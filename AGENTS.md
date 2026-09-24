@@ -9,6 +9,7 @@
 入口是 `preview.html`（浏览器 / Electron 都加载它），按顺序加载 `vendor/three.min.js` 和 `js/` 下的脚本，全部挂在全局 `RW` 上。
 微信小游戏版已搁置（`game.js`、`game.json`、`project.config.json` 保留，暂不维护）。
 玩法设计见 `DESIGN.md`，美术方向见 `docs/ART.md`，上架清单见 `docs/STEAM.md`。
+玩家逐条要求见 `docs/PLAYER-LOG.md`。全面优化以那份日志为准；日志后面的条目覆盖前面的。
 
 | 文件 | 负责什么 |
 |---|---|
@@ -20,7 +21,7 @@
 | `js/world3d.js` | 3D 场景：调色板 `PAL`、地形、低模、英雄造型与动作、昼夜光照预设、镜头 |
 | `js/render.js` | 战斗 HUD、3D 之上的标注层；也含 2D 退路画面 |
 | `js/ui.js` | 各页面界面（逻辑分辨率 960×540） |
-| `js/audio.js` | 程序合成的重金属 / 摇滚音乐与音效 |
+| `js/audio.js` | 程序合成的音乐与音效。风格以 `docs/PLAYER-LOG.md` 为准，不是重金属 |
 | `js/main.js` | 主循环、输入分发 |
 | `desktop/` | Electron 主进程与预加载（窗口、全屏、退出、存档文件） |
 

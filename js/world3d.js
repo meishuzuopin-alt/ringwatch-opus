@@ -112,19 +112,20 @@
     var n = 3;
     for (var i = 0; i <= n; i++) {
       var t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t;
-      gb.box(x, 0, z, 2.4, 11, 2.4, PAL.wood);
+      gb.box(x, 0, z, 2.6, 22, 2.6, PAL.wood);
     }
     var dx = x1 - x0, dz = z1 - z0;
-    if (Math.abs(dx) > Math.abs(dz)) { gb.box((x0 + x1) / 2, 7, z0, Math.abs(dx), 1.6, 1.4, PAL.plank2); gb.box((x0 + x1) / 2, 3.5, z0, Math.abs(dx), 1.4, 1.2, PAL.plank); }
-    else { gb.box(x0, 7, (z0 + z1) / 2, 1.4, 1.6, Math.abs(dz), PAL.plank2); }
+    if (Math.abs(dx) > Math.abs(dz)) { gb.box((x0 + x1) / 2, 14, z0, Math.abs(dx), 1.8, 1.6, PAL.plank2); gb.box((x0 + x1) / 2, 8, z0, Math.abs(dx), 1.6, 1.4, PAL.plank); }
+    else { gb.box(x0, 14, (z0 + z1) / 2, 1.6, 1.8, Math.abs(dz), PAL.plank2); }
   }
   function tree(gb, x, z, s, seed) {
     var R = rnd(seed * 97 + 13);
-    gb.cyl(x, 0, z, 3.2 * s, 2.4 * s, 16 * s, 6, PAL.trunk);
+    var trunk = 52 * s;
+    gb.cyl(x, 0, z, 4.4 * s, 2.6 * s, trunk, 6, PAL.trunk);
     var lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3];
-    gb.blob(x, 22 * s, z, 15 * s, 12 * s, 15 * s, lc, 0, seed, 0.22);
-    gb.blob(x + (R() - 0.5) * 10 * s, 31 * s, z + (R() - 0.5) * 8 * s, 10 * s, 9 * s, 10 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
-    if (R() < 0.5) gb.blob(x + 8 * s, 18 * s, z + 6 * s, 8 * s, 7 * s, 8 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
+    gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
+    if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
   }
   function tufts(gb, x, z, c, r) {
     var R = rnd(c * 977 + r * 131 + 5);
@@ -135,7 +136,7 @@
       gb.tri(a, b, t, col); gb.tri(b, a, t, col);
     }
   }
-  function bush(gb, x, z, seed) { gb.blob(x, 4, z, 7, 6, 7, PAL.leaf2, 0, seed, 0.3); }
+  function bush(gb, x, z, seed) { gb.blob(x, 9, z, 16, 14, 16, PAL.leaf2, 0, seed, 0.3); }
   function flowers(gb, x, z, c, r) {
     var R = rnd(c * 131 + r * 7);
     for (var i = 0; i < 4; i++) {
@@ -145,11 +146,11 @@
     }
   }
   function lantern(gb, x, z, lamps) {
-    gb.box(x, 0, z, 3, 26, 3, PAL.wood);
-    gb.box(x + 5, 24, z, 11, 2, 2, PAL.wood);
-    gb.box(x + 9, 15, z, 5, 7, 5, PAL.lamp, 1.2);
-    gb.box(x + 9, 22, z, 6.5, 1.4, 6.5, PAL.wood);
-    lamps.push({ x: x + 9, y: 18, z: z, s: 1 });
+    gb.box(x, 0, z, 3.2, 46, 3.2, PAL.wood);
+    gb.box(x + 8, 42, z, 16, 2.2, 2.2, PAL.wood);
+    gb.box(x + 14, 30, z, 6, 9, 6, PAL.lamp, 1.2);
+    gb.box(x + 14, 39, z, 8, 1.8, 8, PAL.wood);
+    lamps.push({ x: x + 14, y: 34, z: z, s: 1.1 });
   }
   function banner(gb, x, z, h) {
     gb.box(x, 0, z, 3, h, 3, PAL.wood);
@@ -161,12 +162,12 @@
     var vertical = c === 0 || c === cols - 1;
     for (var s = -1; s <= 1; s += 2) {
       var px = vertical ? x : x + s * 24, pz = vertical ? z + s * 24 : z;
-      gb.box(px, 0, pz, 9, 30, 9, PAL.rock2, 0, PAL.stone);
-      gb.box(px, 30, pz, 11, 3, 11, PAL.stone2);
-      gb.box(px, 33, pz, 4, 5, 4, PAL.lamp, 1.3);
-      lamps.push({ x: px, y: 35, z: pz, s: 1.2 });
+      gb.box(px, 0, pz, 12, 68, 12, PAL.rock2, 0, PAL.stone);
+      gb.box(px, 68, pz, 15, 4, 15, PAL.stone2);
+      gb.box(px, 72, pz, 5, 7, 5, PAL.lamp, 1.3);
+      lamps.push({ x: px, y: 75, z: pz, s: 1.3 });
     }
-    banner(gb, x + (vertical ? 0 : -12), z + (vertical ? -12 : 0), 34);
+    banner(gb, x + (vertical ? 0 : -14), z + (vertical ? -14 : 0), 76);
   }
   function buildBridgeCell(gb, c, r, ch, lamps) {
     var C = 40, x0 = c * C, z0 = r * C, cx = x0 + C / 2;
@@ -174,28 +175,31 @@
     for (var i = 0; i < 5; i++) gb.box(cx, -2, z0 + 4 + i * 8, C, 3, 7, i % 2 ? PAL.plank : PAL.plank2);
     gb.box(cx, -18, z0 + C / 2, C, 16, 4, PAL.wood);
     var left = ch(c - 1, r) !== '=', right = ch(c + 1, r) !== '=';
-    if (left) { gb.box(x0 + 2, 1, z0 + C / 2, 2.5, 10, C, PAL.plank2); for (var j = 0; j < 2; j++) gb.box(x0 + 2, 0, z0 + 6 + j * 28, 3.4, 12, 3.4, PAL.wood); }
-    if (right) { gb.box(x0 + C - 2, 1, z0 + C / 2, 2.5, 10, C, PAL.plank2); for (var k = 0; k < 2; k++) gb.box(x0 + C - 2, 0, z0 + 6 + k * 28, 3.4, 12, 3.4, PAL.wood); }
+    if (left) { gb.box(x0 + 2, 1, z0 + C / 2, 2.5, 20, C, PAL.plank2); for (var j = 0; j < 2; j++) gb.box(x0 + 2, 0, z0 + 6 + j * 28, 3.6, 24, 3.6, PAL.wood); }
+    if (right) { gb.box(x0 + C - 2, 1, z0 + C / 2, 2.5, 20, C, PAL.plank2); for (var k = 0; k < 2; k++) gb.box(x0 + C - 2, 0, z0 + 6 + k * 28, 3.6, 24, 3.6, PAL.wood); }
     // 桥头灯笼
     if (ch(c, r - 1) !== '=' && ch(c, r - 1) !== '~') { if (left) lantern(gb, x0 + 2, z0 - 6, lamps); if (right) lantern(gb, x0 + C - 12, z0 - 6, lamps); }
     if (ch(c, r + 1) !== '=' && ch(c, r + 1) !== '~') { if (left) lantern(gb, x0 + 2, z0 + C + 6, lamps); if (right) lantern(gb, x0 + C - 12, z0 + C + 6, lamps); }
   }
   function house(gb, x0, z0, w, d, blue, lamps) {
     var cx = x0 + w / 2, cz = z0 + d / 2, wall = blue ? PAL.wall : PAL.wallWood, roof = blue ? PAL.roofBlue : PAL.roofRed;
-    gb.box(cx, 0, cz, w - 8, 3, d - 6, PAL.stone2);
-    gb.box(cx, 3, cz, w - 12, 30, d - 12, wall);
-    // 木梁
-    gb.box(x0 + 7, 3, cz, 3, 30, d - 10, PAL.wood); gb.box(x0 + w - 7, 3, cz, 3, 30, d - 10, PAL.wood);
-    gb.box(cx, 30, cz, w - 10, 3, d - 10, PAL.wood);
-    gb.roof(cx, 33, cz, w - 2, 20, d + 2, roof);
-    gb.box(cx - w * 0.2, 40, cz - 4, 6, 14, 6, PAL.rockDark);
-    // 门、窗（窗会发光）
-    gb.box(cx, 3, z0 + d - 5.5, 9, 15, 1.2, PAL.wood);
-    for (var i = -1; i <= 1; i += 2) gb.box(cx + i * w * 0.25, 15, z0 + d - 5.8, 7, 7, 1, PAL.lamp, 0.9);
-    gb.box(cx, 18, z0 + d - 3, w * 0.6, 1.5, 6, PAL.wood);
-    lamps.push({ x: cx - w * 0.25, y: 18, z: z0 + d - 3, s: 0.7 });
-    lamps.push({ x: cx + w * 0.25, y: 18, z: z0 + d - 3, s: 0.7 });
-    gb.box(x0 + w - 4, 0, z0 + d - 2, 7, 6, 7, PAL.plank2);
+    var span = Math.min(w, d);
+    var wallH = Math.max(52, Math.min(78, span * 0.72));
+    var roofH = Math.max(28, Math.min(50, span * 0.4));
+    var doorH = 36;
+    gb.box(cx, 0, cz, w - 8, 4, d - 6, PAL.stone2);
+    gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall);
+    gb.box(x0 + 7, 4, cz, 3, wallH, d - 10, PAL.wood); gb.box(x0 + w - 7, 4, cz, 3, wallH, d - 10, PAL.wood);
+    gb.box(cx, wallH, cz, w - 10, 4, d - 10, PAL.wood);
+    gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof);
+    gb.box(cx - w * 0.2, wallH + roofH * 0.45, cz - 4, 7, 20, 7, PAL.rockDark);
+    gb.box(cx, 4, z0 + d - 5.5, 12, doorH, 1.4, PAL.wood);
+    var winY = 4 + doorH * 0.45;
+    for (var i = -1; i <= 1; i += 2) gb.box(cx + i * w * 0.25, winY, z0 + d - 5.8, 9, 11, 1, PAL.lamp, 0.9);
+    gb.box(cx, doorH + 8, z0 + d - 3, w * 0.55, 2, 7, PAL.wood);
+    lamps.push({ x: cx - w * 0.25, y: winY + 5, z: z0 + d - 3, s: 0.8 });
+    lamps.push({ x: cx + w * 0.25, y: winY + 5, z: z0 + d - 3, s: 0.8 });
+    gb.box(x0 + w - 4, 0, z0 + d - 2, 9, 9, 9, PAL.plank2);
   }
 
   // ================= 模型 =================
@@ -370,30 +374,30 @@
     });
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
     M.sentry = model(function (g) {
-      g.box(0, 0, 0, 20, 16, 20, PAL.rock2, 0, PAL.stone);
-      g.box(0, 16, 0, 17, 13, 17, PAL.wallWood);
-      g.box(0, 22, 8.7, 6, 4, 0.8, hex('#1a120c'));
-      g.cyl(0, 29, 0, 15, 0, 13, 4, PAL.roofRed);
-      g.box(0, 12, 10.2, 8, 16, 0.8, PAL.banner); g.box(0, 18, 10.7, 4, 4, 0.4, PAL.gold, 0.6);
+      g.box(0, 0, 0, 22, 26, 22, PAL.rock2, 0, PAL.stone);
+      g.box(0, 26, 0, 16, 62, 16, PAL.wallWood);
+      g.box(0, 58, 8.2, 7, 8, 0.8, hex('#1a120c'));
+      g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed);
+      g.box(0, 40, 8.4, 8, 28, 0.8, PAL.banner); g.box(0, 52, 8.9, 4, 6, 0.4, PAL.gold, 0.6);
     });
     M.pylon = model(function (g) {
-      g.box(0, 0, 0, 18, 8, 18, PAL.rock2, 0, PAL.stone);
-      g.box(0, 8, 0, 12, 6, 12, PAL.rock);
-      g.blob(0, 26, 0, 6, 13, 6, hex('#8fe3ff'), 1.1, 3, 0.15);
-      g.blob(5, 18, 4, 3, 6, 3, hex('#8fe3ff'), 0.9, 5, 0.2); g.blob(-5, 18, -3, 3, 5, 3, hex('#8fe3ff'), 0.9, 6, 0.2);
+      g.box(0, 0, 0, 20, 10, 20, PAL.rock2, 0, PAL.stone);
+      g.box(0, 10, 0, 10, 70, 10, PAL.rock);
+      g.blob(0, 92, 0, 8, 22, 8, hex('#8fe3ff'), 1.1, 3, 0.15);
+      g.blob(6, 48, 4, 4, 16, 4, hex('#8fe3ff'), 0.9, 5, 0.2); g.blob(-6, 36, -4, 4, 14, 4, hex('#8fe3ff'), 0.9, 6, 0.2);
     });
     M.siphon = model(function (g) {
-      g.box(0, 0, 0, 14, 5, 14, PAL.stone);
-      g.box(0, 5, 0, 5, 22, 5, PAL.wood);
-      g.box(0, 22, 0, 12, 3, 3, PAL.wood);
-      g.cyl(0, 30, 0, 6, 6, 1.5, 8, PAL.gold, 1.0);
+      g.box(0, 0, 0, 16, 6, 16, PAL.stone);
+      g.box(0, 6, 0, 5, 78, 5, PAL.wood);
+      g.box(0, 78, 0, 16, 3, 3, PAL.wood);
+      g.cyl(0, 92, 0, 7, 7, 2, 8, PAL.gold, 1.0);
     });
     M.barracks = model(function (g) {
-      g.box(0, 0, 0, 30, 3, 26, PAL.stone2);
-      g.box(0, 3, 0, 26, 18, 22, PAL.wallWood);
-      g.roof(0, 21, 0, 30, 12, 26, PAL.roofRed);
-      g.box(0, 3, 11.2, 8, 11, 0.8, hex('#1a120c'));
-      banner(g, -14, 12, 34);
+      g.box(0, 0, 0, 32, 4, 28, PAL.stone2);
+      g.box(0, 4, 0, 28, 48, 24, PAL.wallWood);
+      g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed);
+      g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
+      banner(g, -15, 13, 72);
     });
     M.soldier = model(function (g) {
       g.box(0, 0, 1.6, 1.8, 4, 1.8, hex('#5a5f6a')); g.box(0, 0, -1.6, 1.8, 4, 1.8, hex('#5a5f6a'));
@@ -689,13 +693,13 @@
       if (!tw.on || !W3.inView(tw.x, tw.y, 80)) continue;
       var d = tw.d, s = d.r / 12 * 0.9, bk = tw.build > 0 ? 1 - tw.build / T.build.time : 1;
       var yaw = d.kind === 'sentry' ? tw.ang : -Math.PI / 2;
-      GL.put(M[TMODEL[tw.id]], tw.x, (bk - 1) * 30, tw.y, d.kind === 'barracks' ? 0 : yaw, s, s * bk, s, 0, 1, 1, 1, tw.flash > 0 ? 0.7 : 0);
+      GL.put(M[TMODEL[tw.id]], tw.x, (bk - 1) * 90, tw.y, d.kind === 'barracks' ? 0 : yaw, s, s * bk, s, 0, 1, 1, 1, tw.flash > 0 ? 0.7 : 0);
       GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.2, BLACK, (0.3) * W3.blobShadow());
       var range = (d.range || 0) * RW.TOWER_TIER.range[g.tech[tw.id] - 1];
       if (d.kind === 'barracks') range = d.leash;
       if (range) GL.ground(true, tw.x, 0.8, tw.y, range, 1, 0.012, hex(d.color), 0.25);
-      if (d.kind === 'pylon') { GL.glow(tw.x, 26, tw.y, 16, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
-      if (d.kind === 'siphon') GL.glow(tw.x, 31, tw.y, 12, hex('#ffe066'), 0.6);
+      if (d.kind === 'pylon') { GL.glow(tw.x, 84, tw.y, 18, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
+      if (d.kind === 'siphon') GL.glow(tw.x, 78, tw.y, 14, hex('#ffe066'), 0.6);
     }
   }
   function drawSoldiers(g, M) {
