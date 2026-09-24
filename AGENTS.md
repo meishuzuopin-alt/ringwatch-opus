@@ -4,22 +4,25 @@
 
 ## 项目是什么
 
-「环带值守」：竖屏微信小游戏，低多边形 3D 守村。纯原生 JS，**没有构建步骤、没有运行时依赖**。
-入口是 `game.js`（微信）和 `preview.html`（浏览器），两者按同一顺序加载 `js/` 下的脚本，全部挂在全局 `RW` 上。
-玩法设计见 `DESIGN.md`，美术方向见 `docs/ART.md`。
+「环带值守 Ringwatch」：奇幻守村割草塔防，**目标平台 Steam（Windows / macOS / Linux）**，横屏 16:9。
+纯原生 JS，游戏本身**没有构建步骤**；3D 用 Three.js（打包成 `vendor/three.min.js`，全局变量 `THREE`），桌面壳是 Electron（`desktop/`）。
+入口是 `preview.html`（浏览器 / Electron 都加载它），按顺序加载 `vendor/three.min.js` 和 `js/` 下的脚本，全部挂在全局 `RW` 上。
+微信小游戏版已搁置（`game.js`、`game.json`、`project.config.json` 保留，暂不维护）。
+玩法设计见 `DESIGN.md`，美术方向见 `docs/ART.md`，上架清单见 `docs/STEAM.md`。
 
 | 文件 | 负责什么 |
 |---|---|
-| `js/data.js` | 所有数值表（英雄、武器、道具、敌人、波次、商店、广告位）。调数值只改这里 |
+| `js/data.js` | 所有数值表（英雄、武器、道具、敌人、波次、商店）。调数值只改这里 |
 | `js/map.js` | 字符地图 |
 | `js/sim.js` | 纯逻辑，不碰画面，可在 Node 里无头运行 |
-| `js/platform.js` | 微信 / 浏览器差异封装（画布、触摸、存档、广告） |
-| `js/gl3d.js` | 自研 WebGL 渲染器（着色器、网格构建器 `GB`、绘制） |
-| `js/world3d.js` | 3D 场景：调色板 `PAL`、地形、低模、昼夜光照预设、镜头 |
-| `js/render.js` | 2D 画面（WebGL 不可用时的退路）+ 3D 之上的特效层 |
-| `js/ui.js` | HUD 与各页面界面 |
-| `js/audio.js` | 程序化音效 |
+| `js/platform.js` | 平台差异封装（画布、输入、存档、音频上下文） |
+| `js/gl3d.js` | 3D 渲染层（Three.js）：网格构建器 `GB`、实例化网格、阴影、描边、泛光、调色、特效四边形 |
+| `js/world3d.js` | 3D 场景：调色板 `PAL`、地形、低模、英雄造型与动作、昼夜光照预设、镜头 |
+| `js/render.js` | 战斗 HUD、3D 之上的标注层；也含 2D 退路画面 |
+| `js/ui.js` | 各页面界面（逻辑分辨率 960×540） |
+| `js/audio.js` | 程序合成的重金属 / 摇滚音乐与音效 |
 | `js/main.js` | 主循环、输入分发 |
+| `desktop/` | Electron 主进程与预加载（窗口、全屏、退出、存档文件） |
 
 ## 分工
 
@@ -34,9 +37,9 @@
 
 ## 硬规则
 
-1. **画面全部运行时生成**：不引入图片、模型文件或第三方库。要破例需先征得项目负责人同意，并在 `docs/ART.md` 记录。
-2. **微信主包 ≤ 4MB**，`node tools/check.js` 会统计。
-3. **新增 `js/` 文件**时，`game.js` 和 `preview.html` 两处都要加，顺序一致（check 会拦）。
+1. **模型、音乐、音效全部由代码生成**：不引入图片、模型文件、音频文件。第三方库只有 Three.js 与 Electron；新增库或素材需先征得项目负责人同意，并在 `docs/ART.md` 记录。
+2. **Three.js 只通过 `node tools/vendor-three.js` 重新打包**（版本锁在 `package.json`），不要手改 `vendor/three.min.js`。
+3. **新增 `js/` 文件**时，`preview.html` 和 `game.js` 两处都要加，顺序一致（check 会拦）。
 4. **`sim.js` 不许碰画面 API**，否则无头数值测试跑不了。
 5. 代码风格跟随现有文件：ES5 风格（`var`、IIFE、挂 `RW`），注释用中文，2 空格缩进。
 6. 所有用户可见文案用简体中文。
@@ -50,7 +53,10 @@ npm run check        # 必跑，几秒：语法 / 入口一致 / 模拟冒烟 / 
 npm run test:flow    # 改了界面或流程时跑（需要 Playwright + Chromium）
 npm run shots        # 改了画面时跑，截图在 shots/art/，前后对比
 npm run balance      # 改了数值时跑：node tools/balance.js [局数] [最高波数]
-npm run dev          # 本地预览：http://localhost:8080/
+npm run music        # 改了音乐时跑：离线渲染每段音乐为 WAV，检查爆音 / 静音
+npm run dev          # 浏览器预览：http://localhost:8080/
+npm run desktop      # 桌面版（Electron）
+npm run dist:win     # 打 Windows 免安装目录到 dist/（也可在 Actions 手动触发三平台打包）
 ```
 
 CI（`.github/workflows/ci.yml`）在每个 PR 和 main 上跑以上检查，并把截图作为 `screenshots` 产物上传，

@@ -32,6 +32,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'   # 这一步只测浏览器，不需要 Electron
       - run: npx playwright install --with-deps chromium
       - run: npm run test:flow
       - run: npm run shots
@@ -41,4 +43,25 @@ jobs:
         with:
           name: screenshots
           path: shots/
+          retention-days: 14
+
+  desktop:
+    name: 桌面版（Electron）冒烟测试
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+      - run: mkdir -p shots && xvfb-run -a -s "-screen 0 1280x720x24" npm run desktop:smoke
+      - name: 上传桌面版截图
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-smoke
+          path: shots/desktop-smoke.png
           retention-days: 14

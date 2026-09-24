@@ -96,7 +96,8 @@
     UI.button('mute', W / 2 - 150, 356, 96, 42, muted ? '声音：关' : '声音：开', { size: 13 });
     UI.button('music', W / 2 - 48, 356, 96, 42, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
     UI.button('howto', W / 2 + 54, 356, 96, 42, '玩法说明', { size: 13 });
-    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q 技能 · B 造塔 · Enter 开始', W / 2, 430, 12, C.dim, 'center', false, 3);
+    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q 技能 · B 造塔 · Enter 开始 · F11 全屏', W / 2, 430, 12, C.dim, 'center', false, 3);
+    if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出游戏', { style: 'ghost', size: 13 });
     D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
   };
 
@@ -512,7 +513,7 @@
     var by = H - 66;
     var rc = g.rerollCost();
     UI.button('reroll', 16, by, 120, 50, '刷新', { sub: rc + ' 金币', disabled: g.shardCount < rc, why: '金币不足，刷新要 ' + rc });
-    var adOk = g.wave >= RW.AD.FIRST_AD_WAVE;
+    var adOk = !!adLabel && g.wave >= RW.AD.FIRST_AD_WAVE;   // 桌面版没有广告入口
     if (adOk) UI.button('adReroll', 144, by, 116, 50, adLabel, { style: 'ad', sub: shop.adUsed ? '本轮已用' : '免费刷新 1 次', size: 13, disabled: shop.adUsed, why: '每轮整备只能用一次' });
     UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '开始第 ' + (g.wave + 1) + ' 波', { style: 'primary', size: adOk ? 15 : 18 });
   };
@@ -597,7 +598,7 @@
     D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', cx, 186, 13, C.text, 'center');
     var h = g.lastHits[g.lastHits.length - 1];
     if (h) D.text('致命一击：' + h.src, cx, 212, 13, '#ffb3c1', 'center', true);
-    UI.button('revive', cx - 190, 244, 380, 70, adLabel + ' · 原地复活', { style: 'ad', size: 18, sub: '恢复 60% 生命，清空身边敌人（每局一次）' });
+    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '原地复活', { style: 'ad', size: 18, sub: '恢复 60% 生命，清空身边敌人（每局一次）' });
     if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
     UI.button('giveup', cx - 190, 352, 380, 52, '结束值守，查看结算', { style: 'ghost', size: 14 });
   };

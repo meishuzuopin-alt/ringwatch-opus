@@ -150,10 +150,12 @@
       case 'revive':
         P.showReward('revive', function (r) {
           g.revive(); resetStick();
-          UI.toast(r.preview ? '预览发放：已复活（未播放广告）' : '已复活');
+          UI.toast(r.preview ? '预览发放：已复活（未播放广告）' : '已复活');   // 桌面版 r.free：直接复活
         }, function (msg) { UI.toast(msg); });
         break;
       case 'giveup': g.finishRun(); break;
+      case 'exitGame': if (root.desktop) root.desktop.quit(); break;
+      case 'fullscreen': if (root.desktop) root.desktop.toggleFullscreen(); break;
       case 'reroll': if (!g.reroll(false)) UI.toast('晶屑不足'); break;
       case 'adReroll':
         P.showReward('reroll', function (r) {
@@ -230,8 +232,8 @@
         D.hud(g, UI, buildMenu); D.joystick(js);
         if (paused) UI.pause(g, muted);
         break;
-      case 'revive': if (gl3) D.overlay3D(g); else D.world(g); D.hud(g, UI, false); UI.btns.length = 0; UI.revive(g, P.adLabel('revive')); break;
-      case 'shop': UI.shop(g, P.adLabel('reroll')); break;
+      case 'revive': if (gl3) D.overlay3D(g); else D.world(g); D.hud(g, UI, false); UI.btns.length = 0; UI.revive(g, P.hasAds ? P.adLabel('revive') : ''); break;
+      case 'shop': UI.shop(g, P.hasAds ? P.adLabel('reroll') : ''); break;
       case 'result': UI.result(g); break;
     }
     UI.pressed = pressed;
