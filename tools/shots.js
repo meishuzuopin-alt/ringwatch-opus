@@ -14,7 +14,7 @@ fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ args: CHROMIUM_ARGS });
   const errors = [];
   const open = async (query) => {
-    const page = await browser.newPage({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 });
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     await page.goto(base + (query || ''));
@@ -43,7 +43,8 @@ fs.mkdirSync(out, { recursive: true });
     await shot(page, name);
   }
   await page.evaluate(() => { RW.game.clearWave(); });
-  await page.waitForTimeout(2200);
+  await page.waitForFunction(() => RW.game.mode === 'shop', null, { timeout: 60000 });
+  await page.waitForTimeout(500);
   await shot(page, '07_shop');
   await page.close();
 
@@ -70,6 +71,7 @@ fs.mkdirSync(out, { recursive: true });
     p.hp = p.maxHp = 9999;
     p.inv = p.hurtT = p.dashT = 0;
     g.cls = RW.CLASSES.rogue; g.clsId = 'rogue'; g.mode = 'battle';
+    g.banner = 0; g.evolveT = 0; g.eliteAlert = 0;   // 逻辑冻结后横幅不会自己消失，先清掉，别挡住角色
     g.update = function () {};
     RW.W3.envFor = () => 'day';
     RW.W3.updateCamera = (game, dt, orbit, aspect) => {

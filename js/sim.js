@@ -837,7 +837,9 @@
   // ---------- 爆炸：统一排队处理，连锁不会递归 ----------
   G.queueBlast = function (x, y, rad, dmgEnemies, dmgPlayer, source, color, who, knock) {
     var b = take(this.blasts, true);
-    if (dmgPlayer <= 0 && this.st) rad *= this.st.blastR;   // 火药：只放大我方的爆炸
+    // 火药：只放大主角自己的爆炸（符文陷阱、黑洞内爆；它们的 source.crit 为真）。
+    // 环境连锁（炸药地精被打爆）和敌人的爆炸不吃这个加成
+    if (dmgPlayer <= 0 && source && source.crit && this.st) rad *= this.st.blastR;
     b.x = x; b.y = y; b.rad = rad; b.de = dmgEnemies; b.dp = dmgPlayer; b.src = source; b.color = color; b.who = who || ''; b.knock = knock || 220;
   };
   G.processBlasts = function () {
@@ -900,7 +902,7 @@
     sk.cd = d.cd * this.st.cdr;
     switch (sk.id) {
       case 'nova':
-        var rad = d.radius + 20 * (sk.tier - 1), dmg = this.skillDmg();
+        var rad = (d.radius + 20 * (sk.tier - 1)) * this.st.blastR, dmg = this.skillDmg();   // 炎爆也吃「爆炸范围」
         for (i = 0; i < this.enemies.length; i++) {
           e = this.enemies[i];
           if (!e.on || e.spawnT > 0) continue;

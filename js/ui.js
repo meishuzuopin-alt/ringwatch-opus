@@ -88,40 +88,41 @@
       }
       c.restore();
     }
-    D.glowText('环带值守', W / 2, 150, 52, C.cyan, 'center', 20);
-    D.text('R I N G W A T C H', W / 2, 192, 12, '#e8d8b8', 'center', true, 3);
-    D.text('夜色压境，守住村子的圣火。', W / 2, 400, 13, C.text, 'center', true, 3);
-    D.text('撑过倒计时，整备，再迎下一波。', W / 2, 422, 12, C.dim, 'center', false, 3);
-    if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波', W / 2, 452, 13, C.gold, 'center', true, 3);
-    UI.button('start', 80, 480, 260, 62, '开始值守', { style: 'primary', size: 22 });
-    UI.button('mute', 80, 556, 125, 40, muted ? '音效：关' : '音效：开', { size: 13 });
-    UI.button('howto', 215, 556, 125, 40, '玩法说明', { size: 13 });
-    D.text('拖动移动 · 自动攻击 · 灵火晋升 · 随时造塔', W / 2, 626, 11, C.dim, 'center', false, 3);
-    D.text('v3.0 · 画面与音效均为运行时生成', W / 2, 736, 10, C.faint, 'center', false, 3);
+    D.glowText('环带值守', W / 2, 120, 64, C.cyan, 'center', 24);
+    D.text('R I N G W A T C H', W / 2, 170, 13, '#e8d8b8', 'center', true, 3);
+    D.text('夜色压境，守住村子的圣火。撑过倒计时，整备，再迎下一波。', W / 2, 214, 14, C.text, 'center', true, 3);
+    if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波', W / 2, 244, 13, C.gold, 'center', true, 3);
+    UI.button('start', W / 2 - 150, 280, 300, 62, '开始值守', { style: 'primary', size: 22 });
+    UI.button('mute', W / 2 - 150, 356, 96, 42, muted ? '声音：关' : '声音：开', { size: 13 });
+    UI.button('music', W / 2 - 48, 356, 96, 42, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
+    UI.button('howto', W / 2 + 54, 356, 96, 42, '玩法说明', { size: 13 });
+    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q 技能 · B 造塔 · Enter 开始 · F11 全屏', W / 2, 430, 12, C.dim, 'center', false, 3);
+    if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出游戏', { style: 'ghost', size: 13 });
+    D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
   };
 
   UI.howto = function () {
     UI.dim(0.85);
-    UI.panel(20, 70, W - 40, 620, C.cyan);
-    D.text('玩法说明', W / 2, 100, 20, C.cyan, 'center', true);
+    UI.panel(W / 2 - 360, 40, 720, 460, C.cyan);
+    D.text('玩法说明', W / 2, 72, 20, C.cyan, 'center', true);
     var lines = [
-      ['移动', '按住屏幕任意位置拖动。松手会滑行一小段。'],
+      ['移动', 'WASD / 方向键；也可以按住鼠标拖动。'],
       ['攻击', '武器自动瞄准最近的敌人，你只管走位。'],
       ['金币', '敌人死亡掉落。8 秒后消失，靠近才能捡到。'],
       ['波次', '撑过倒计时，场上的敌人全部清掉，进入整备。'],
       ['战意', '在身边击杀会攒战意，攒满进入狂热：攻速、伤害、移速都涨。逃跑会掉。'],
-      ['造塔', '战斗中点左下「造塔」，花金币在脚下建箭塔 / 寒霜塔 / 聚金桩 / 兵营。'],
-      ['技能', '右下冲刺（短暂无敌）和技能键。整备时可以换技能、升技能。'],
+      ['造塔', '按 B 再按 1–4，花金币在脚下建箭塔 / 寒霜塔 / 聚金桩 / 兵营。'],
+      ['技能', '空格冲刺（短暂无敌），Q 放技能。整备时可以换技能、升技能。'],
       ['整备', '买武器 / 改造 / 技能 / 建筑科技。每件货都写了强在哪、弱在哪。'],
       ['预警', '红准星＝要刷怪；粉线＝冲锋；黄虚线＝喷刺；橙圈＝爆囊要炸。']
     ];
     for (var i = 0; i < lines.length; i++) {
-      var y = 140 + i * 52;
-      D.text(lines[i][0], 42, y, 14, C.gold, 'left', true);
-      var wl = D.wrap(lines[i][1], 280, 12);
-      for (var j = 0; j < wl.length; j++) D.text(wl[j], 96, y + j * 17, 12, C.text, 'left');
+      var col = i < 5 ? 0 : 1, y = 110 + (i % 5) * 62, x0 = W / 2 - 336 + col * 350;
+      D.text(lines[i][0], x0, y, 14, C.gold, 'left', true);
+      var wl = D.wrap(lines[i][1], 270, 12);
+      for (var j = 0; j < wl.length; j++) D.text(wl[j], x0 + 50, y + j * 17, 12, C.text, 'left');
     }
-    UI.button('howtoClose', 110, 634, 200, 40, '知道了', { style: 'primary' });
+    UI.button('howtoClose', W / 2 - 100, 436, 200, 44, '知道了', { style: 'primary' });
   };
 
   // ================= 选择英雄 =================
@@ -133,16 +134,26 @@
     if (!RW.CLASSES[UI.heroSel]) UI.heroSel = ids[0];
     D.drawBg(true);
     UI.dim(0.5);
-    D.text('选择英雄', W / 2, 38, 24, C.text, 'center', true, 3);
-    D.text('已解锁 ' + nUn + ' / ' + ids.length + ' · 每个英雄自带不同的属性和特性', W / 2, 64, 11, C.dim, 'center', false, 3);
+    D.text('选择英雄', 24, 36, 24, C.text, 'left', true, 3);
+    D.text('已解锁 ' + nUn + ' / ' + ids.length + ' · 每个英雄自带不同的属性和特性 · 方向键切换，Enter 出发', 24, 60, 11, C.dim, 'left', false, 3);
     for (i = 0; i < ids.length; i++) {
       var col = i % 5, row = (i / 5) | 0;
-      UI.button('hero:' + ids[i], 14 + col * 80, 80 + row * 96, 72, 88, '', { draw: UI.heroTile(g, ids[i]) });
+      UI.button('hero:' + ids[i], 24 + col * 86, 76 + row * 104, 80, 96, '', { draw: UI.heroTile(g, ids[i]) });
     }
-    UI.heroDetail(g, UI.heroSel, 20, 280, W - 40, 376);
+    // 累计进度
+    var pr = prog || {};
+    UI.panel(24, 294, 424, 162);
+    D.text('值守记录', 40, 316, 13, C.text, 'left', true);
+    var rec = [['局数', pr.runs || 0], ['累计击杀', pr.kills || 0], ['累计金币', pr.coins || 0], ['累计建造', pr.built || 0], ['最佳纪录', g.best ? '第 ' + g.best + ' 波' : '—']];
+    for (i = 0; i < rec.length; i++) {
+      var rx = 40 + (i % 3) * 136, ry = 350 + ((i / 3) | 0) * 50;
+      D.text(rec[i][0], rx, ry, 10, C.dim, 'left');
+      D.text(String(rec[i][1]), rx, ry + 20, 17, C.gold, 'left', true);
+    }
+    UI.heroDetail(g, UI.heroSel, 468, 24, W - 492, 432);
     var sel = UI.heroSel, ok = RW.isUnlocked(sel, prog);
-    UI.button('back', 20, 670, 120, 44, '返回', { style: 'ghost', size: 13 });
-    UI.button('pick:' + sel, 152, 670, 248, 44, ok ? '出发 · ' + RW.CLASSES[sel].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 16, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
+    UI.button('back', 24, 472, 160, 48, '返回', { style: 'ghost', size: 14 });
+    UI.button('pick:' + sel, 468, 472, W - 492, 48, ok ? '出发 · ' + RW.CLASSES[sel].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 17, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
   };
   UI.heroTile = function (g, id) {
     return function (x, y, w, h, pressed) {
@@ -198,7 +209,18 @@
       if (ft.cons) { D.text('↓ ' + ft.cons, x + 24, yy, 11, C.bad, 'left', true); yy += 18; }
       yy += 12;
     }
-    UI.prosCons(x + 24, yy + 4, w - 48, d.pros, d.cons);
+    yy = UI.prosCons(x + 24, yy + 4, w - 48, d.pros, d.cons) + 18;
+    // 起手武器与技能
+    var wd = RW.WEAPONS[d.weapon], sd = RW.SKILLS[d.skill], boxes = [['起手武器', wd.name, wd.color, wd.pros], ['主动技能', sd.name, sd.color, sd.pros]];
+    for (var bi = 0; bi < boxes.length && yy < y + h - (ok ? 60 : 120); bi++) {
+      var bx = boxes[bi], tl = D.wrap(bx[3], w - 60, 11);
+      c.fillStyle = 'rgba(255,255,255,0.04)'; D.rr(x + 14, yy, w - 28, 30 + tl.length * 15, 6); c.fill();
+      c.fillStyle = bx[2]; c.fillRect(x + 14, yy + 6, 3, 18 + tl.length * 15);
+      D.text(bx[0], x + 26, yy + 13, 10, C.dim, 'left');
+      D.text(bx[1], x + 86, yy + 13, 13, bx[2], 'left', true);
+      for (var li = 0; li < tl.length; li++) D.text(tl[li], x + 26, yy + 31 + li * 15, 11, C.text, 'left');
+      yy += 38 + tl.length * 15;
+    }
     if (!ok) {
       var u = d.unlock, up = RW.unlockProgress(id, g.prog), k = Math.min(1, up.have / up.need), by = y + h - 58;
       c.fillStyle = 'rgba(0,0,0,0.55)'; D.rr(x + 12, by, w - 24, 46, 8); c.fill();
@@ -440,7 +462,7 @@
 
   // ================= 整备商店 =================
   UI.shop = function (g, adLabel) {
-    var c = D.ctx, shop = g.shop, i;
+    var c = D.ctx, shop = g.shop, i, LW = 420;   // 左栏宽度：沿用竖屏时的排版
     D.drawBg(true);
     UI.dim(0.72);
     // 头部
@@ -449,8 +471,8 @@
     D.text('第 ' + g.wave + ' 波已完成 · 物价 +' + pm + '%', 16, 50, 11, C.dim, 'left');
     var pv = UI.nextPreview(g);
     D.text(pv.text, 16, 64, 10, pv.boss ? '#ff9ab0' : C.gold, 'left', true);
-    D.shardIcon(W - 100, 30, 10);
-    D.text(String(g.shardCount), W - 86, 31, 26, C.shard, 'left', true);
+    D.shardIcon(W - 110, 30, 11);
+    D.text(String(g.shardCount), W - 94, 31, 28, C.shard, 'left', true);
     // 属性条
     UI.statStrip(g, 74);
     // 武器槽
@@ -472,8 +494,8 @@
     }
     // 技能 + 圣火
     y = 190;
-    c.fillStyle = '#1e1712'; D.rr(16, y, W - 32, 62, 6); c.fill();
-    c.strokeStyle = '#4a3a28'; c.lineWidth = 1; D.rr(16, y, W - 32, 62, 6); c.stroke();
+    c.fillStyle = '#1e1712'; D.rr(16, y, LW - 32, 62, 6); c.fill();
+    c.strokeStyle = '#4a3a28'; c.lineWidth = 1; D.rr(16, y, LW - 32, 62, 6); c.stroke();
     var sk = g.skill;
     D.text('技能', 26, y + 14, 10, C.dim, 'left');
     if (sk) { D.text(sk.d.name + ' ' + ROMAN[sk.tier - 1], 26, y + 32, 13, sk.d.color, 'left', true); D.text('冷却 ' + Math.round(sk.d.cd * g.st.cdr * 10) / 10 + 's', 26, y + 49, 10, C.dim, 'left'); }
@@ -485,23 +507,25 @@
     UI.button('repair', 118, y + 32, 124, 26, '维修 +50% · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '圣火是满的' : '金币不足' });
     UI.button('armor', 250, y + 32, 146, 26, '加固 上限+' + T.core.armorHp + ' · ' + ac, { size: 11, disabled: g.shardCount < ac, why: '金币不足' });
     // 卡片
-    y = 262;
+    // 右栏：4 张货
     for (i = 0; i < 4; i++) {
       var sl = shop.slots[i];
-      UI.card(g, sl, i, 16, y + i * 106, W - 32, 98);
+      UI.card(g, sl, i, LW + 16, 82 + i * 112, W - LW - 32, 104);
     }
-    // 底部操作
-    var by = 690;
+    // 圣火之后：键位提示
+    D.text('1–4 购买 · R 刷新 · Enter 开始下一波', 16, 268, 11, C.faint, 'left');
+    // 底部操作（左栏）
+    var by = H - 66;
     var rc = g.rerollCost();
     UI.button('reroll', 16, by, 120, 50, '刷新', { sub: rc + ' 金币', disabled: g.shardCount < rc, why: '金币不足，刷新要 ' + rc });
-    var adOk = g.wave >= RW.AD.FIRST_AD_WAVE;
+    var adOk = !!adLabel && g.wave >= RW.AD.FIRST_AD_WAVE;   // 桌面版没有广告入口
     if (adOk) UI.button('adReroll', 144, by, 116, 50, adLabel, { style: 'ad', sub: shop.adUsed ? '本轮已用' : '免费刷新 1 次', size: 13, disabled: shop.adUsed, why: '每轮整备只能用一次' });
     UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '开始第 ' + (g.wave + 1) + ' 波', { style: 'primary', size: adOk ? 15 : 18 });
   };
 
   UI.statStrip = function (g, y) {
     var s = g.st, c = D.ctx;
-    c.fillStyle = 'rgba(30,24,18,0.9)'; D.rr(10, y, W - 20, 36, 6); c.fill();
+    c.fillStyle = 'rgba(30,24,18,0.9)'; D.rr(10, y, 400, 36, 6); c.fill();
     var items = [
       ['生命', Math.round(s.maxHp), s.maxHp - T.player.hp],
       ['伤害', pct(s.dmg - 1), s.dmg - 1],
@@ -572,67 +596,72 @@
 
   // ================= 复活 =================
   UI.revive = function (g, adLabel) {
+    var cx = W / 2;
     UI.dim(0.78);
-    UI.panel(24, 170, W - 48, 350, C.red);
-    D.glowText('值守中断', W / 2, 220, 34, C.red, 'center', 14);
-    D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', W / 2, 262, 13, C.text, 'center');
+    UI.panel(cx - 220, 100, 440, 340, C.red);
+    D.glowText('值守中断', cx, 146, 34, C.red, 'center', 14);
+    D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', cx, 186, 13, C.text, 'center');
     var h = g.lastHits[g.lastHits.length - 1];
-    if (h) D.text('致命一击：' + h.src, W / 2, 288, 13, '#ffb3c1', 'center', true);
-    UI.button('revive', 50, 330, W - 100, 70, adLabel + ' · 原地复活', { style: 'ad', size: 18, sub: '恢复 60% 生命，清空身边敌人（每局一次）' });
-    if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', W / 2, 414, 10, C.dim, 'center');
-    UI.button('giveup', 50, 440, W - 100, 52, '结束值守，查看结算', { style: 'ghost', size: 14 });
+    if (h) D.text('致命一击：' + h.src, cx, 212, 13, '#ffb3c1', 'center', true);
+    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '原地复活', { style: 'ad', size: 18, sub: '恢复 60% 生命，清空身边敌人（每局一次）' });
+    if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
+    UI.button('giveup', cx - 190, 352, 380, 52, '结束值守，查看结算', { style: 'ghost', size: 14 });
   };
 
   // ================= 结算 =================
   UI.result = function (g) {
-    var r = g.result, c = D.ctx;
+    var r = g.result, c = D.ctx, i;
     D.drawBg(true);
     UI.dim(0.6);
-    D.text('值守结束', W / 2, 60, 16, C.dim, 'center', true);
-    D.glowText('撑到第 ' + r.wave + ' 波', W / 2, 104, 36, r.newBest ? C.gold : C.cyan, 'center', 16);
-    if (r.coreDown) D.text('圣火熄灭了', W / 2, 140, 13, C.red, 'center', true);
-    else if (r.newBest) D.text('新纪录', W / 2, 140, 13, C.gold, 'center', true);
-    else D.text('最佳：第 ' + r.best + ' 波', W / 2, 140, 12, C.dim, 'center');
-    UI.panel(16, 162, W - 32, 62);
-    D.text('击杀', 56, 182, 11, C.dim, 'center'); D.text(String(r.kills), 56, 204, 18, C.text, 'center', true);
-    D.text('金币', 160, 182, 11, C.dim, 'center'); D.text(String(r.shards), 160, 204, 18, C.shard, 'center', true);
-    D.text('位阶', 280, 182, 11, C.dim, 'center'); D.text(r.stage, 280, 204, 16, C.text, 'center', true);
-    D.text('最高连杀', 370, 182, 11, C.dim, 'center'); D.text('×' + (r.streak || 0), 370, 204, 18, C.gold, 'center', true);
-    // 输出构成
-    var un = r.unlocked || [];
-    var rows = Math.max(1, Math.min(un.length ? 6 : 9, r.list.length)), ph = 44 + rows * 25;
-    UI.panel(16, 236, W - 32, ph);
-    D.text('输出构成', 30, 256, 13, C.text, 'left', true);
-    var max = 1, i;
+    D.text('值守结束' + (r.hero && RW.CLASSES[r.hero] ? ' · ' + RW.CLASSES[r.hero].name : ''), W / 2, 30, 14, C.dim, 'center', true);
+    D.glowText('撑到第 ' + r.wave + ' 波', W / 2, 70, 36, r.newBest ? C.gold : C.cyan, 'center', 16);
+    if (r.coreDown) D.text('圣火熄灭了', W / 2, 104, 13, C.red, 'center', true);
+    else if (r.newBest) D.text('新纪录', W / 2, 104, 13, C.gold, 'center', true);
+    else D.text('最佳：第 ' + r.best + ' 波', W / 2, 104, 12, C.dim, 'center');
+    // 左栏：数据 + 输出构成
+    var LX = 24, LW = 440;
+    UI.panel(LX, 124, LW, 62);
+    var st = [['击杀', String(r.kills), C.text], ['金币', String(r.shards), C.shard], ['位阶', r.stage, C.text], ['最高连杀', '×' + (r.streak || 0), C.gold]];
+    for (i = 0; i < st.length; i++) {
+      var sx = LX + 55 + i * 110;
+      D.text(st[i][0], sx, 144, 11, C.dim, 'center'); D.text(st[i][1], sx, 166, 18, st[i][2], 'center', true);
+    }
+    var rows = Math.max(1, Math.min(10, r.list.length)), ph = 40 + rows * 26;
+    UI.panel(LX, 196, LW, ph);
+    D.text('输出构成', LX + 14, 214, 13, C.text, 'left', true);
+    var max = 1;
     for (i = 0; i < r.list.length; i++) max = Math.max(max, r.list[i].dmg);
     for (i = 0; i < rows && i < r.list.length; i++) {
-      var it = r.list[i], yy = 282 + i * 25;
-      D.text(it.name, 30, yy, 12, it.color, 'left', true);
-      c.fillStyle = '#2a2016'; c.fillRect(140, yy - 6, 190, 12);
-      c.fillStyle = it.color; c.fillRect(140, yy - 6, 190 * it.dmg / max, 12);
-      D.text(String(it.dmg), W - 30, yy, 11, C.text, 'right');
+      var it = r.list[i], yy = 240 + i * 26;
+      D.text(it.name, LX + 14, yy, 12, it.color, 'left', true);
+      c.fillStyle = '#2a2016'; c.fillRect(LX + 130, yy - 6, 230, 12);
+      c.fillStyle = it.color; c.fillRect(LX + 130, yy - 6, 230 * it.dmg / max, 12);
+      D.text(String(it.dmg), LX + LW - 14, yy, 11, C.text, 'right');
     }
-    // 死因
-    var dy = 236 + ph + 12;
-    UI.panel(16, dy, W - 32, 104);
-    D.text('最后受到的伤害', 30, dy + 20, 13, C.text, 'left', true);
-    if (!r.hits.length) D.text('无', 30, dy + 46, 12, C.dim, 'left');
+    // 右栏：死因 / 解锁 / 按钮
+    var RX = 488, RWd = W - RX - 24;
+    UI.panel(RX, 124, RWd, 118);
+    D.text('最后受到的伤害', RX + 14, 144, 13, C.text, 'left', true);
+    if (!r.hits.length) D.text('无', RX + 14, 170, 12, C.dim, 'left');
     for (i = 0; i < r.hits.length; i++) {
       var hh = r.hits[r.hits.length - 1 - i];
-      D.text((i === 0 ? '致命 · ' : '之前 · ') + hh.src, 30, dy + 46 + i * 20, 12, i === 0 ? '#ffb3c1' : C.dim, 'left', i === 0);
-      D.text('-' + (Math.round(hh.dmg * 10) / 10), W - 30, dy + 46 + i * 20, 12, '#ff6b81', 'right', true);
+      D.text((i === 0 ? '致命 · ' : '之前 · ') + hh.src, RX + 14, 170 + i * 22, 12, i === 0 ? '#ffb3c1' : C.dim, 'left', i === 0);
+      D.text('-' + (Math.round(hh.dmg * 10) / 10), RX + RWd - 14, 170 + i * 22, 12, '#ff6b81', 'right', true);
     }
+    var adv = D.wrap(UI.adviceFor(r), RWd - 28, 12);
+    for (i = 0; i < adv.length; i++) D.text(adv[i], RX + 14, 262 + i * 18, 12, C.dim, 'left');
+    var un = r.unlocked || [];
     if (un.length) {   // 新解锁的英雄
-      var uy = dy + 114;
-      c.fillStyle = 'rgba(60,44,12,0.95)'; D.rr(16, uy, W - 32, 54, 10); c.fill();
-      c.strokeStyle = C.gold; c.lineWidth = 2; D.rr(17, uy + 1, W - 34, 52, 10); c.stroke();
-      for (i = 0; i < Math.min(3, un.length); i++) UI.heroGlyph(un[i], 48 + i * 40, uy + 27, 0.4);
+      var uy = 320;
+      c.fillStyle = 'rgba(60,44,12,0.95)'; D.rr(RX, uy, RWd, 64, 10); c.fill();
+      c.strokeStyle = C.gold; c.lineWidth = 2; D.rr(RX + 1, uy + 1, RWd - 2, 62, 10); c.stroke();
+      for (i = 0; i < Math.min(3, un.length); i++) UI.heroGlyph(un[i], RX + 36 + i * 44, uy + 32, 0.44);
       var names = un.map(function (id) { return RW.CLASSES[id].name; }).join('、');
-      D.glowText('解锁新英雄：' + names, 48 + Math.min(3, un.length) * 40 - 10, uy + 28, 15, C.gold, 'left', 8);
+      D.glowText('解锁新英雄：' + names, RX + 36 + Math.min(3, un.length) * 44 - 12, uy + 33, 16, C.gold, 'left', 8);
     }
-    UI.button('again', 16, 628, 250, 58, '再来一局', { style: 'primary', size: 20 });
-    UI.button('home', 276, 628, 128, 58, '返回标题', { size: 14 });
-    D.text(UI.adviceFor(r), W / 2, 710, 11, C.dim, 'center');
+    UI.button('again', RX, 404, RWd - 150, 58, '再来一局', { style: 'primary', size: 20 });
+    UI.button('home', RX + RWd - 140, 404, 140, 58, '返回标题', { size: 14 });
+    D.text('Enter 再来一局', RX + (RWd - 150) / 2, 476, 10, C.faint, 'center');
   };
   UI.adviceFor = function (r) {
     var h = r.hits[r.hits.length - 1];
@@ -650,12 +679,14 @@
   // ================= 暂停 =================
   UI.pause = function (g, muted) {
     UI.dim(0.75);
-    UI.panel(50, 220, W - 100, 300, C.cyan);
-    D.text('暂停', W / 2, 262, 26, C.text, 'center', true);
-    D.text('第 ' + g.wave + ' 波', W / 2, 294, 12, C.dim, 'center');
-    UI.button('resume', 80, 320, W - 160, 52, '继续', { style: 'primary', size: 18 });
-    UI.button('mute', 80, 384, W - 160, 44, muted ? '音效：关' : '音效：开', { size: 14 });
-    UI.button('quit', 80, 440, W - 160, 44, '放弃本局', { style: 'danger', size: 14 });
+    var cx = W / 2;
+    UI.panel(cx - 170, 110, 340, 300, C.cyan);
+    D.text('暂停', cx, 150, 26, C.text, 'center', true);
+    D.text('第 ' + g.wave + ' 波 · Esc 继续', cx, 180, 12, C.dim, 'center');
+    UI.button('resume', cx - 140, 206, 280, 52, '继续', { style: 'primary', size: 18 });
+    UI.button('mute', cx - 140, 270, 136, 44, muted ? '声音：关' : '声音：开', { size: 14 });
+    UI.button('music', cx + 4, 270, 136, 44, UI.musicOff ? '音乐：关' : '音乐：开', { size: 14 });
+    UI.button('quit', cx - 140, 326, 280, 44, '放弃本局', { style: 'danger', size: 14 });
   };
 
   RW.UI = UI;

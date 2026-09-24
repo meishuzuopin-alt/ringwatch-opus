@@ -472,11 +472,10 @@
   W3.init = function () {
     if (!GL.ok) return false;
     var t = buildTerrain();
-    W3.land = GL.upload(t.land);
-    W3.water = GL.upload(t.water);
+    W3.land = GL.upload(t.land, { static: true });
+    W3.water = GL.upload(t.water, { static: true, water: true });
     W3.lamps = t.lamps;
     buildModels();
-    W3.water.outline = false; W3.water.shadow = false;
     // 发光小物件不描边、不投影，保持干净的光点
     ['coin', 'crystal'].forEach(function (k) { if (W3.meshes[k]) { W3.meshes[k].outline = false; W3.meshes[k].shadow = false; } });
     // 浏览器调试参数：?lowfx 关掉全部画质效果；?hifx 锁定画质、不自动降级（截图用）
@@ -492,13 +491,15 @@
   };
 
   // ================= 镜头 =================
-  var CAM = { pitch: 44 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 1080 };
+  var CAM = { pitch: 46 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 980 };
   W3.updateCamera = function (g, dt, orbit, aspect) {
     var p = g.player, WD = T.WORLD, ct = W3.camT;
     var tx, tz;
     if (orbit) { tx = T.core.x + Math.cos(W3.t * 0.12) * 120; tz = T.core.y - 120 + Math.sin(W3.t * 0.12) * 80; }
     else { tx = p.x + p.vx * T.camera.lead; tz = p.y + p.vy * T.camera.lead; }
-    tx = Math.max(200, Math.min(WD.w - 200, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
+    // 横屏视野很宽：按地面上的可见半宽限制镜头，别拍到地图外面
+    var asp = aspect || V.w / V.h, mx = Math.min(WD.w / 2, Math.tan(CAM.fov / 2) * CAM.dist * asp * 0.92);
+    tx = Math.max(mx, Math.min(WD.w - mx, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
     if (W3.snap) { ct.x = tx; ct.z = tz; W3.snap = false; }
     else { var k = 1 - Math.exp(-T.camera.follow * dt); ct.x += (tx - ct.x) * k; ct.z += (tz - ct.z) * k; }
     var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) : 0;
@@ -518,7 +519,9 @@
   W3.toScreen = function (x, y, z) {
     var p = GL.project(x, y, z);
     if (!p) { SP.ok = false; return SP; }
-    SP.x = V.x + (p[0] * 0.5 + 0.5) * V.w; SP.y = V.y + (0.5 - p[1] * 0.5) * V.h;
+    // 3D 铺满整个窗口：NDC -> 窗口 CSS 像素 -> 逻辑坐标
+    var v = RW.Plat.view;
+    SP.x = ((p[0] * 0.5 + 0.5) * v.cssW - v.ox) / v.s; SP.y = ((0.5 - p[1] * 0.5) * v.cssH - v.oy) / v.s;
     SP.ok = p[0] > -1.1 && p[0] < 1.1 && p[1] > -1.1 && p[1] < 1.1;
     return SP;
   };
@@ -554,37 +557,11 @@
     drawCorpses(g, M);
     if (!orbit || g.mode === 'down') drawHero(g, M);
     drawPickups(g, M);
-    // 1. 阴影贴图：覆盖当前可见范围
-    if (GL.fx.shadow && GL.shadowRT) {
-      var b = W3.bounds, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
-      var r = Math.sqrt((b.x1 - b.x0) * (b.x1 - b.x0) + (b.z1 - b.z0) * (b.z1 - b.z0)) / 2 + 40;
-      GL.setLight(env.light, cx, cz, r);
-      GL.beginShadow();
-      GL.drawStatic(W3.land, false);
-      for (k in M) if (M[k].shadow) GL.drawInstances(M[k]);
-      GL.endShadow();
-    }
-    // 2. 正常着色
-    GL.beginFrame(viewport[0], viewport[1], viewport[2], viewport[3], env.clear);
-    GL.useMesh(env);
-    GL.drawStatic(W3.land, false);
-    GL.drawStatic(W3.water, true);
-    for (k in M) GL.drawInstances(M[k]);
-    // 3. 描边
-    if (GL.fx.outline && GL.lineProg) {
-      GL.useLine(env, 1.05);
-      GL.drawStatic(W3.land, false);
-      GL.useLine(env, 1.25);
-      for (k in M) if (M[k].outline) GL.drawInstances(M[k]);
-      GL.endLine();
-    }
-    GL.resetInstances(M);
-    // 4. 特效
     drawFx(g, env);
-    GL.flushAlpha();
-    GL.flushAdd();
-    // 5. 泛光
-    GL.bloom(viewport[0], viewport[1], viewport[2], viewport[3], env.bloom, env.thr);
+    // 阴影覆盖当前可见范围；光照、雾、描边、泛光、调色都由 env 决定
+    var b = W3.bounds, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
+    var r = Math.sqrt((b.x1 - b.x0) * (b.x1 - b.x0) + (b.z1 - b.z0) * (b.z1 - b.z0)) / 2 + 40;
+    GL.frame(env, { cx: cx, cz: cz, r: r });
   };
 
   function flashOf(e) { return e.flash > 0 ? 0.85 : 0; }

@@ -1,0 +1,41 @@
+name: 桌面版打包（Steam 上传用）
+
+# 手动触发：Actions 页面选这个流程 -> Run workflow。产物是可直接上传 Steam 的免安装目录。
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+            out: dist/win-unpacked
+            name: Ringwatch-windows
+          - os: macos-latest
+            target: --mac
+            out: dist/mac*
+            name: Ringwatch-macos
+          - os: ubuntu-latest
+            target: --linux
+            out: dist/linux-unpacked
+            name: Ringwatch-linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node tools/check.js
+      - run: npx electron-builder ${{ matrix.target }} --dir --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # 暂不做代码签名（Steam 不强制）
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.out }}
+          retention-days: 7

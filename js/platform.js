@@ -21,7 +21,10 @@
         v.dpr = Math.min(2, window.devicePixelRatio || 1);
         Plat.canvas.style.width = v.cssW + 'px'; Plat.canvas.style.height = v.cssH + 'px';
         Plat.canvas.width = Math.round(v.cssW * v.dpr); Plat.canvas.height = Math.round(v.cssH * v.dpr);
-        if (Plat.hud) { Plat.hud.width = Plat.canvas.width; Plat.hud.height = Plat.canvas.height; }
+        if (Plat.hud) {
+          Plat.hud.width = Plat.canvas.width; Plat.hud.height = Plat.canvas.height;
+          if (Plat.hud.style) { Plat.hud.style.width = v.cssW + 'px'; Plat.hud.style.height = v.cssH + 'px'; }
+        }
         Plat.computeView();
         if (Plat.onResize) Plat.onResize();
       };
@@ -32,7 +35,15 @@
     var force2d = !isWx && typeof location !== 'undefined' && /[?&]2d\b/.test(location.search);
     try { Plat.gl3d = !force2d && !!(RW.GL && RW.GL.init(Plat.canvas)); } catch (err) { console.error(err); Plat.gl3d = false; }
     if (Plat.gl3d) {
-      Plat.hud = Plat.createOffscreen(Plat.canvas.width, Plat.canvas.height);
+      if (isWx) Plat.hud = Plat.createOffscreen(Plat.canvas.width, Plat.canvas.height);
+      else {
+        // HUD：叠在 3D 画布上的透明画布，不接收鼠标（输入统一由底下的游戏画布处理）
+        var h = Plat.hud = document.createElement('canvas');
+        h.id = 'hud';
+        h.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;width:' + Plat.view.cssW + 'px;height:' + Plat.view.cssH + 'px';
+        h.width = Plat.canvas.width; h.height = Plat.canvas.height;
+        Plat.canvas.parentNode.appendChild(h);
+      }
       Plat.ctx = Plat.hud.getContext('2d');
     } else Plat.ctx = Plat.canvas.getContext('2d');
     Plat.computeView();
@@ -111,7 +122,9 @@
   // ---------- 存档 ----------
   Plat.load = function (key, def) {
     try {
-      var v = isWx ? wx.getStorageSync(key) : window.localStorage.getItem(key);
+      // 桌面版：存档是用户目录下的 JSON 文件（方便 Steam 云存档同步）
+      var dk = typeof window !== 'undefined' && window.desktop && window.desktop.load;
+      var v = isWx ? wx.getStorageSync(key) : (dk ? window.desktop.load(key) : window.localStorage.getItem(key));
       if (v === '' || v === null || v === undefined) return def;
       return JSON.parse(v);
     } catch (e) { return def; }
@@ -119,7 +132,9 @@
   Plat.save = function (key, val) {
     try {
       var s = JSON.stringify(val);
-      if (isWx) wx.setStorageSync(key, s); else window.localStorage.setItem(key, s);
+      if (isWx) wx.setStorageSync(key, s);
+      else if (window.desktop && window.desktop.save) window.desktop.save(key, s);
+      else window.localStorage.setItem(key, s);
     } catch (e) { /* 存不了就算了，不影响游戏 */ }
   };
 
@@ -136,8 +151,11 @@
   // 广告位常量留空时：不播放任何东西，直接「预览发放」，按钮文案也会写明「预览发放」。
   var adCache = {};
   Plat.adUnit = function (kind) { return kind === 'revive' ? RW.AD.REWARD_REVIVE : RW.AD.REWARD_REROLL; };
+  // Steam / 桌面版没有广告：hasAds 为假时，界面不显示任何广告入口，复活直接可用（每局一次）
+  Plat.hasAds = isWx;
   Plat.adLabel = function (kind) { return Plat.adUnit(kind) ? '看广告' : '预览发放'; };
   Plat.showReward = function (kind, onGrant, onFail) {
+    if (!Plat.hasAds) { onGrant({ free: true }); return; }
     var unit = Plat.adUnit(kind);
     if (!unit) { onGrant({ preview: true }); return; }
     if (!isWx || !wx.createRewardedVideoAd) { onFail('当前环境无法播放广告'); return; }
