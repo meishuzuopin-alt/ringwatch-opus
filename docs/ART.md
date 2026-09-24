@@ -27,7 +27,7 @@
 | wizard 尖帽 · hood 兜帽 · helm 头盔 · bandana 头巾 · goggles 护目镜 · horn 角盔 · halo 光环 · cap 帽子 · tophat 礼帽 · crown 王冠 | staff 法杖 · crossbow 弩 · sword 剑盾 · dagger 双匕 · wrench 扳手 · axe 斧 · book 圣典 · bomb 炸弹 · coin 钱袋 · dice 骰子 |
 
 模型在 `js/world3d.js` 的 `buildModels`；选英雄界面的头像在 `js/ui.js` 的 `UI.hatGlyph / UI.propGlyph`，两边改造型时要保持一致。
-本轮识别度修正：影刺客的头巾增加浅紫双尾，延伸出后脑轮廓；工匠增加绕过两侧的棕金镜带与后扣。验收时从正面、背面和斜后方检查，390×780 战斗画面中仍应认出两种配饰；选人头像的小图标同步体现尾带和镜带。
+本轮识别度修正：影刺客的头巾增加浅紫双尾，延伸出后脑轮廓；工匠增加绕过两侧的棕金镜带与后扣。验收时从正面、背面和斜后方检查；在 1280×720 横屏战斗画面中仍应清楚认出两种配饰，选人头像也应体现尾带与镜带。
 
 ## 可以直接改的地方
 
