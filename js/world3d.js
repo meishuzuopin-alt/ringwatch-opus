@@ -483,9 +483,20 @@
   var CAM = { pitch: 46 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 980 };
   W3.updateCamera = function (g, dt, orbit, aspect) {
     var p = g.player, WD = T.WORLD, ct = W3.camT;
+    var lv = (g.core && g.core.lv) || 1, open = Math.max(0, Math.min(1, (lv - 1) / 4));
+    CAM.dist = 860 + open * 560;
+    CAM.pitch = (50 - open * 10) * Math.PI / 180;
     var tx, tz;
     if (orbit) { tx = T.core.x + Math.cos(W3.t * 0.12) * 120; tz = T.core.y - 120 + Math.sin(W3.t * 0.12) * 80; }
-    else { tx = p.x + p.vx * T.camera.lead; tz = p.y + p.vy * T.camera.lead; }
+    else {
+      tx = p.x + p.vx * T.camera.lead; tz = p.y + p.vy * T.camera.lead;
+      var fr = g.front;
+      if (fr && lv > 1) {
+        var pull = 0.28 + open * 0.22;
+        tx = tx * (1 - pull) + fr.x * pull;
+        tz = tz * (1 - pull) + fr.y * pull;
+      }
+    }
     // 横屏视野很宽：按地面上的可见半宽限制镜头，别拍到地图外面
     var asp = aspect || V.w / V.h, mx = Math.min(WD.w / 2, Math.tan(CAM.fov / 2) * CAM.dist * asp * 0.92);
     tx = Math.max(mx, Math.min(WD.w - mx, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
@@ -537,11 +548,15 @@
     var target = envPreset(W3.envFor(g));
     lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
     var env = W3.env; env.time = W3.t;
+    var open = Math.max(0, Math.min(1, (((g.core && g.core.lv) || 1) - 1) / 4));
+    env.fogNear += open * 500; env.fogFar += open * 1100;
     W3.updateCamera(g, dt, orbit, viewport[2] / viewport[3]);
     var M = W3.meshes, k;
     drawCore(g, M);
     drawTowers(g, M);
     drawSoldiers(g, M);
+    drawMates(g, M);
+    drawChests(g, M);
     drawEnemies(g, M);
     drawCorpses(g, M);
     if (!orbit || g.mode === 'down') drawHero(g, M);
@@ -700,6 +715,24 @@
       if (range) GL.ground(true, tw.x, 0.8, tw.y, range, 1, 0.012, hex(d.color), 0.25);
       if (d.kind === 'pylon') { GL.glow(tw.x, 84, tw.y, 18, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
       if (d.kind === 'siphon') GL.glow(tw.x, 78, tw.y, 14, hex('#ffe066'), 0.6);
+    }
+  }
+  function drawChests(g, M) {
+    for (var i = 0; i < g.chests.length; i++) {
+      var b = g.chests[i];
+      if (!b.on || !W3.inView(b.x, b.y, 20)) continue;
+      GL.put(M.crystal, b.x, 16, b.y, W3.t, 4, 3.2, 4, 0, 1, 0.82, 0.35, 0);
+      GL.glow(b.x, 22, b.y, 16, hex('#ffe08a'), 0.45);
+    }
+  }
+  function drawMates(g, M) {
+    for (var i = 0; i < g.mates.length; i++) {
+      var m = g.mates[i];
+      if (!m.on || !W3.inView(m.x, m.y, 30)) continue;
+      var sc = m.star === 2 ? 1.45 : 1;
+      var col = hex(m.d.color);
+      GL.put(M.soldier, m.x, 0, m.y, m.ang, sc, sc, sc, 0, col[0], col[1], col[2], m.flash > 0 ? 0.7 : 0);
+      GL.ground(false, m.x, 0.6, m.y, 7 * sc, 2, 0.3, BLACK, 0.3 * W3.blobShadow());
     }
   }
   function drawSoldiers(g, M) {

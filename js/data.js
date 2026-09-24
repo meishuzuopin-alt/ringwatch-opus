@@ -18,7 +18,7 @@
     MAX_ENEMIES: 120,
     FONT: 'Consolas, "Courier New", monospace',
     player: {
-      hp: 30, speed: 165, radius: 10,
+      hp: 30, mp: 100, mpRegen: 18, speed: 165, radius: 10,
       accel: 2300, turnAccel: 3600, friction: 1150,
       iframes: 0.55, pickup: 36, crit: 0.05, critMul: 2,
       hurtPush: 190
@@ -34,10 +34,13 @@
     build: { max: 8, spacing: 34, step: 0.15, time: 0.5 },
     // 圣火：村子中央的守护目标。它熄灭 = 值守失败（位置由地图里的 C 决定）。
     core: { x: 580, y: 900, r: 30, hp: 260, gunDmg: 6, gunCd: 0.5, gunRange: 170, waveHeal: 0.5, repairCost: 14, repairPart: 0.5, armorCost: 20, armorHp: 50, interceptDist: 110 },
-    priceGrowth: 0.08,          // 每波物价 +8%
+    priceGrowth: 0.06,          // 每波物价 +6%，买数值要赶在曲线前面
     rerollBase: 2, rerollPerWave: 1, rerollStep: 2,
     sellRate: 0.5,
-    armorPerPoint: 0.07,        // 每点护甲 受伤 -7%
+    armorPerPoint: 12,          // 护甲减伤 = 护甲 / (护甲 + 12)，最高 75%
+    armorNeg: 0.08,              // 负护甲：每点受伤 +8%
+    harvestBase: 6,              // 每波结束固定收成
+    harvestPer: 30,              // 金币获取每 +100% ，收成 +30
     lifestealPerSec: 8,         // 吸血每秒最多触发次数
     dodgeCap: 0.6,              // 闪避上限
     thornsR: 70,                // 反伤范围
@@ -56,51 +59,51 @@
   // ---------- 武器表（6） ----------
   RW.WEAPONS = {
     needle: {
-      name: '飞弩', kind: 'needle', color: '#ffe08a', cost: 15,
-      dmg: 8, cd: [0.38, 0.32, 0.26], range: 235, speed: 560, knock: 80,
+      name: '飞弩', kind: 'needle', color: '#ffe08a', cost: 16,
+      dmg: 8, cd: [0.38, 0.32, 0.26], range: 235, speed: 560, knock: 80, tag: 'ranged',
       pros: '射程远、弹道快，站远了也能稳定输出',
       cons: '只打单体，打有护甲的敌人每发都被削',
       extraNote: '额外弹数：每 +1 多一发，呈扇形'
     },
     scatter: {
       name: '霰火', kind: 'scatter', color: '#ff9a3c', cost: 18,
-      dmg: 4, cd: [0.9, 0.84, 0.78], range: 150, speed: 440, knock: 150, pellets: 5, spread: 0.62, recoil: 55,
+      dmg: 4, cd: [0.9, 0.84, 0.78], range: 150, speed: 440, knock: 150, pellets: 5, spread: 0.62, recoil: 55, tag: 'ranged',
       pros: '贴脸喷出 5 团火焰，击退强，瞬间打散怪群',
       cons: '射程很短，还会把你往后推',
       extraNote: '额外弹数：每 +1 多两团火'
     },
     blades: {
       name: '护身剑环', kind: 'blades', color: '#bff5ff', cost: 18,
-      dmg: 4, cd: [0.35, 0.33, 0.3], range: 54, spin: 4.4, knock: 110, count: 3, bladeR: 8,
+      dmg: 4, cd: [0.35, 0.33, 0.3], range: 54, spin: 4.4, knock: 110, count: 3, bladeR: 8, tag: 'melee',
       pros: '不用瞄准，绕身旋转，贴身清杂兵',
       cons: '没有射程，得主动往怪里钻',
       extraNote: '额外弹数：每 +1 多一片刃'
     },
     lance: {
-      name: '雷光矛', kind: 'lance', color: '#b58cff', cost: 22,
-      dmg: 34, cd: [1.1, 1.0, 0.9], range: 340, charge: 0.34, width: 12, knock: 90,
+      name: '雷光矛', kind: 'lance', color: '#b58cff', cost: 26,
+      dmg: 34, cd: [1.1, 1.0, 0.9], range: 340, charge: 0.34, width: 12, knock: 90, tag: 'spell',
       pros: '一道雷光贯穿整条线，单发高伤，打精英最强',
       cons: '蓄力 0.34 秒才开火，方向提前锁死，快怪能躲开',
       extraNote: '额外弹数：每 +1 多一道偏 ±6° 的雷光'
     },
     arc: {
       name: '连锁闪电', kind: 'arc', color: '#8fc2ff', cost: 20,
-      dmg: 7, cd: [0.8, 0.74, 0.68], range: 170, jumps: 3, jumpRange: 110, falloff: 0.8, knock: 30,
+      dmg: 7, cd: [0.8, 0.74, 0.68], range: 170, jumps: 3, jumpRange: 110, falloff: 0.8, knock: 30, tag: 'spell',
       pros: '必中，在敌人之间连跳，越密越赚',
       cons: '每跳一次伤害 ×0.8，单挑精英很乏力',
       extraNote: '额外弹数：每 +1 多跳一次'
     },
     mines: {
       name: '符文陷阱', kind: 'mines', color: '#ff7a4a', cost: 20,
-      dmg: 15, cd: [1.4, 1.28, 1.16], range: 58, maxMines: 4, arm: 0.45, trigger: 24, life: 12, knock: 230,
+      dmg: 15, cd: [1.4, 1.28, 1.16], range: 58, maxMines: 4, arm: 0.45, trigger: 24, life: 12, knock: 230, tag: 'spell',
       pros: '符文爆炸范围大、击退猛，把怪引过来就清场',
       cons: '只在你脚下布雷，站着不动就没有输出',
       extraNote: '额外弹数：每 +1 同时存在的雷 +2'
     }
   };
   RW.WEAPON_ORDER = ['needle', 'scatter', 'blades', 'lance', 'arc', 'mines'];
-  RW.TIER_DMG = [1, 1.65, 2.5];
-  RW.TIER_COST = [1, 1.6, 2.6];     // 买 I / 升 II / 升 III 的价格倍率
+  RW.TIER_DMG = [1, 1.85, 3.1];
+  RW.TIER_COST = [1, 1.45, 2.2];     // 买 I / 升 II / 升 III 的价格倍率
   RW.MAX_SLOTS = 6;
 
   // ---------- 英雄（开局选一个；多数需要解锁） ----------
@@ -110,7 +113,7 @@
   RW.CLASSES = {
     mage: {
       name: '法师', tag: '贴脸爆发', color: '#ff9a3c', cape: '#ff8a2a', look: { hat: 'wizard', prop: 'staff' },
-      weapon: 'arc', skill: 'nova', hp: 26, fx: {},
+      weapon: 'arc', skill: 'nova', hp: 26, fx: { spell: 0.2 },
       passive: '近焰：离敌人越近伤害越高，贴身 +40%',
       near: { r0: 60, r1: 200, bonus: 0.4 },
       pros: '起手连锁闪电 + 炎爆；站进怪堆里打最痛',
@@ -119,7 +122,7 @@
     },
     ranger: {
       name: '弩手', tag: '站桩狙击', color: '#9dff7a', cape: '#3e8a3a', look: { hat: 'hood', prop: 'crossbow' },
-      weapon: 'needle', skill: 'storm', hp: 30, fx: {},
+      weapon: 'needle', skill: 'storm', hp: 30, fx: { ranged: 0.2 },
       passive: '凝神：站定射击叠层，每层暴击 +8%，满 5 层弩箭穿透',
       focus: { still: 40, per: 0.45, max: 5, crit: 0.08, decay: 1.2 },
       pros: '起手飞弩 + 追魂箭雨；站稳了暴击高、能穿透',
@@ -128,17 +131,17 @@
     },
     knight: {
       name: '盾骑士', tag: '反伤坦克', color: '#9fc4ff', cape: '#3f5f9e', look: { hat: 'helm', prop: 'sword' },
-      weapon: 'blades', skill: 'nova', hp: 38, fx: { armor: 3, thorns: 6, speed: -0.08, rate: -0.1 },
+      weapon: 'blades', skill: 'bash', hp: 38, fx: { armor: 3, thorns: 6, speed: -0.08, rate: -0.1, melee: 0.15 },
       passive: '荆棘：挨打时反震身边的敌人',
-      pros: '血厚甲硬，挨打还能反伤，适合贴着桥头硬扛',
+      pros: '血厚甲硬，盾击把贴脸的怪掀开，适合守桥头',
       cons: '走得慢、攻速低，追不上逃跑的怪',
       unlock: { kind: 'wave', wave: 5, text: '任意英雄打到第 5 波' }
     },
     rogue: {
       name: '影刺客', tag: '暴击收割', color: '#d6a8ff', cape: '#3a2a55', look: { hat: 'bandana', prop: 'dagger' },
-      weapon: 'needle', skill: 'storm', hp: 22, fx: { crit: 0.15, critMul: 1, speed: 0.12, dashCd: -0.3, armor: -1 },
+      weapon: 'needle', skill: 'shade', hp: 22, fx: { crit: 0.15, critMul: 1, speed: 0.12, dashCd: -0.3, armor: -1, melee: 0.1 },
       passive: '致命：暴击伤害 ×3（别人 ×2），冲刺冷却 -30%',
-      pros: '暴击高、暴击伤害高、跑得快，冲刺很勤',
+      pros: '暴击高、跑得快，影步往前扎进怪堆再穿出来',
       cons: '血最薄，还自带 -1 护甲，被摸两下就危险',
       unlock: { kind: 'wave', wave: 6, hero: 'ranger', text: '用弩手打到第 6 波' }
     },
@@ -152,41 +155,41 @@
     },
     berserker: {
       name: '狂战士', tag: '残血暴走', color: '#ff6a4a', cape: '#8a2a1a', look: { hat: 'horn', prop: 'axe' },
-      weapon: 'blades', skill: 'nova', hp: 34, fx: { rage: 0.8, dmg: 0.1, dmgTaken: 0.15 },
+      weapon: 'blades', skill: 'cleave', hp: 34, fx: { rage: 0.8, dmg: 0.1, dmgTaken: 0.15, melee: 0.2 },
       passive: '狂怒：生命越低伤害越高，残血时最多 +80%',
-      pros: '血越少越猛，残血时一刀一片',
+      pros: '血越少越猛，狂斩在残血时一刀一片',
       cons: '受到伤害 +15%，玩脱了就是一瞬间',
       unlock: { kind: 'kills', n: 1500, text: '累计击杀 1500 只敌人' }
     },
     priest: {
       name: '圣女', tag: '续航守护', color: '#fff1a8', cape: '#f4f0e0', look: { hat: 'halo', prop: 'book' },
-      weapon: 'arc', skill: 'veil', hp: 30, fx: { regen: 0.5, healOrb: 1.5, healCore: 4, dmg: -0.12 },
+      weapon: 'arc', skill: 'hymn', hp: 30, fx: { regen: 0.5, healOrb: 1.5, healCore: 4, dmg: -0.12 },
       passive: '祝福：回血火光多 2.5 倍，捡到时还给圣火回 4 点',
-      pros: '自己能回血，还能顺手修圣火，很难被磨死',
+      pros: '圣愈同时拉自己和圣火，很难被磨死',
       cons: '伤害 -12%，杀得慢',
       unlock: { kind: 'wave', wave: 8, hero: 'mage', text: '用法师打到第 8 波' }
     },
     bomber: {
       name: '爆破手', tag: '范围轰炸', color: '#ff7a4a', cape: '#5a4630', look: { hat: 'cap', prop: 'bomb' },
-      weapon: 'mines', skill: 'well', hp: 28, fx: { blastR: 0.35, knock: 0.3, range: -0.2 },
+      weapon: 'mines', skill: 'salvo', hp: 28, fx: { blastR: 0.35, knock: 0.3, range: -0.2 },
       passive: '火药：所有爆炸范围 +35%',
-      pros: '符文陷阱、炎爆、黑洞的爆炸都更大，一炸一片',
+      pros: '连环爆在身前丢三颗延时雷，爆炸范围更大',
       cons: '射程 -20%，远程武器不好用',
       unlock: { kind: 'wave', wave: 10, text: '任意英雄打到第 10 波' }
     },
     merchant: {
       name: '商人', tag: '滚雪球', color: '#ffe066', cape: '#6a3a8a', look: { hat: 'tophat', prop: 'coin' },
-      weapon: 'needle', skill: 'storm', hp: 26, fx: { harvest: 0.3, interest: 0.1, shopPrice: -0.1, dmg: -0.15 },
+      weapon: 'needle', skill: 'bounty', hp: 26, fx: { harvest: 0.3, interest: 0.1, shopPrice: -0.1, dmg: -0.15 },
       passive: '生意经：每次整备按手上金币给 10% 利息，商店打九折',
-      pros: '钱越攒越多，中后期装备最好',
+      pros: '赏金让接下来的击杀掉双倍钱，中后期装备最好',
       cons: '伤害 -15%，前几波会比较难熬',
       unlock: { kind: 'coins', n: 3000, text: '累计获得 3000 金币' }
     },
     gambler: {
       name: '赌徒', tag: '看脸', color: '#7affd0', cape: '#1f5a4a', look: { hat: 'crown', prop: 'dice' },
-      weapon: 'scatter', skill: 'veil', hp: 28, fx: { luck: 0.6, freeReroll: 1, crit: 0.05, dmgTaken: 0.1 },
+      weapon: 'scatter', skill: 'wager', hp: 28, fx: { luck: 0.6, freeReroll: 1, crit: 0.05, dmgTaken: 0.1 },
       passive: '好运：高品质道具更常出现，每次整备免费刷新 1 次',
-      pros: '更容易刷到稀有、传说道具',
+      pros: '豪赌每次随机：炸一片、回一截血，或者直接掉一堆金币',
       cons: '受到伤害 +10%',
       unlock: { kind: 'wave', wave: 12, text: '任意英雄打到第 12 波' }
     }
@@ -213,28 +216,108 @@
   // ---------- 主动技能（1 个技能槽；冲刺人人都有） ----------
   RW.SKILLS = {
     nova: {
-      name: '炎爆', color: '#ff9a3c', cost: 20, cd: 10, dmg: 14, radius: 150, knock: 340,
+      name: '炎爆', color: '#ff9a3c', cost: 18, cd: 10, dmg: 22, radius: 150, knock: 340, tag: 'spell',
       pros: '以自己为中心炸开一圈烈焰，把贴身的怪全部掀飞',
       cons: '只管身边 150，远处的威胁它碰不到'
     },
     veil: {
-      name: '雷暴', color: '#a8d4ff', cost: 24, cd: 14, dur: 3, rate: 7, dmg: 12, radius: 210,
+      name: '雷暴', color: '#a8d4ff', cost: 24, cd: 14, dur: 3, rate: 7, dmg: 12, radius: 210, tag: 'spell',
       pros: '3 秒内从天而降的落雷，自动劈周围的敌人',
       cons: '冷却最长；随机落点，救不了被单只精英追的急'
     },
     well: {
-      name: '黑洞法阵', color: '#c07bff', cost: 24, cd: 12, pull: 1.8, force: 300, radius: 170, dmg: 34, blast: 115,
+      name: '黑洞法阵', color: '#c07bff', cost: 24, cd: 12, pull: 1.8, force: 300, radius: 170, dmg: 42, blast: 115, tag: 'spell',
       pros: '把一大片怪吸成一团再内爆，配雷光矛、符文陷阱最香',
       cons: '要吸 1.8 秒才炸；精英几乎吸不动'
     },
     storm: {
-      name: '追魂箭雨', color: '#ffd166', cost: 22, cd: 12, missiles: 16, dmg: 8, speed: 340, turn: 7, life: 2.4,
+      name: '追魂箭雨', color: '#ffd166', cost: 22, cd: 12, missiles: 16, dmg: 8, speed: 340, turn: 7, life: 2.4, tag: 'ranged',
       pros: '一次射出 16 支追魂箭，自己找目标，适合清散兵',
       cons: '单发伤害低，打护甲怪会被削得很厉害'
+    },
+    bash: {
+      name: '盾击', color: '#9fc4ff', cost: 16, cd: 8, dmg: 14, len: 120, arc: 0.9, knock: 420, tag: 'melee',
+      pros: '身前扇形掀飞，给贴脸的怪让出一条路',
+      cons: '打不远，身后的怪碰不到'
+    },
+    shade: {
+      name: '影步', color: '#d6a8ff', cost: 16, cd: 7, dmg: 18, len: 150, step: 96, knock: 80, tag: 'melee',
+      pros: '向前穿一段，路径上的怪吃一刀',
+      cons: '直线很窄，走位歪了就空'
+    },
+    cleave: {
+      name: '狂斩', color: '#ff6a4a', cost: 18, cd: 8, dmg: 24, len: 130, arc: 1.3, knock: 200, tag: 'melee',
+      pros: '身前宽斩。残血时吃狂怒，一刀比炎爆更痛',
+      cons: '要贴着砍，站远处没有用'
+    },
+    hymn: {
+      name: '圣愈', color: '#fff1a8', cost: 16, cd: 12, heal: 0.32, core: 22,
+      pros: '立刻回复自己一截血，并给圣火回一截',
+      cons: '不造成伤害，怪还在就得接着躲'
+    },
+    salvo: {
+      name: '连环爆', color: '#ff7a4a', cost: 20, cd: 11, dmg: 16, radius: 78, step: 55, knock: 180, tag: 'spell',
+      pros: '身前依次炸开三团火，吃爆炸范围加成',
+      cons: '有延迟，怪走开了就炸空地'
+    },
+    bounty: {
+      name: '赏金', color: '#ffe066', cost: 16, cd: 14, dur: 7,
+      pros: '几秒内每次击杀多掉一枚金币',
+      cons: '自己不打出伤害，要靠你接着杀'
+    },
+    wager: {
+      name: '豪赌', color: '#7affd0', cost: 16, cd: 9, dmg: 22, radius: 130, heal: 0.4, coins: 8, tag: 'spell',
+      pros: '随机变成爆炸、治疗或一笔金币',
+      cons: '可能在你最需要伤害时变成回血'
+    },
+    fan: {
+      name: '扇火', color: '#ffb15a', cost: 14, cd: 4.5, dmg: 6, pellets: 7, spread: 0.9, speed: 480, range: 220, knock: 40, tag: 'ranged', mp: 16,
+      pros: '身前扇出一团火，专门清正面的杂兵',
+      cons: '单发不高，侧面来的怪打不到'
+    },
+    ring: {
+      name: '冲击环', color: '#9fe8ff', cost: 14, cd: 3.6, dmg: 8, len: 130, knock: 260, tag: 'spell', mp: 14,
+      pros: '身边一圈推开，走位清怪最顺手',
+      cons: '打不远'
+    },
+    lash: {
+      name: '横扫', color: '#ffd1a8', cost: 14, cd: 3.2, dmg: 11, len: 150, arc: 1.5, knock: 160, tag: 'melee', mp: 16,
+      pros: '宽扇形连砍，贴着怪群按就有伤害',
+      cons: '要贴身'
     }
   };
   RW.SKILL_ORDER = ['nova', 'veil', 'well', 'storm'];
-  RW.SKILL_TIER = [1, 1.5, 2.2];
+  RW.SKILL_TIER = [1, 1.7, 2.6];
+  RW.LOADOUT = {
+    mage: ['nova', 'ring', 'fan'],
+    ranger: ['storm', 'fan', 'ring'],
+    knight: ['bash', 'lash', 'ring'],
+    rogue: ['shade', 'lash', 'fan'],
+    engineer: ['well', 'ring', 'fan'],
+    berserker: ['cleave', 'lash', 'nova'],
+    priest: ['hymn', 'ring', 'nova'],
+    bomber: ['salvo', 'nova', 'ring'],
+    merchant: ['bounty', 'fan', 'ring'],
+    gambler: ['wager', 'nova', 'fan']
+  };
+  // 圣火等级：像主塔一样一档一档加，不再只加血上限
+  RW.CORE_LV = [
+    null,
+    { note: '基础' },
+    { cost: 20, hp: 50, dmg: 2, range: 30, cd: 0.06, heal: 0.05, note: '火舌更远' },
+    { cost: 32, hp: 70, dmg: 2, range: 25, cd: 0.06, heal: 0.05, note: '射得更快' },
+    { cost: 48, hp: 90, dmg: 3, range: 30, cd: 0.05, heal: 0.1, note: '开波回更多' },
+    { cost: 72, hp: 120, dmg: 4, range: 40, cd: 0.05, heal: 0.1, note: '圣火封顶' }
+  ];
+  // 圣火每升一级，王旗自动往外插一站。玩家不用选阵型，跟着旗走就行。
+  RW.FRONTS = [
+    null,
+    { name: '王庭', x: 580, y: 900, gate: 'side' },
+    { name: '南街', x: 580, y: 780, gate: 'south' },
+    { name: '北桥', x: 540, y: 580, gate: 'north' },
+    { name: '北道', x: 620, y: 300, gate: 'north' },
+    { name: '山门', x: 260, y: 140, gate: 'north' }
+  ];
 
   // ---------- 建筑（战斗中随时在脚下建造；整备时买「科技」统一升级） ----------
   RW.TOWERS = {
@@ -265,13 +348,19 @@
     }
   };
   RW.TOWER_ORDER = ['sentry', 'pylon', 'siphon', 'barracks'];
+  RW.MATES = {
+    spark: { name: '火童', color: '#ff8a3c', hp: 16, dmg: 5, cd: 0.45, speed: 150, r: 7 },
+    bolt: { name: '弩童', color: '#9dff7a', hp: 12, dmg: 7, cd: 0.7, speed: 140, r: 6 },
+    ward: { name: '盾童', color: '#9fc4ff', hp: 28, dmg: 4, cd: 0.55, speed: 120, r: 8 }
+  };
+  RW.MATE_ORDER = ['spark', 'bolt', 'ward'];
   RW.TOWER_TIER = { dmg: [1, 1.7, 2.6], hp: [1, 1.5, 2.2], range: [1, 1.12, 1.25] };
   RW.TECH_COST = [0, 1, 1.7];         // 科技 II / III 的价格倍率（乘 techCost）
 
   // ---------- 敌人表（10）：轮廓、速度、行为都要一眼能分开 ----------
   RW.ENEMIES = {
     mite: {
-      name: '小鬼', hp: 5, speed: 66, dmg: 2, r: 8, armor: 0, knockRes: 1, shards: 1, shardVal: 1, mass: 1,
+      name: '小鬼', hp: 6, speed: 70, dmg: 2, r: 8, armor: 0, knockRes: 1, shards: 1, shardVal: 1, mass: 1,
       color: '#b04cff', shape: 'imp', cluster: 4, soldierAggro: 60, coreBias: 0.2
     },
     spore: {
@@ -279,7 +368,7 @@
       color: '#8a5cff', shape: 'bat', cluster: 1, soldierAggro: 60
     },
     shell: {
-      name: '铁甲兽', hp: 24, speed: 34, dmg: 3, r: 14, armor: 2, armorGrow: 0.25, knockRes: 0.45, shards: 2, shardVal: 1, mass: 3,
+      name: '铁甲兽', hp: 28, speed: 32, dmg: 3, r: 14, armor: 3, armorGrow: 0.35, knockRes: 0.45, shards: 2, shardVal: 1, mass: 3,
       color: '#9aa4b8', shape: 'brute', cluster: 1, towerAggro: 260, chewCd: 0.8, coreBias: 0.8
     },
     dasher: {
@@ -304,18 +393,18 @@
       color: '#4f8cff', shape: 'shaman', cluster: 1, keep: 170, link: 120, links: 4, reduce: 0.5
     },
     warden: {
-      name: '暗影术士', elite: true, hp: 150, speed: 28, dmg: 5, r: 22, armor: 1, armorGrow: 0.12, knockRes: 0.12, shards: 6, shardVal: 3, mass: 8,
+      name: '暗影术士', elite: true, hp: 180, speed: 26, dmg: 5, r: 22, armor: 2, armorGrow: 0.2, knockRes: 0.12, shards: 8, shardVal: 2, mass: 8,
       color: '#ff3b8c', shape: 'warlock', cluster: 1,
       fireCd: 3.2, charge: 0.7, bullets: 10, bulletsLate: 14, lateWave: 8, bulletSpeed: 105, bulletDmg: 3
     },
     brood: {
-      name: '蝠母', elite: true, hp: 210, speed: 22, dmg: 5, r: 26, armor: 1, armorGrow: 0.12, knockRes: 0.08, shards: 8, shardVal: 3, mass: 10,
+      name: '蝠母', elite: true, hp: 240, speed: 20, dmg: 5, r: 26, armor: 2, armorGrow: 0.2, knockRes: 0.08, shards: 10, shardVal: 2, mass: 10,
       color: '#9b4dff', shape: 'broodmother', cluster: 1, spawnCd: 4.5, spawnN: 3, coreBias: 1
     }
   };
   // ---------- Boss：第 5 / 10 / 15… 波出场 ----------
   RW.ENEMIES.boss = {
-    name: '崩山巨像', elite: true, boss: true, hp: 400, speed: 34, dmg: 6, r: 38, armor: 1, armorGrow: 0.1, knockRes: 0.02, shards: 24, shardVal: 2, mass: 30,
+    name: '崩山巨像', elite: true, boss: true, hp: 520, speed: 32, dmg: 7, r: 38, armor: 3, armorGrow: 0.15, knockRes: 0.02, shards: 20, shardVal: 2, mass: 30,
     color: '#ff6a2e', shape: 'golem', cluster: 1,
     rest: [2.2, 1.4],                          // 两次大招之间的间隔（一阶段 / 二阶段）
     slam: { tele: [1.15, 0.9], r: 95, mul: 1.4 },
@@ -325,8 +414,21 @@
   };
   RW.BOSS_WAVES = { every: 5, at: 0.2, rateCut: 0.35 };
 
-  // 敌人成长：hp × (1 + a(w-1) + b(w-1)^2 + c9(w-8)^2)，伤害 × (1 + c(w-1))
-  RW.GROWTH = { hpA: 0.2, hpB: 0.035, hpC9: 0.35, dmgC: 0.09, spdC: 0.015, spdCap: 0.25 };
+  // 全表只跟这一张走：血、怪伤、物价、开局金币、收成。改这里，战斗和商店一起变。
+  RW.SHEET = {
+    hpA: 0.16, hpB: 0.055, hpC9: 0.42, dmgC: 0.05, spdC: 0.012, spdCap: 0.22, priceC: 0.06,
+    startGold: 14, harvestBase: 6, harvestPer: 30
+  };
+  RW.SHEET.hp = function (w) {
+    var k = w - 1, s = RW.SHEET;
+    return 1 + s.hpA * k + s.hpB * k * k + (w > 8 ? s.hpC9 * (w - 8) * (w - 8) : 0);
+  };
+  RW.SHEET.dmg = function (w) { return 1 + RW.SHEET.dmgC * (w - 1); };
+  RW.SHEET.price = function (w) { return 1 + RW.SHEET.priceC * Math.max(0, w - 1); };
+  RW.GROWTH = RW.SHEET;
+  RW.TUNE.priceGrowth = RW.SHEET.priceC;
+  RW.TUNE.harvestBase = RW.SHEET.harvestBase;
+  RW.TUNE.harvestPer = RW.SHEET.harvestPer;
 
   // ---------- 波次表 ----------
   // dur 秒；r0→r1 每秒刷怪数；mix 权重；elites = [出现时间占波长比例, 精英种类]
@@ -355,6 +457,9 @@
   // fx 里的值：pct 类是比例（0.3 = +30%），flat 类是绝对值。卡面「强/弱」由 fx 自动生成，数据和文字永远一致。
   RW.STATS = {
     dmg: { label: '伤害', pct: true },
+    melee: { label: '近战伤害', pct: true },
+    ranged: { label: '远程伤害', pct: true },
+    spell: { label: '法术伤害', pct: true },
     rate: { label: '攻速', pct: true },
     speed: { label: '移速', pct: true },
     range: { label: '射程', pct: true },
@@ -363,7 +468,7 @@
     armor: { label: '护甲', pct: false },
     regen: { label: '每秒回血', pct: false },
     pickup: { label: '拾取半径', pct: true },
-    harvest: { label: '金币获取', pct: true },
+    harvest: { label: '收成', pct: true },
     knock: { label: '击退', pct: true },
     extra: { label: '额外弹数', pct: false },
     cdr: { label: '技能冷却', pct: true, inverse: true },
@@ -405,17 +510,20 @@
     hull:    { name: '疾风靴', r: 0, cost: 16, max: 3, fx: { speed: 0.16, armor: -1 } },
     nano:    { name: '再生护符', r: 0, cost: 20, max: 3, fx: { regen: 0.4, dmg: -0.06 } },
     magnet:  { name: '磁石', r: 0, cost: 14, max: 2, fx: { pickup: 0.7, rate: -0.05 } },
-    whet:    { name: '磨刀石', r: 0, cost: 14, max: 5, fx: { dmg: 0.08 } },
-    bracer:  { name: '皮护腕', r: 0, cost: 13, max: 5, fx: { armor: 1 } },
-    apple:   { name: '红苹果', r: 0, cost: 12, max: 5, fx: { maxHp: 3 } },
-    feather: { name: '羽毛', r: 0, cost: 12, max: 3, fx: { speed: 0.06, pickup: 0.2 } },
-    purse:   { name: '小钱袋', r: 0, cost: 14, max: 3, fx: { harvest: 0.12 } },
-    herb:    { name: '草药', r: 0, cost: 13, max: 3, fx: { regen: 0.25 } },
+    whet:    { name: '磨刀石', r: 0, cost: 10, max: 6, fx: { dmg: 0.1 } },
+    gauntlet: { name: '铁护手', r: 0, cost: 12, max: 4, fx: { melee: 0.25, ranged: -0.1 } },
+    quiver:  { name: '箭袋', r: 0, cost: 12, max: 4, fx: { ranged: 0.25, melee: -0.1 } },
+    tome:    { name: '残页', r: 0, cost: 12, max: 4, fx: { spell: 0.25, speed: -0.06 } },
+    bracer:  { name: '皮护腕', r: 0, cost: 10, max: 6, fx: { armor: 1 } },
+    apple:   { name: '红苹果', r: 0, cost: 8, max: 6, fx: { maxHp: 4 } },
+    feather: { name: '羽毛', r: 0, cost: 8, max: 4, fx: { speed: 0.08, pickup: 0.15 } },
+    purse:   { name: '小钱袋', r: 0, cost: 12, max: 4, fx: { harvest: 0.25 } },
+    herb:    { name: '草药', r: 0, cost: 10, max: 4, fx: { regen: 0.3 } },
     // ---- 精良 ----
     coil:    { name: '狂暴药剂', r: 1, cost: 20, max: 3, fx: { dmg: 0.30, maxHp: -4 } },
     sight:   { name: '致命之眼', r: 1, cost: 18, max: 3, fx: { crit: 0.15, maxHp: -3 }, note: '暴击默认 ×2 伤害' },
-    plate:   { name: '重甲', r: 1, cost: 20, max: 3, fx: { armor: 2, speed: -0.12 }, note: '每点护甲受伤 -7%' },
-    greed:   { name: '贪婪之戒', r: 1, cost: 16, max: 2, fx: { harvest: 0.3, dmgTaken: 0.15 } },
+    plate:   { name: '重甲', r: 1, cost: 18, max: 4, fx: { armor: 3, speed: -0.1 }, note: '减伤 = 护甲 / (护甲+12)，最高 75%' },
+    greed:   { name: '贪婪之戒', r: 1, cost: 18, max: 3, fx: { harvest: 0.5, dmgTaken: 0.12 } },
     overclock: { name: '时之沙', r: 1, cost: 18, max: 2, fx: { cdr: -0.25, rate: -0.1 }, note: '冲刺和技能都算' },
     bounty:  { name: '悬赏令', r: 1, cost: 18, max: 1, fx: { bounty: 1 }, note: '强：精英掉落金币 ×2　弱：第3波起每波多来 1 只精英' },
     fang:    { name: '吸血獠牙', r: 1, cost: 20, max: 3, fx: { lifesteal: 0.06, maxHp: -2 }, note: '武器和技能命中时按几率回 1 血，每秒最多 8 次' },

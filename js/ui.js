@@ -344,14 +344,16 @@
     }
   };
   UI.weaponStatLine = function (id, tier, g) {
-    var d = RW.WEAPONS[id], dmg = Math.round(d.dmg * RW.TIER_DMG[tier - 1] * 10) / 10;
+    var d = RW.WEAPONS[id], mul = g && g.st ? g.st.dmg * (g.st[d.tag] || 1) * (g.momDmg ? g.momDmg() : 1) : 1;
+    var dmg = Math.round(d.dmg * RW.TIER_DMG[tier - 1] * mul * 10) / 10;
+    var lane = d.tag === 'melee' ? '近战' : (d.tag === 'spell' ? '法术' : '远程');
     switch (d.kind) {
-      case 'needle': return '伤害 ' + dmg + ' · 间隔 ' + d.cd[tier - 1] + 's · 射程 ' + d.range;
-      case 'scatter': return '伤害 ' + dmg + '×' + (d.pellets + tier - 1) + ' 片 · 间隔 ' + d.cd[tier - 1] + 's · 射程 ' + d.range;
-      case 'blades': return '伤害 ' + dmg + ' · ' + (d.count + tier - 1) + ' 片刃 · 半径 ' + d.range;
-      case 'lance': return '伤害 ' + dmg + ' · 间隔 ' + d.cd[tier - 1] + 's · 贯穿 · 射程 ' + d.range;
-      case 'arc': return '伤害 ' + dmg + ' · 连跳 ' + (d.jumps + tier - 1) + ' 次 · 间隔 ' + d.cd[tier - 1] + 's';
-      case 'mines': return '伤害 ' + dmg + ' · 范围 ' + d.range + ' · 同时 ' + (d.maxMines + tier - 1) + ' 颗';
+      case 'needle': return lane + ' ' + dmg + ' · 间隔 ' + d.cd[tier - 1] + 's · 射程 ' + d.range;
+      case 'scatter': return lane + ' ' + dmg + '×' + (d.pellets + tier - 1) + ' 片 · 间隔 ' + d.cd[tier - 1] + 's · 射程 ' + d.range;
+      case 'blades': return lane + ' ' + dmg + ' · ' + (d.count + tier - 1) + ' 片刃 · 半径 ' + d.range;
+      case 'lance': return lane + ' ' + dmg + ' · 间隔 ' + d.cd[tier - 1] + 's · 贯穿 · 射程 ' + d.range;
+      case 'arc': return lane + ' ' + dmg + ' · 连跳 ' + (d.jumps + tier - 1) + ' 次 · 间隔 ' + d.cd[tier - 1] + 's';
+      case 'mines': return lane + ' ' + dmg + ' · 范围 ' + d.range + ' · 同时 ' + (d.maxMines + tier - 1) + ' 颗';
     }
     return '';
   };
@@ -495,12 +497,13 @@
     D.text('技能', 26, y + 14, 10, C.dim, 'left');
     if (sk) { D.text(sk.d.name + ' ' + ROMAN[sk.tier - 1], 26, y + 32, 13, sk.d.color, 'left', true); D.text('冷却 ' + Math.round(sk.d.cd * g.st.cdr * 10) / 10 + 's', 26, y + 49, 10, C.dim, 'left'); }
     var co = g.core, ck = co.hp / co.maxHp;
-    D.text('圣火 ' + Math.ceil(co.hp) + '/' + co.maxHp + ' · 下波开场回 ' + Math.round(T.core.waveHeal * 100) + '%', 118, y + 14, 10, ck < 0.4 ? C.bad : '#ffd27a', 'left', true);
+    var fr = g.front;
+    D.text('圣火 Lv' + (co.lv || 1) + (fr ? ' · 王旗' + fr.name : '') + '  ' + Math.ceil(co.hp) + '/' + co.maxHp, 118, y + 14, 10, ck < 0.4 ? C.bad : '#ffd27a', 'left', true);
     c.fillStyle = '#140e0a'; c.fillRect(118, y + 22, 120, 6);
     c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(118, y + 22, 120 * ck, 6);
-    var rc2 = g.coreRepairCost(), ac = g.coreArmorCost();
+    var rc2 = g.coreRepairCost(), uc = g.coreUpgradeCost(), nxt = RW.CORE_LV[(co.lv || 1) + 1], maxed = !nxt;
     UI.button('repair', 118, y + 32, 124, 26, '维修 +50% · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '圣火是满的' : '金币不足' });
-    UI.button('armor', 250, y + 32, 146, 26, '加固 上限+' + T.core.armorHp + ' · ' + ac, { size: 11, disabled: g.shardCount < ac, why: '金币不足' });
+    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火已满级' : ('升级 ' + nxt.note + ' · ' + uc), { size: 11, disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
     // 卡片
     // 右栏：4 张货
     for (i = 0; i < 4; i++) {
@@ -524,14 +527,17 @@
     var items = [
       ['生命', Math.round(s.maxHp), s.maxHp - T.player.hp],
       ['伤害', pct(s.dmg - 1), s.dmg - 1],
+      ['近战', pct(s.melee - 1), s.melee - 1],
+      ['远程', pct(s.ranged - 1), s.ranged - 1],
+      ['法术', pct(s.spell - 1), s.spell - 1],
       ['攻速', pct(s.rate - 1), s.rate - 1],
       ['移速', Math.round(T.player.speed * s.speed), s.speed - 1],
-      ['护甲', Math.round(s.armor), s.armor],
+      ['护甲', Math.round(s.armor) + ' · ' + Math.round((1 - (s.takenMul / Math.max(0.01, s.dmgTaken))) * 100) + '%', s.armor],
       ['暴击', Math.round(s.crit * 100) + '%', s.crit - T.player.crit],
       ['射程', pct(s.range - 1), s.range - 1],
       ['回血', (Math.round(s.regen * 10) / 10) + '/s', s.regen],
       ['冷却', pct(s.cdr - 1), -(s.cdr - 1)],
-      ['金币', pct(s.harvest - 1), s.harvest - 1],
+      ['收成', '+' + Math.round(T.harvestBase + Math.max(0, s.harvest - 1) * T.harvestPer), s.harvest - 1],
       ['弹数', '+' + s.extra, s.extra],
       ['受伤', pct(s.takenMul - 1), -(s.takenMul - 1)]
     ];

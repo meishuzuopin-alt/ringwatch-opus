@@ -6,8 +6,8 @@
 
   var g = null, paused = false, showHow = false, muted = false, musicOff = false, buildMenu = false, buildMenuT = 0;
   var js = { active: false, id: null, ox: 0, oy: 0, kx: 0, ky: 0, mx: 0, my: 0 };
-  var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: false };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
+  var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: 0 };
 
   function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel }); }
   function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
@@ -37,10 +37,13 @@
   function battleButton(id) {
     if (id === 'pause') { paused = true; resetStick(); buildMenu = false; S.play({ type: 'ui' }); return; }
     if (id === 'dash') { inputBuf.dash = true; return; }
-    if (id === 'skill') {
-      if (!g.skill) return;
-      if (g.skill.cd > 0) { UI.toast(g.skill.d.name + ' 冷却中 ' + g.skill.cd.toFixed(1) + 's', 0.8); return; }
-      inputBuf.skill = true; return;
+    if (id.indexOf('skill') === 0) {
+      var ix = id === 'skill' ? 0 : +id.slice(6);
+      var sk = (g.skills && g.skills[ix]) || g.skill;
+      if (!sk) return;
+      if (sk.cd > 0) { UI.toast(sk.d.name + ' 冷却中 ' + sk.cd.toFixed(1) + 's', 0.8); return; }
+      if ((g.player.mp || 0) < (sk.d.mp || 18)) { UI.toast('法力不足', 0.8); return; }
+      inputBuf.skill = ix + 1; return;
     }
     if (id === 'build') { buildMenu = !buildMenu; buildMenuT = 5; S.play({ type: 'ui' }); return; }
     if (id.indexOf('bt:') === 0) {
@@ -56,7 +59,7 @@
     if (inBattle() && !paused) {
       if (type === 'down') {
         var b = UI.hit(x, y);
-        if (b && (BATTLE_BTNS[b.id] || b.id.indexOf('bt:') === 0)) {
+        if (b && (BATTLE_BTNS[b.id] || b.id.indexOf('bt:') === 0 || b.id.indexOf('skill') === 0)) {
           if (b.disabled) { if (b.why) UI.toast(b.why, 1.2); S.play({ type: 'deny' }); return; }
           UI.pressed = b.id; battleButton(b.id); return;
         }
@@ -104,7 +107,9 @@
     }
     if (inBattle() && !paused) {
       if (code === 'Space' || code === 'ShiftLeft' || code === 'ShiftRight') { battleButton('dash'); return; }
-      if (code === 'KeyQ' || code === 'KeyE' || code === 'KeyJ') { battleButton('skill'); return; }
+      if (code === 'KeyQ' || code === 'KeyJ') { battleButton('skill:0'); return; }
+      if (code === 'KeyE') { battleButton('skill:1'); return; }
+      if (code === 'KeyR') { battleButton('skill:2'); return; }
       if (code === 'KeyB') { battleButton('build'); return; }
       if (/^Digit[1-4]$/.test(code)) { battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
     }
@@ -170,7 +175,7 @@
         break;
       case 'lock': g.toggleLock(+arg); break;
       case 'repair': var r1 = g.repairCore(); if (r1 !== 'ok') UI.toast(r1); break;
-      case 'armor': var r2 = g.armorCore(); if (r2 !== 'ok') UI.toast(r2); break;
+      case 'upgrade': var r2 = g.upgradeCore(); if (r2 !== 'ok') UI.toast(r2); break;
       case 'wslot':
         var wi = +arg, w = g.weapons[wi];
         if (!w) break;

@@ -149,6 +149,8 @@
     this.fx = makePool(72, function () { return { kind: 'ring', x: 0, y: 0, x2: 0, y2: 0, life: 0, max: 1, color: '#fff', r: 10, r2: 20, w: 2, n: 0, pts: new Float32Array(40) }; });
     this.corpses = makePool(70, function () { return { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rot: 0, rv: 0, tilt: 0, tv: 0, type: 'mite', r: 8, life: 0, max: 1, color: '#fff' }; });
     this.heals = makePool(20, function () { return { x: 0, y: 0, life: 0, sp: 0 }; });
+    this.chests = makePool(8, function () { return { x: 0, y: 0, r: 14, life: 0 }; });
+    this.mates = makePool(8, function () { return { x: 0, y: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, r: 7, cd: 0, ang: 0, star: 1, id: '', d: null, flash: 0 }; });
     this.decals = makePool(40, function () { return { x: 0, y: 0, r: 10, life: 0, max: 1, color: '#000' }; });
     this.gridHead = new Int16Array(GC * GR);
     this.gridNext = new Int16Array(T.MAX_ENEMIES);
@@ -172,7 +174,8 @@
   // ================= 局 =================
   G.resetRun = function () {
     var p = this.player, CO = T.core;
-    this.core = { x: CO.x, y: CO.y, r: CO.r, hp: CO.hp, maxHp: CO.hp, flash: 0, alert: 0, cd: 0, ang: 0 };
+    this.core = { x: CO.x, y: CO.y, r: CO.r, hp: CO.hp, maxHp: CO.hp, flash: 0, alert: 0, cd: 0, ang: 0, lv: 1 };
+    this.applyCoreLevel();
     this.coreSrc = src('圣火之光', '#ffd27a', false);
     this.boss = null; this.bossAlert = 0; this.deathCause = '';
     p.x = CO.x; p.y = CO.y + 80; p.vx = p.vy = p.pvx = p.pvy = 0; p.inv = 0;
@@ -198,13 +201,110 @@
     this.banner = 0; this.enemyCount = 0; this.evolveT = 0;
     this.shop = null; this.result = null;
     this.eliteAlert = 0; this.eliteAlertName = '';
-    var pools = [this.corpses, this.heals, this.enemies, this.bullets, this.ebullets, this.shards, this.mines, this.towers, this.soldiers, this.orbs, this.missiles, this.blasts, this.parts, this.nums, this.marks, this.fx, this.decals];
+    var pools = [this.corpses, this.heals, this.enemies, this.bullets, this.ebullets, this.shards, this.mines, this.towers, this.soldiers, this.orbs, this.missiles, this.blasts, this.parts, this.nums, this.marks, this.fx, this.decals, this.chests, this.mates];
     for (var i = 0; i < pools.length; i++) clearPool(pools[i]);
     this.seedOrbs();
+    this.seedChests(5);
     this.recalc();
     p.hp = p.maxHp;
+    p.maxMp = T.player.mp; p.mp = p.maxMp;
   };
 
+  G.seedChests = function (n) {
+    var p = this.player, made = 0;
+    for (var k = 0; k < 24 && made < n; k++) {
+      var c = take(this.chests);
+      if (!c) return;
+      c.x = this.RR(AX0 + 40, AX1 - 40); c.y = this.RR(AY0 + 40, AY1 - 40); c.r = 14;
+      if (!walkable(c.x, c.y)) { c.on = false; continue; }
+      var dx = c.x - p.x, dy = c.y - p.y;
+      if (dx * dx + dy * dy < 120 * 120) { c.on = false; continue; }
+      made++;
+    }
+  };
+  G.mateCount = function () {
+    var n = 0;
+    for (var i = 0; i < this.mates.length; i++) if (this.mates[i].on) n++;
+    return n;
+  };
+  G.summonMate = function (x, y) {
+    var id = RW.MATE_ORDER[Math.floor(this.R() * RW.MATE_ORDER.length)], d = RW.MATES[id];
+    for (var i = 0; i < this.mates.length; i++) {
+      var o = this.mates[i];
+      if (!o.on || o.id !== id || o.star !== 1) continue;
+      o.star = 2; o.maxHp = Math.round(d.hp * 2.2); o.hp = o.maxHp; o.r = d.r + 3;
+      this.banner = 1.4; this.bannerText = '两名' + d.name + '合成了';
+      this.ringFx(o.x, o.y, 8, 40, 0.4, d.color, 4);
+      return;
+    }
+    if (this.mateCount() >= 6) { this.shardCount += 8; return; }
+    var m = take(this.mates);
+    if (!m) return;
+    m.id = id; m.d = d; m.star = 1; m.x = x; m.y = y; m.vx = m.vy = 0;
+    m.hp = m.maxHp = d.hp; m.r = d.r; m.cd = 0.2; m.ang = 0; m.flash = 0;
+    this.ringFx(x, y, 6, 28, 0.3, d.color, 3);
+  };
+  G.updateChests = function () {
+    if (this.mode === 'battle') {
+      this._chestT = (this._chestT || 10) - DT;
+      if (this._chestT <= 0) { this._chestT = 12; this.seedChests(1); }
+    }
+    var p = this.player;
+    for (var i = 0; i < this.chests.length; i++) {
+      var c = this.chests[i];
+      if (!c.on) continue;
+      var dx = p.x - c.x, dy = p.y - c.y;
+      if (dx * dx + dy * dy > (c.r + p.r + 6) * (c.r + p.r + 6)) continue;
+      c.on = false;
+      var gold = 4 + Math.floor(this.R() * 7);
+      this.shardCount += gold; this.totalShards += gold;
+      if (this.R() < 0.75) this.summonMate(c.x, c.y);
+      this.ringFx(c.x, c.y, 8, 36, 0.35, '#ffe08a', 3);
+      this.burst(c.x, c.y, 10, '#ffe08a', 160, 2, true);
+    }
+  };
+  G.updateMates = function () {
+    var p = this.player, battle = this.mode === 'battle', slot = 0;
+    for (var i = 0; i < this.mates.length; i++) {
+      var m = this.mates[i];
+      if (!m.on) continue;
+      if (m.flash > 0) m.flash -= DT;
+      m.cd -= DT;
+      slot++;
+      var tgt = null;
+      if (battle) {
+        var best = 1e9, cnt = this.near(m.x, m.y, 160);
+        for (var j = 0; j < cnt; j++) {
+          var e = this.enemies[this.nbuf[j]];
+          if (!e.on || e.spawnT > 0) continue;
+          var ex = e.x - m.x, ey = e.y - m.y, e2 = ex * ex + ey * ey;
+          if (e2 < best) { best = e2; tgt = e; }
+        }
+      }
+      var gx, gy;
+      if (tgt) { gx = tgt.x; gy = tgt.y; }
+      else if (p.dashT > 0) { gx = p.x + (p.dx || 0) * 70; gy = p.y + (p.dy || 0) * 70; }
+      else {
+        var a = slot * 1.4 + this.clock * 0.5;
+        gx = p.x + Math.cos(a) * (34 + m.star * 10);
+        gy = p.y + Math.sin(a) * (34 + m.star * 10);
+      }
+      var mx = gx - m.x, my = gy - m.y, dl = Math.sqrt(mx * mx + my * my) || 1;
+      var reach = tgt ? tgt.r + m.r + 4 : 6;
+      var sp = m.d.speed * (p.dashT > 0 ? 1.8 : 1);
+      var kk = Math.min(1, 12 * DT);
+      m.vx += ((dl > reach ? mx / dl * sp : 0) - m.vx) * kk;
+      m.vy += ((dl > reach ? my / dl * sp : 0) - m.vy) * kk;
+      m.x += m.vx * DT; m.y += m.vy * DT;
+      if (dl > 1) m.ang = Math.atan2(my, mx);
+      m.x = clampX(m.x, m.r); m.y = clampY(m.y, m.r);
+      if (tgt && dl <= reach + 6 && m.cd <= 0) {
+        m.cd = m.d.cd;
+        this.hitEnemy(tgt, m.d.dmg * (m.star === 2 ? 1.8 : 1) * this.st.dmg, mx / dl, my / dl, 60, this.coreSrc, false);
+        m.flash = 0.08;
+      }
+    }
+  };
   G.seedOrbs = function () {
     for (var i = 0; i < this.orbs.length; i++) {
       var o = this.orbs[i];
@@ -237,7 +337,8 @@
     this.runHeals = 0;
     this.addWeapon(cls.weapon);
     this.setSkill(cls.skill);
-    this.shardCount = 16;   // 开局给一点钱：第一波就能在脚下建一座塔
+    this.loadSkills(RW.LOADOUT[this.clsId] || [cls.skill]);
+    this.shardCount = RW.SHEET.startGold;
     this.startWave(1);
   };
 
@@ -253,12 +354,21 @@
     var d = RW.SKILLS[id];
     if (this.skill && this.skill.id === id) { this.skill.tier = Math.min(3, this.skill.tier + 1); return; }
     var old = this.skill;
-    this.skill = { id: id, d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: old ? 0 : 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0 };
+    this.skill = { id: id, d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: old ? 0 : 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0, bountyT: 0, bombs: [] };
     if (old) { this.retiredSkills = this.retiredSkills || []; this.retiredSkills.push(old); }
+  };
+  G.loadSkills = function (ids) {
+    this.skills = [];
+    for (var i = 0; i < ids.length; i++) {
+      var d = RW.SKILLS[ids[i]];
+      if (!d) continue;
+      this.skills.push({ id: ids[i], d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0, bountyT: 0, bombs: [] });
+    }
+    this.skill = this.skills[0] || this.skill;
   };
 
   G.recalc = function () {
-    var s = { dmg: 1, rate: 1, speed: 1, range: 1, crit: P.crit, maxHp: this.cls ? this.cls.hp : P.hp, armor: 0, regen: 0, pickup: 1, harvest: 1, knock: 1, extra: 0, cdr: 1, dmgTaken: 1, bounty: 0,
+    var s = { dmg: 1, melee: 1, ranged: 1, spell: 1, rate: 1, speed: 1, range: 1, crit: P.crit, maxHp: this.cls ? this.cls.hp : P.hp, armor: 0, regen: 0, pickup: 1, harvest: 1, knock: 1, extra: 0, cdr: 1, dmgTaken: 1, bounty: 0,
       lifesteal: 0, dodge: 0, critMul: P.critMul, luck: 0, towerDmg: 1, blastR: 1, thorns: 0, interest: 0, healOrb: 1, healCore: 0, coreRegen: 0,
       buildCost: 1, rage: 0, shopPrice: 1, freeReroll: 0, dashCd: 1 };
     var k;
@@ -269,23 +379,23 @@
     }
     var evo = RW.EVO[this.player.stage];
     s.armor += evo.armor; s.maxHp += evo.hp; s.dmg += evo.dmg;
-    s.dmg = Math.max(0.3, s.dmg); s.rate = Math.max(0.4, s.rate); s.speed = Math.max(0.55, s.speed) * evo.speed;
+    s.dmg = Math.max(0.3, s.dmg); s.melee = Math.max(0.4, s.melee); s.ranged = Math.max(0.4, s.ranged); s.spell = Math.max(0.4, s.spell);
+    s.rate = Math.max(0.4, s.rate); s.speed = Math.max(0.55, s.speed) * evo.speed;
     s.range = Math.max(0.5, s.range); s.maxHp = Math.max(6, s.maxHp); s.pickup = Math.max(0.5, s.pickup);
     s.crit = Math.min(0.9, Math.max(0, s.crit)); s.knock = Math.max(0.2, s.knock); s.cdr = Math.max(0.5, s.cdr);
     s.dodge = Math.min(T.dodgeCap, Math.max(0, s.dodge)); s.lifesteal = Math.max(0, s.lifesteal); s.harvest = Math.max(0.2, s.harvest);
     s.buildCost = Math.max(0.4, s.buildCost); s.shopPrice = Math.max(0.5, s.shopPrice); s.dashCd = Math.max(0.4, s.dashCd);
     s.towerDmg = Math.max(0.3, s.towerDmg); s.blastR = Math.max(0.5, s.blastR);
-    s.takenMul = s.dmgTaken * Math.min(1.6, Math.max(0.4, 1 - s.armor * T.armorPerPoint));
+    var arm = s.armor, red = arm > 0 ? Math.min(0.75, arm / (arm + T.armorPerPoint)) : 0;
+    var neg = arm < 0 ? 1 + (-arm) * T.armorNeg : 1;
+    s.takenMul = s.dmgTaken * (1 - red) * neg;
     this.st = s;
     var p = this.player;
     p.maxHp = s.maxHp; p.r = evo.r;
     if (p.hp > p.maxHp) p.hp = p.maxHp;
   };
 
-  G.hpMul = function (w) {
-    var g = RW.GROWTH, k = w - 1;
-    return 1 + g.hpA * k + g.hpB * k * k + (w > 8 ? g.hpC9 * (w - 8) * (w - 8) : 0);
-  };
+  G.hpMul = function (w) { return RW.SHEET.hp(w); };
 
   G.startWave = function (n) {
     var p = this.player;
@@ -301,9 +411,9 @@
     this.bossAt = n % BW.every === 0 ? this.dur * BW.at : -1;
     this.boss = null;
     var co = this.core;
-    co.hp = Math.min(co.maxHp, co.hp + co.maxHp * T.core.waveHeal);
+    co.hp = Math.min(co.maxHp, co.hp + co.maxHp * (co.waveHeal || T.core.waveHeal));
     p.vx = p.vy = p.pvx = p.pvy = 0; p.dashT = 0; p.dashCd = 0;
-    p.hp = p.maxHp; p.inv = 0.8;
+    p.hp = p.maxHp; p.inv = 0.8; p.mp = p.maxMp || T.player.mp;
     for (var t = 0; t < this.towers.length; t++) { var tw = this.towers[t]; if (tw.on) { tw.hp = tw.maxHp; tw.cd = 0.5; } }
     for (var s = 0; s < this.soldiers.length; s++) { var so = this.soldiers[s]; if (so.on) so.hp = so.maxHp; }
     for (var w = 0; w < this.weapons.length; w++) { var wp = this.weapons[w]; wp.cd = 0.3; wp.charge = 0; wp.mineCount = 0; }
@@ -313,6 +423,7 @@
     this.enemyCount = 0;
     this.mode = 'battle';
     this.banner = 1.6;
+    this.bannerText = (this.front && (this.core.lv || 1) > 1) ? ('王旗在' + this.front.name + ' · 跟着光走') : '';
     this.emit('waveStart', n);
   };
 
@@ -325,6 +436,10 @@
     this.shake = Math.max(0, this.shake - DT * 2.6);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - DT * 3);
     if (this.banner > 0) this.banner -= DT;
+    if (this.front && (this.core.lv || 1) > 1 && (this._frontPulse = (this._frontPulse || 0) + DT) > 0.55) {
+      this._frontPulse = 0;
+      this.ringFx(this.front.x, this.front.y, 8, 36, 0.4, '#ffe7a0', 2);
+    }
     if (this.evolveT > 0) this.evolveT -= DT;
     if (this.eliteAlert > 0) this.eliteAlert -= DT;
     if (this.bossAlert > 0) this.bossAlert -= DT;
@@ -342,13 +457,14 @@
     inp = inp || { mx: 0, my: 0 };
     if (m === 'battle') this.wt += DT;
     if (m === 'battle' && inp.dash) this.tryDash(inp);
-    if (m === 'battle' && inp.skill) this.castSkill();
+    if (m === 'battle' && inp.skill) { this.castSkill(inp.skill - 1); inp.skill = 0; }
     inp.dash = false; inp.skill = false;
     this.movePlayer(inp);
     var p = this.player;
     if (p.inv > 0) p.inv -= DT;
     if (p.dashCd > 0) p.dashCd -= DT;
     if (m === 'battle' && this.st.regen > 0) p.hp = Math.min(p.maxHp, p.hp + this.st.regen * DT);
+    if (m === 'battle') p.mp = Math.min(p.maxMp || T.player.mp, (p.mp || 0) + T.player.mpRegen * DT);
     if (m === 'battle' && this.st.coreRegen > 0) this.core.hp = Math.min(this.core.maxHp, this.core.hp + this.st.coreRegen * DT);
     if (p.hurtT > 0) p.hurtT -= DT;
     if (p.castT > 0) p.castT -= DT;
@@ -360,6 +476,8 @@
     if (m === 'battle') { this.updateWeapons(); this.updateSkill(); }
     this.updateTowers();
     this.updateSoldiers();
+    this.updateChests();
+    this.updateMates();
     this.updateBullets();
     this.updateMissiles();
     this.updateEnemies();
@@ -499,13 +617,23 @@
   };
   G.spawnPoint = function (out, goal) {
     var p = this.player, sp = T.spawn, x = 0, y = 0, co = this.core;
+    var fr = this.front, lv = (co.lv || 1);
     if (goal) {
-      // 冲圣火的怪：从地图入口进场（北面山道为主），给你拦截的时间
-      var gw = MAP.gateWeight, rg = this.R(), list = rg < gw.north ? GATES.north : (rg < gw.north + gw.side ? GATES.side : GATES.south);
+      var gw = MAP.gateWeight, north = gw.north, side = gw.side;
+      if (fr && fr.gate === 'north') { north = Math.min(0.85, 0.55 + (lv - 1) * 0.08); side = 0.1; }
+      else if (fr && fr.gate === 'south') { north = 0.25; side = 0.2; }
+      var rg = this.R(), list = rg < north ? GATES.north : (rg < north + side ? GATES.side : GATES.south);
       if (!list.length) list = GATES.north;
       var gt = list[Math.floor(this.R() * list.length)];
       out.x = gt.x + this.RR(-10, 10); out.y = gt.y + this.RR(-10, 10);
       return;
+    }
+    if (fr && lv > 1 && this.R() < 0.42 + (lv - 1) * 0.1) {
+      for (var n = 0; n < 12; n++) {
+        var a0 = this.R() * TAU, r0 = this.RR(70, 160);
+        x = fr.x + Math.cos(a0) * r0; y = fr.y + Math.sin(a0) * r0;
+        if (walkable(x, y)) { out.x = x; out.y = y; return; }
+      }
     }
     for (var tries = 0; tries < 20; tries++) {
       if (this.R() < sp.anywhere) { x = this.RR(AX0 + 24, AX1 - 24); y = this.RR(AY0 + 24, AY1 - 24); }
@@ -558,7 +686,7 @@
     e.type = type; e.d = d; e.x = x; e.y = y;
     e.vx = e.vy = e.kvx = e.kvy = 0; e.r = d.r;
     e.maxHp = e.hp = d.hp * this.hpMul(w);
-    e.dmg = d.dmg * (1 + g.dmgC * (w - 1));
+    e.dmg = d.dmg * RW.SHEET.dmg(w);
     e.armor = Math.floor((d.armor || 0) + (d.armorGrow || 0) * (w - 1));
     e.speed = d.speed * (1 + Math.min(g.spdCap, g.spdC * (w - 1)));
     e.knockRes = d.knockRes; e.flash = 0; e.spawnT = 0.18;
@@ -615,7 +743,10 @@
     return m;
   };
   G.momRate = function () { return this.momTier > 0 ? 1 + T.momentum.rate[this.momTier - 1] : 1; };
-  G.weaponDmg = function (w) { return w.d.dmg * RW.TIER_DMG[w.tier - 1] * this.st.dmg * this.momDmg(); };
+  G.weaponDmg = function (w) {
+    var tag = (w.d && w.d.tag) || 'ranged', kind = this.st[tag] || 1;
+    return w.d.dmg * RW.TIER_DMG[w.tier - 1] * this.st.dmg * kind * this.momDmg();
+  };
 
   G.updateWeapons = function () {
     var p = this.player, s = this.st;
@@ -893,13 +1024,21 @@
   };
 
   // ================= 主动技能 =================
-  G.skillDmg = function () { return this.skill.d.dmg * RW.SKILL_TIER[this.skill.tier - 1] * this.st.dmg * this.momDmg(); };
-  G.castSkill = function () {
-    var sk = this.skill, p = this.player;
+  G.skillDmg = function () {
+    var tag = (this.skill.d && this.skill.d.tag) || 'spell';
+    return this.skill.d.dmg * RW.SKILL_TIER[this.skill.tier - 1] * this.st.dmg * (this.st[tag] || 1) * this.momDmg();
+  };
+  G.castSkill = function (which) {
+    var list = this.skills && this.skills.length ? this.skills : (this.skill ? [this.skill] : []);
+    var sk = list[which || 0], p = this.player;
     if (!sk || sk.cd > 0) return false;
-    p.castT = 0.45;
+    var cost = sk.d.mp || 18;
+    if ((p.mp || 0) < cost) return false;
+    this.skill = sk;
+    p.mp -= cost;
+    p.castT = 0.28;
     var d = sk.d, i, e;
-    sk.cd = d.cd * this.st.cdr;
+    sk.cd = d.cd * this.st.cdr * 0.72;
     switch (sk.id) {
       case 'nova':
         var rad = (d.radius + 20 * (sk.tier - 1)) * this.st.blastR, dmg = this.skillDmg();   // 炎爆也吃「爆炸范围」
@@ -941,11 +1080,90 @@
         this.ringFx(p.x, p.y, 8, 70, 0.25, d.color, 4);
         this.flash = Math.max(this.flash, 0.15);
         break;
+      case 'bash':
+        this.skillCone(sk, d.len, d.arc, 1, d.knock);
+        this.ringFx(p.x, p.y, 8, d.len * 0.7, 0.28, d.color, 5);
+        this.shake = Math.min(1, this.shake + 0.35);
+        break;
+      case 'shade':
+        this.skillStep(d.step);
+        this.skillLine(sk, d.len, d.knock);
+        this.ringFx(p.x, p.y, 6, 40, 0.22, d.color, 3);
+        break;
+      case 'cleave':
+        this.skillCone(sk, d.len, d.arc, 1, d.knock);
+        this.ringFx(p.x, p.y, 10, d.len, 0.32, d.color, 6);
+        this.shake = Math.min(1, this.shake + 0.45);
+        this.stop(2, true);
+        break;
+      case 'hymn':
+        this.skillHeal(d.heal, d.core);
+        this.ringFx(p.x, p.y, 8, 90, 0.4, d.color, 4);
+        this.ringFx(this.core.x, this.core.y, this.core.r, this.core.r + 40, 0.4, '#ffd27a', 3);
+        break;
+      case 'salvo':
+        sk.bombs = [];
+        for (i = 0; i < 3; i++) {
+          var ba = p.face, dist = d.step * (i + 1);
+          sk.bombs.push({ x: p.x + Math.cos(ba) * dist, y: p.y + Math.sin(ba) * dist, t: 0.28 * i, r: d.radius * this.st.blastR });
+        }
+        break;
+      case 'bounty':
+        sk.bountyT = d.dur + (sk.tier - 1);
+        this.ringFx(p.x, p.y, 6, 50, 0.3, d.color, 3);
+        break;
+      case 'wager':
+        var roll = this.R();
+        if (roll < 0.34) {
+          var wr = d.radius * this.st.blastR, wd = this.skillDmg();
+          for (i = 0; i < this.enemies.length; i++) {
+            e = this.enemies[i];
+            if (!e.on || e.spawnT > 0) continue;
+            var wx = e.x - p.x, wy = e.y - p.y, rr = wr + e.r;
+            if (wx * wx + wy * wy > rr * rr) continue;
+            var wl = Math.sqrt(wx * wx + wy * wy) || 1;
+            this.hitEnemy(e, wd, wx / wl, wy / wl, 160, sk, false);
+          }
+          this.ringFx(p.x, p.y, 8, wr, 0.35, d.color, 5);
+          this.shake = Math.min(1, this.shake + 0.3);
+        } else if (roll < 0.67) {
+          this.skillHeal(d.heal, 0);
+          this.ringFx(p.x, p.y, 8, 80, 0.35, '#fff1a8', 4);
+        } else {
+          var coins = d.coins + 4 * (sk.tier - 1);
+          for (i = 0; i < coins; i++) this.spawnShard(p.x, p.y, 1);
+          this.ringFx(p.x, p.y, 6, 60, 0.3, '#ffe066', 3);
+        }
+        break;
+      case 'fan':
+        var fn = d.pellets, face = p.face;
+        for (i = 0; i < fn; i++) {
+          var fa = face + (i / (fn - 1) - 0.5) * d.spread;
+          this.fireBullet(p.x, p.y, fa, d.speed, d.range / d.speed, this.skillDmg(), d.knock, 3, sk, 0, d.color);
+        }
+        this.ringFx(p.x, p.y, 6, 36, 0.18, d.color, 3);
+        break;
+      case 'ring':
+        this.skillCone(sk, d.len, Math.PI, 1, d.knock);
+        this.ringFx(p.x, p.y, 8, d.len, 0.28, d.color, 4);
+        break;
+      case 'lash':
+        this.skillCone(sk, d.len, d.arc, 1, d.knock);
+        this.ringFx(p.x, p.y, 8, d.len * 0.8, 0.22, d.color, 4);
+        break;
     }
     this.emit('skill', sk.id);
     return true;
   };
   G.updateSkill = function () {
+    if (!this._skillPass) {
+      var list = this.skills && this.skills.length ? this.skills : (this.skill ? [this.skill] : []);
+      this._skillPass = 1;
+      for (var n = 0; n < list.length; n++) { this.skill = list[n]; this.updateSkill(); }
+      this._skillPass = 0;
+      if (list.length) this.skill = list[0];
+      return;
+    }
     var sk = this.skill, p = this.player;
     if (!sk) return;
     if (sk.cd > 0) sk.cd -= DT;
@@ -1014,6 +1232,55 @@
         this.stop(4, true);
       }
     }
+    if (sk.bountyT > 0) sk.bountyT -= DT;
+    if (sk.bombs && sk.bombs.length) {
+      var left = [];
+      for (i = 0; i < sk.bombs.length; i++) {
+        var bm = sk.bombs[i];
+        bm.t -= DT;
+        if (bm.t > 0) { left.push(bm); continue; }
+        this.queueBlast(bm.x, bm.y, bm.r, this.skillDmg(), 0, sk, d.color, '', d.knock || 180);
+        this.ringFx(bm.x, bm.y, 6, bm.r, 0.28, d.color, 4);
+      }
+      sk.bombs = left;
+    }
+  };
+  G.skillCone = function (sk, len, arc, mul, knock) {
+    var p = this.player, dmg = this.skillDmg() * mul, face = p.face;
+    for (var i = 0; i < this.enemies.length; i++) {
+      var e = this.enemies[i];
+      if (!e.on || e.spawnT > 0) continue;
+      var dx = e.x - p.x, dy = e.y - p.y, d2 = dx * dx + dy * dy, reach = len + e.r;
+      if (d2 > reach * reach) continue;
+      var ang = Math.atan2(dy, dx), diff = Math.atan2(Math.sin(ang - face), Math.cos(ang - face));
+      if (Math.abs(diff) > arc) continue;
+      var dd = Math.sqrt(d2) || 1;
+      this.hitEnemy(e, dmg, dx / dd, dy / dd, knock * this.st.knock, sk, false);
+    }
+  };
+  G.skillLine = function (sk, len, knock) {
+    var p = this.player, dmg = this.skillDmg(), face = p.face, c = Math.cos(face), s = Math.sin(face);
+    for (var i = 0; i < this.enemies.length; i++) {
+      var e = this.enemies[i];
+      if (!e.on || e.spawnT > 0) continue;
+      var dx = e.x - p.x, dy = e.y - p.y, along = dx * c + dy * s;
+      if (along < -e.r || along > len + e.r) continue;
+      var side = dx * -s + dy * c;
+      if (Math.abs(side) > 28 + e.r) continue;
+      this.hitEnemy(e, dmg, c, s, knock * this.st.knock, sk, false);
+    }
+  };
+  G.skillStep = function (dist) {
+    var p = this.player, c = Math.cos(p.face), s = Math.sin(p.face);
+    for (var k = 4; k >= 1; k--) {
+      var nx = p.x + c * dist * k / 4, ny = p.y + s * dist * k / 4;
+      if (walkable(nx, ny)) { p.x = nx; p.y = ny; return; }
+    }
+  };
+  G.skillHeal = function (frac, coreAmt) {
+    var p = this.player, co = this.core;
+    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * frac);
+    if (coreAmt) co.hp = Math.min(co.maxHp, co.hp + coreAmt * (1 + 0.25 * (this.skill.tier - 1)));
   };
   G.ringFx = function (x, y, r, r2, life, color, w) {
     var f = take(this.fx, true);
@@ -1097,12 +1364,13 @@
     var co = this.core, CO = T.core;
     co.cd -= DT;
     if (co.cd > 0) return;
-    var e = this.nearest(co.x, co.y, CO.gunRange);
+    var gr = co.gunRange || CO.gunRange, gd = co.gunDmg || CO.gunDmg, gc = co.gunCd || CO.gunCd;
+    var e = this.nearest(co.x, co.y, gr);
     if (!e) { co.cd = 0; return; }
     var a = Math.atan2(e.y - co.y, e.x - co.x);
     co.ang = a;
-    this.fireBullet(co.x + Math.cos(a) * co.r, co.y + Math.sin(a) * co.r, a, 460, CO.gunRange / 460 + 0.05, CO.gunDmg * (1 + 0.1 * (this.wave - 1)), 40, 3, this.coreSrc, 0, '#9fe8ff');
-    co.cd = CO.gunCd;
+    this.fireBullet(co.x + Math.cos(a) * co.r, co.y + Math.sin(a) * co.r, a, 460, gr / 460 + 0.05, gd * (1 + 0.1 * (this.wave - 1)), 40, 3, this.coreSrc, 0, '#9fe8ff');
+    co.cd = gc;
     this.emit('shot', 'tower');
   };
   G.updateTowers = function () {
@@ -1201,21 +1469,26 @@
       var d = tw.d, sd = d.soldier, ti = this.tech.barracks - 1;
       s.cd -= DT;
       var tgt = null;
+      var fr = this.front, push = fr && (this.core.lv || 1) > 1;
       if (battle) {
-        // 只拦截兵营警戒圈内的敌人
-        var best = 1e9, cnt = this.near(tw.x, tw.y, d.leash);
+        var leash = push ? d.leash + 140 : d.leash;
+        var best = 1e9, cnt = this.near(s.x, s.y, leash);
         for (var j = 0; j < cnt; j++) {
           var e = this.enemies[this.nbuf[j]];
           if (!e.on || e.spawnT > 0) continue;
           var hx = e.x - tw.x, hy = e.y - tw.y;
-          if (hx * hx + hy * hy > d.leash * d.leash) continue;
+          if (!push && hx * hx + hy * hy > d.leash * d.leash) continue;
           var sx = e.x - s.x, sy = e.y - s.y, s2 = sx * sx + sy * sy;
           if (s2 < best) { best = s2; tgt = e; }
         }
       }
       var gx, gy;
       if (tgt) { gx = tgt.x; gy = tgt.y; }
-      else { var a = s.slot * 1.9 + this.clock * 0.3; gx = tw.x + Math.cos(a) * 30; gy = tw.y + Math.sin(a) * 30; }
+      else if (push) {
+        var ox = fr.x - tw.x, oy = fr.y - tw.y, ol = Math.sqrt(ox * ox + oy * oy) || 1;
+        var reachOut = Math.min(ol, 220 + s.slot * 18);
+        gx = tw.x + ox / ol * reachOut; gy = tw.y + oy / ol * reachOut;
+      } else { var a = s.slot * 1.9 + this.clock * 0.3; gx = tw.x + Math.cos(a) * 30; gy = tw.y + Math.sin(a) * 30; }
       var dx = gx - s.x, dy = gy - s.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
       var reach = tgt ? tgt.r + s.r + 3 : 4;
       var want = dl > reach ? sd.speed : 0;
@@ -1318,6 +1591,7 @@
     var n = d.shards;
     if (e.elite && this.st.bounty > 0) n *= 2;
     for (var k = 0; k < n; k++) this.spawnShard(e.x, e.y, d.shardVal);
+    if (this.skill && this.skill.bountyT > 0 && how !== 'eat') this.spawnShard(e.x, e.y, d.shardVal);
     if (how === 'kill') {
       if (e.type === 'splitter') {
         for (var s = 0; s < d.splits; s++) {
@@ -1622,11 +1896,45 @@
     this.emit('buy', 'repair');
     return 'ok';
   };
-  G.armorCore = function () {
-    var co = this.core, c = this.coreArmorCost();
+  G.armorCore = function () { return this.upgradeCore(); };
+  G.applyCoreLevel = function () {
+    var co = this.core, CO = T.core, lv = co.lv || 1, hp = 0, dmg = 0, range = 0, cd = 0, heal = 0;
+    for (var i = 2; i <= lv; i++) {
+      var L = RW.CORE_LV[i];
+      if (!L) break;
+      hp += L.hp; dmg += L.dmg; range += L.range; cd += L.cd; heal += L.heal;
+    }
+    var ratio = co.maxHp > 0 ? co.hp / co.maxHp : 1;
+    co.maxHp = CO.hp + hp;
+    co.hp = Math.min(co.maxHp, Math.max(1, co.maxHp * ratio));
+    co.gunDmg = CO.gunDmg + dmg;
+    co.gunRange = CO.gunRange + range;
+    co.gunCd = Math.max(0.22, CO.gunCd - cd);
+    co.waveHeal = CO.waveHeal + heal;
+    var fr = RW.FRONTS[Math.min(lv, RW.FRONTS.length - 1)];
+    this.front = fr ? { name: fr.name, x: fr.x, y: fr.y, gate: fr.gate } : null;
+  };
+  G.coreUpgradeCost = function () {
+    var next = RW.CORE_LV[(this.core.lv || 1) + 1];
+    if (!next) return 0;
+    return Math.round(next.cost * this.priceMul());
+  };
+  G.upgradeCore = function () {
+    var co = this.core, lv = co.lv || 1, next = RW.CORE_LV[lv + 1];
+    if (!next) return '圣火已满级';
+    var c = this.coreUpgradeCost();
     if (this.shardCount < c) return '金币不足，需要 ' + c;
-    this.shardCount -= c; co.maxHp += T.core.armorHp; co.hp += T.core.armorHp;
-    this.emit('buy', 'armor');
+    this.shardCount -= c;
+    var before = co.maxHp;
+    co.lv = lv + 1;
+    this.applyCoreLevel();
+    co.hp = Math.min(co.maxHp, co.hp + (co.maxHp - before));
+    this.emit('buy', 'coreLv');
+    if (this.front) {
+      this.banner = 2.4;
+      this.bannerText = '王旗插到' + this.front.name + ' · 跟着光走';
+      this.ringFx(this.front.x, this.front.y, 12, 90, 0.7, '#ffd27a', 5);
+    }
     return 'ok';
   };
 
@@ -1689,7 +1997,7 @@
             var ang = e.wob + q * TAU / arms;
             b.x = e.x + Math.cos(ang) * e.r; b.y = e.y + Math.sin(ang) * e.r;
             b.vx = Math.cos(ang) * B.speed; b.vy = Math.sin(ang) * B.speed;
-            b.life = 5; b.dmg = B.dmg * (1 + RW.GROWTH.dmgC * (this.wave - 1)); b.r = 6; b.kind = 'orb'; b.src = d.name + '弹幕';
+            b.life = 5; b.dmg = B.dmg * RW.SHEET.dmg(this.wave); b.r = 6; b.kind = 'orb'; b.src = d.name + '弹幕';
           }
           e.wob += B.turn * (ph ? -1.2 : 1);
           this.emit('eliteFire');
@@ -1713,7 +2021,7 @@
 
   G.wardenFire = function (e) {
     var d = e.d, n = this.wave >= d.lateWave ? d.bulletsLate : d.bullets;
-    var off = this.R() * TAU, dmg = d.bulletDmg * (1 + RW.GROWTH.dmgC * (this.wave - 1));
+    var off = this.R() * TAU, dmg = d.bulletDmg * RW.SHEET.dmg(this.wave);
     for (var k = 0; k < n; k++) {
       var b = take(this.ebullets);
       if (!b) break;
@@ -2018,12 +2326,14 @@
     clearPool(this.marks); clearPool(this.ebullets); clearPool(this.missiles); clearPool(this.blasts);
     if (this.skill) { this.skill.veilT = 0; this.skill.wellT = 0; }
     for (var j = 0; j < this.shards.length; j++) { var s = this.shards[j]; if (s.on && !s.tower && !s.mag) { s.mag = true; s.recall = true; s.sp = 60; } }
+    var haul = Math.round(T.harvestBase + Math.max(0, this.st.harvest - 1) * T.harvestPer);
+    this.shardCount += haul; this.totalShards += haul; this.haul = haul;
     this.ringFx(this.player.x, this.player.y, 10, 700, 0.8, '#5ef2ff', 3);
     this.emit('waveClear', this.wave);
   };
 
   // ================= 整备（商店） =================
-  G.priceMul = function () { return (1 + T.priceGrowth * Math.max(0, this.wave - 1)) * (this.st ? this.st.shopPrice : 1); };
+  G.priceMul = function () { return RW.SHEET.price(this.wave) * (this.st ? this.st.shopPrice : 1); };
   G.enterShop = function () {
     clearPool(this.shards); clearPool(this.mines); clearPool(this.bullets);
     for (var w = 0; w < this.weapons.length; w++) this.weapons[w].mineCount = 0;

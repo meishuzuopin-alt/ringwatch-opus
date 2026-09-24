@@ -164,6 +164,8 @@
     D.shards(g);
     D.enemyUnder(g);
     D.soldiers(g);
+    D.mates(g);
+    D.chests(g);
     D.enemies(g);
     D.player(g);
     D.bullets(g);
@@ -397,6 +399,27 @@
     }
   };
 
+  D.chests = function (g) {
+    var c = D.ctx;
+    for (var i = 0; i < g.chests.length; i++) {
+      var b = g.chests[i];
+      if (!b.on || !D.inView(b.x, b.y, 20)) continue;
+      c.fillStyle = '#c9893a'; c.strokeStyle = '#5a3a16'; c.lineWidth = 2;
+      c.fillRect(b.x - 12, b.y - 10, 24, 18); c.strokeRect(b.x - 12, b.y - 10, 24, 18);
+      c.fillStyle = '#ffe08a'; c.fillRect(b.x - 3, b.y - 10, 6, 18);
+    }
+  };
+  D.mates = function (g) {
+    var c = D.ctx;
+    for (var i = 0; i < g.mates.length; i++) {
+      var m = g.mates[i];
+      if (!m.on || !D.inView(m.x, m.y, 24)) continue;
+      c.fillStyle = m.flash > 0 ? '#ffffff' : m.d.color;
+      c.strokeStyle = '#1a120c'; c.lineWidth = 1.5;
+      D.circle(m.x, m.y, m.r); c.fill(); c.stroke();
+      if (m.star === 2) { c.fillStyle = '#ffe08a'; D.circle(m.x, m.y - m.r - 3, 3); c.fill(); }
+    }
+  };
   D.soldiers = function (g) {
     var c = D.ctx;
     for (var i = 0; i < g.soldiers.length; i++) {
@@ -1142,21 +1165,21 @@
   D.hud = function (g, ui, menu) {
     var c = D.ctx, p = g.player;
     // ---- 左上：生命 / 位阶 / 武器 ----
-    D.hudPanel(10, 10, 250, 96);
-    var hpk = Math.max(0, p.hp / p.maxHp), bx = 22, bw = 226, bh = 18, by = 30;
+    D.hudPanel(10, 10, 250, 118);
+    var hpk = Math.max(0, p.hp / p.maxHp), bx = 22, bw = 226, bh = 18, by = 28;
     D.text('生命', bx, 21, 10, C.dim, 'left');
     if (g.cls) D.text(g.cls.name, bx + bw, 21, 10, g.cls.color, 'right', true);
-    c.fillStyle = '#1a0b12'; D.rr(bx, by, bw, bh, 4); c.fill();
-    c.fillStyle = hpk < 0.3 ? C.red : (hpk < 0.6 ? '#ff9f43' : '#3ee08f');
-    if (hpk > 0) { D.rr(bx, by, Math.max(8, bw * hpk), bh, 4); c.fill(); }
-    c.strokeStyle = 'rgba(255,255,255,0.18)'; D.rr(bx, by, bw, bh, 4); c.stroke();
-    D.text(Math.ceil(p.hp) + ' / ' + Math.round(p.maxHp), bx + bw / 2, by + bh / 2 + 1, 12, '#ffffff', 'center', true, 3);
+    D.vial(bx + 22, by + 16, 20, hpk, hpk < 0.3 ? '#e23b4a' : '#c42838', Math.ceil(p.hp));
+    var mpk = Math.max(0, (p.mp || 0) / (p.maxMp || 1));
+    D.vial(bx + 74, by + 16, 20, mpk, '#2f6dff', Math.ceil(p.mp || 0));
+    D.text('红 ' + Math.ceil(p.hp) + '/' + Math.round(p.maxHp), bx + 104, by + 8, 11, '#ffb4be', 'left', true);
+    D.text('蓝 ' + Math.ceil(p.mp || 0) + '/' + Math.round(p.maxMp || 0), bx + 104, by + 24, 11, '#b9d0ff', 'left', true);
     var evo = RW.EVO, st = p.stage, next = evo[st + 1];
     var ek = next ? (p.mass - evo[st].mass) / (next.mass - evo[st].mass) : 1;
-    c.fillStyle = '#0c1a1a'; c.fillRect(bx, by + 22, bw, 5);
-    c.fillStyle = evo[st].color; c.fillRect(bx, by + 22, bw * Math.min(1, ek), 5);
-    D.text(evo[st].name + (next ? ' → ' + next.name + '  ' + Math.floor(p.mass) + '/' + next.mass : ' · 最终形态'), bx, by + 36, 10, evo[st].color, 'left', true);
-    var x = bx, y = 112;
+    c.fillStyle = '#0c1a1a'; c.fillRect(bx, by + 46, bw, 5);
+    c.fillStyle = evo[st].color; c.fillRect(bx, by + 46, bw * Math.min(1, ek), 5);
+    D.text(evo[st].name + (next ? ' → ' + next.name + '  ' + Math.floor(p.mass) + '/' + next.mass : ' · 最终形态'), bx, by + 60, 10, evo[st].color, 'left', true);
+    var x = bx, y = 132;
     for (var i = 0; i < g.weapons.length; i++) {
       var w = g.weapons[i];
       c.fillStyle = 'rgba(20,15,11,0.85)'; D.rr(x, y, 34, 28, 5); c.fill();
@@ -1202,13 +1225,13 @@
       var k = g.banner / 1.6, al = Math.min(1, k * 3);
       c.globalAlpha = al;
       c.fillStyle = 'rgba(4,8,16,0.7)'; c.fillRect(0, 196, W, 76);
-      D.glowText('第 ' + g.wave + ' 波', W / 2, 226, 34, C.cyan, 'center', 16);
-      var sub = '坚守 ' + g.dur + ' 秒';
+      D.glowText(g.bannerText || ('第 ' + g.wave + ' 波'), W / 2, 226, g.bannerText ? 28 : 34, C.cyan, 'center', 16);
+      var sub = g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒');
       if (g.eliteQ.length) sub += ' · 精英 ×' + g.eliteQ.length;
       D.text(sub, W / 2, 256, 13, C.dim, 'center');
       c.globalAlpha = 1;
       if (g.wave === 1) {
-        D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q 放技能 · 冲进怪堆里打会攒战意', W / 2, 292, 13, C.text, 'center', false, 3);
+        D.text('踩金色木箱召唤同伴，两个一样的会合成。Q / E / R 放技能', W / 2, 292, 13, C.text, 'center', false, 3);
         D.text('B 造塔（1–4 选种类），花金币建塔，守住中央的圣火', W / 2, 314, 13, C.shard, 'center', false, 3);
       }
     }
@@ -1235,7 +1258,7 @@
     if (g.core.alert > 2.2 && g.mode === 'battle') D.text('圣火正在受到攻击！', W / 2, 92, 13, '#ff9ab0', 'center', true, 3);
     if (g.mode === 'clear') {
       D.glowText('本波完成', W / 2, 226, 32, C.gold, 'center', 16);
-      D.text('地上的金币按 50% 回收', W / 2, 260, 12, C.shard, 'center', false, 3);
+      D.text('收成 +' + (g.haul || 0) + '    地上的金币按 50% 回收', W / 2, 260, 13, C.shard, 'center', false, 3);
     }
   };
   D.eatHint = function (stage) {
@@ -1245,8 +1268,8 @@
   };
 
   // ---------- 右下：冲刺 + 技能；左下：造塔 ----------
-  D.BTN = { skill: { x: W - 62, y: H - 62, r: 40 }, dash: { x: W - 150, y: H - 48, r: 30 }, build: { x: 52, y: H - 52, r: 32 } };
-  var KEYCAP = { dash: '空格', skill: 'Q', build: 'B' };
+  D.BTN = { dash: { x: W - 250, y: H - 48, r: 28 }, build: { x: 52, y: H - 52, r: 32 } };
+  var KEYCAP = { dash: '空格', build: 'B', 'skill:0': 'Q', 'skill:1': 'E', 'skill:2': 'R' };
   D.battleButtons = function (g, ui, menu) {
     var c = D.ctx, B = D.BTN, p = g.player, sk = g.skill;
     function round(id, b, label, color, k, sub) {
@@ -1272,9 +1295,13 @@
     }
     var dk = p.dashCd > 0 ? p.dashCd / (T.dash.cd * g.st.cdr) : 0;
     round('dash', B.dash, '冲刺', C.cyan, dk, dk > 0 ? p.dashCd.toFixed(1) : '');
-    if (sk) {
-      var sk2 = sk.cd > 0 ? sk.cd / (sk.d.cd * g.st.cdr) : 0;
-      round('skill', B.skill, sk.d.name, sk.d.color, sk2, sk.cd > 0 ? sk.cd.toFixed(1) + 's' : ['I', 'II', 'III'][sk.tier - 1]);
+    var slots = g.skills && g.skills.length ? g.skills : (sk ? [sk] : []);
+    for (var si = 0; si < slots.length; si++) {
+      (function (s, i) {
+        var b = { x: W - 64 - (slots.length - 1 - i) * 78, y: H - 58, r: 30 };
+        var k = s.cd > 0 ? s.cd / (s.d.cd * g.st.cdr * 0.72) : 0;
+        round('skill:' + i, b, s.d.name, s.d.color, k, s.cd > 0 ? s.cd.toFixed(1) : (s.d.mp || 18) + '');
+      })(slots[si], si);
     }
     round('build', B.build, menu ? '收起' : '造塔', C.gold, 0, menu ? '' : g.towerCount() + '/' + T.build.max);
     if (menu) {
@@ -1311,5 +1338,16 @@
     c.fillStyle = 'rgba(94,242,255,0.38)'; D.circle(js.ox + js.kx, js.oy + js.ky, 16); c.fill();
   };
 
-  RW.Draw = D;
+  D.vial = function (x, y, r, k, fill, num) {
+    var c = D.ctx;
+    c.save();
+    c.beginPath(); c.arc(x, y, r, 0, TAU); c.clip();
+    c.fillStyle = '#14080c'; c.fillRect(x - r, y - r, r * 2, r * 2);
+    var h = r * 2 * Math.max(0, Math.min(1, k));
+    c.fillStyle = fill; c.fillRect(x - r, y + r - h, r * 2, h);
+    c.restore();
+    c.strokeStyle = 'rgba(255,236,210,0.55)'; c.lineWidth = 2;
+    c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke();
+    D.text(String(num), x, y + 4, 11, '#ffffff', 'center', true, 2);
+  };
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));
