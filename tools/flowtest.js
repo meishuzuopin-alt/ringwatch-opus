@@ -38,12 +38,12 @@ fs.mkdirSync(out, { recursive: true });
   await shot('f2_shop');
   await press('repair');           // 维修
   await until(() => RW.game.core.hp > 90).catch(() => {});
-  await press('armor');            // 加固
-  await until(() => RW.game.core.maxHp > 260).catch(() => {});
+  await press('upgrade');          // 圣火升级（取代旧的「加固」）
+  await until(() => (RW.game.core.lv || 1) > 1).catch(() => {});
   await press('buy:0');            // 买第一张卡
   await page.waitForTimeout(300);
   await shot('f3_shop_after');
-  const coreAfter = await page.evaluate(() => [Math.round(RW.game.core.hp), RW.game.core.maxHp]);
+  const coreAfter = await page.evaluate(() => [Math.round(RW.game.core.hp), RW.game.core.maxHp, 'Lv' + (RW.game.core.lv || 1)]);
   await press('next');             // 下一波（Boss 波）
   await page.waitForTimeout(8000);
   await shot('f4_boss');
@@ -57,7 +57,7 @@ fs.mkdirSync(out, { recursive: true });
   await page.evaluate(() => RW.game.finishRun());
   await page.waitForTimeout(300);
   await shot('f6_result');
-  console.log('towers after build', towers1, 'core after repair/armor', coreAfter, 'errors', errors.length ? errors : 'none');
+  console.log('towers after build', towers1, 'core after repair/upgrade', coreAfter, 'errors', errors.length ? errors : 'none');
   await browser.close(); server.close();
   if (errors.length) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exit(1); });

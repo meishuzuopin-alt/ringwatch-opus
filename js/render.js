@@ -1268,7 +1268,7 @@
   };
 
   // ---------- 右下：冲刺 + 技能；左下：造塔 ----------
-  D.BTN = { dash: { x: W - 250, y: H - 48, r: 28 }, build: { x: 52, y: H - 52, r: 32 } };
+  D.BTN = { dash: { x: W - 316, y: H - 48, r: 28 }, build: { x: 52, y: H - 52, r: 32 } };   // 冲刺放在三个技能键左边，别叠在 Q 上
   var KEYCAP = { dash: '空格', build: 'B', 'skill:0': 'Q', 'skill:1': 'E', 'skill:2': 'R' };
   D.battleButtons = function (g, ui, menu) {
     var c = D.ctx, B = D.BTN, p = g.player, sk = g.skill;
@@ -1350,4 +1350,6 @@
     c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke();
     D.text(String(num), x, y + 4, 11, '#ffffff', 'center', true, 2);
   };
+
+  RW.Draw = D;
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));
