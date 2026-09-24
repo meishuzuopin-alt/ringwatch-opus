@@ -216,10 +216,54 @@
       g.blob(-0.8, 29.5, 0, 4.8, 3.2, 4.8, HAIR, 0, 3, 0.3);
       g.blob(-2.5, 26, 0, 3, 3.5, 4.2, HAIR, 0, 7, 0.3);
     });
-    M.capeMage = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, hex('#ff8a2a')); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, hex('#ff8a2a'), 0, 5, 0.2); g.box(-5.6, 12, 0, 0.3, 4, 4, hex('#ffd27a'), 0.8); });
-    M.capeRanger = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, hex('#3e7a3a')); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, hex('#3e7a3a'), 0, 5, 0.2); g.cyl(-1.5, 26, 0, 4.5, 0, 7, 5, hex('#3e7a3a')); });
-    M.staff = model(function (g) { g.box(2, 0, 7, 1.6, 30, 1.6, hex('#6b4428')); g.blob(2, 32, 7, 3, 3, 3, hex('#ffb347'), 1.4, 2, 0.1); g.box(2, 28, 7, 3, 1.5, 3, hex('#c8963c'), 0.3); });
-    M.crossbow = model(function (g) { g.box(6, 15, 3, 12, 2, 2, hex('#6b4428')); g.box(11, 15.5, 3, 1.5, 1.5, 12, hex('#4a3020')); g.box(12, 16, 3, 0.4, 0.4, 11, hex('#f6e2b0'), 0.5); g.box(4, 12, 3, 2, 4, 2, hex('#6b4428')); });
+    // 斗篷与兜帽/尖帽做成白色，绘制时按英雄的 cape 颜色着色；其余帽子、手持物自带颜色
+    var CLOTH = hex('#ffffff'), STEEL = hex('#c8d2e0'), WOOD = hex('#6b4428'), GOLDC = hex('#e0a83a');
+    M.cape = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, CLOTH); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, CLOTH, 0, 5, 0.2); });
+    M.hat_wizard = model(function (g) { g.cyl(-0.3, 29.4, 0, 6.8, 6.4, 0.9, 8, CLOTH); g.cyl(-0.8, 30.3, 0, 4.2, 0, 11, 7, CLOTH); });
+    M.hat_hood = model(function (g) { g.blob(-1, 27.5, 0, 4.9, 4.4, 4.9, CLOTH, 0, 9, 0.12); g.cyl(-2.2, 29, 0, 3.2, 0, 6, 5, CLOTH); });
+    M.hat_helm = model(function (g) {
+      g.box(-0.2, 25.5, 0, 8, 6.2, 8, STEEL); g.box(3.9, 25.6, 0, 0.4, 1.1, 5.6, hex('#1e2230'));
+      g.box(-0.2, 31.6, 0, 3, 1.4, 1.4, STEEL); g.box(-1.2, 33, 0, 5, 3.4, 1, hex('#ff5a3a'));
+    });
+    M.hat_bandana = model(function (g) {
+      g.box(0, 27.6, 0, 7.6, 2.2, 7.6, hex('#3a2350')); g.box(-5, 26.5, 1.5, 2.6, 1, 1.4, hex('#3a2350')); g.box(-6.2, 25.6, 2.2, 2, 1, 1.2, hex('#3a2350'));
+      g.box(1.2, 23.2, 0, 5.2, 2.6, 7.4, hex('#1c1226'));
+    });
+    M.hat_goggles = model(function (g) {
+      g.box(0, 27.2, 0, 7.6, 1.4, 7.6, hex('#5a3a22'));
+      g.box(3.8, 26.8, 1.7, 0.8, 2.2, 2.2, hex('#8fe3ff'), 1.2); g.box(3.8, 26.8, -1.7, 0.8, 2.2, 2.2, hex('#8fe3ff'), 1.2);
+    });
+    M.hat_horn = model(function (g) {
+      g.blob(-0.3, 29, 0, 4.6, 3.2, 4.6, hex('#8a8a92'), 0, 4, 0.08);
+      g.cyl(-0.5, 29.5, 4.6, 1.5, 0, 7, 5, hex('#efe4cc')); g.cyl(-0.5, 29.5, -4.6, 1.5, 0, 7, 5, hex('#efe4cc'));
+    });
+    M.hat_halo = model(function (g) {
+      g.blob(-1.6, 25, 0, 4.6, 6, 4.8, hex('#f4f0e0'), 0, 3, 0.1);
+      for (var i = 0; i < 10; i++) { var a = i / 10 * Math.PI * 2; g.box(Math.cos(a) * 5, 35, Math.sin(a) * 5, 2.4, 0.8, 2.4, hex('#fff1a8'), 2.2); }
+    });
+    M.hat_cap = model(function (g) { g.blob(-0.3, 29, 0, 4.4, 2.6, 4.4, hex('#6a5236'), 0, 6, 0.06); g.box(3.6, 28.4, 0, 3.6, 0.6, 5, hex('#5a4630')); });
+    M.hat_tophat = model(function (g) { g.cyl(0, 29.6, 0, 6.2, 6.2, 0.8, 10, hex('#2a1a2a')); g.cyl(0, 30.4, 0, 3.8, 3.8, 8.5, 10, hex('#2a1a2a')); g.cyl(0, 31.2, 0, 3.9, 3.9, 1.3, 10, hex('#ffe066'), 0.3); });
+    M.hat_crown = model(function (g) {
+      g.cyl(0, 29.8, 0, 4.2, 4.4, 2.4, 8, GOLDC, 0.4);
+      for (var i = 0; i < 5; i++) { var a = i / 5 * Math.PI * 2; g.box(Math.cos(a) * 3.8, 32.2, Math.sin(a) * 3.8, 1.2, 2.2, 1.2, GOLDC, 0.4); }
+      g.box(4.2, 31, 0, 0.6, 1.2, 1.2, hex('#7affd0'), 1.6);
+    });
+    M.prop_staff = model(function (g) { g.box(2, 0, 7, 1.6, 30, 1.6, WOOD); g.blob(2, 32, 7, 3, 3, 3, hex('#ffb347'), 1.4, 2, 0.1); g.box(2, 28, 7, 3, 1.5, 3, hex('#c8963c'), 0.3); });
+    M.prop_crossbow = model(function (g) { g.box(6, 15, 3, 12, 2, 2, WOOD); g.box(11, 15.5, 3, 1.5, 1.5, 12, hex('#4a3020')); g.box(12, 16, 3, 0.4, 0.4, 11, hex('#f6e2b0'), 0.5); g.box(4, 12, 3, 2, 4, 2, WOOD); });
+    M.prop_sword = model(function (g) {
+      g.box(3, 5, 7, 1.4, 5, 1.4, hex('#4a3020')); g.box(3, 10, 7, 1.6, 1.2, 6, GOLDC); g.box(3, 11.2, 7, 0.8, 16, 2.6, STEEL);
+      g.box(2, 5, -7.2, 1.4, 12, 8.5, hex('#3f5f9e')); g.box(2.8, 9, -7.2, 0.4, 4, 3, GOLDC, 0.3);
+    });
+    M.prop_dagger = model(function (g) {
+      g.box(3, 9, 7, 3, 1.2, 1.2, hex('#2a1a10')); g.box(8, 9, 7, 7, 0.6, 1.6, STEEL);
+      g.box(3, 9, -7, 3, 1.2, 1.2, hex('#2a1a10')); g.box(8, 9, -7, 7, 0.6, 1.6, STEEL);
+    });
+    M.prop_wrench = model(function (g) { g.box(2, 4, 7, 1.6, 20, 1.6, STEEL); g.box(2, 23, 7, 5, 3, 2, STEEL); g.box(3.4, 26, 7, 1.4, 2.4, 2, STEEL); g.box(0.6, 26, 7, 1.4, 2.4, 2, STEEL); });
+    M.prop_axe = model(function (g) { g.box(2, 0, 7, 1.8, 29, 1.8, WOOD); g.box(5.6, 21, 7, 5.6, 8, 0.8, STEEL); g.box(-0.8, 23, 7, 2, 4, 0.8, STEEL); });
+    M.prop_book = model(function (g) { g.box(5, 11, 6, 5.5, 7, 1.6, hex('#8a2a1a')); g.box(5, 11.6, 6.9, 4.4, 5.8, 0.4, hex('#ffe2a8'), 0.6); });
+    M.prop_bomb = model(function (g) { g.blob(5, 12, 7, 3.6, 3.6, 3.6, hex('#2a2a30'), 0, 3, 0.05); g.box(5, 15.4, 7, 0.8, 2.6, 0.8, hex('#c8963c')); g.blob(5, 18.4, 7, 1.1, 1.1, 1.1, hex('#ffb347'), 2.5, 2, 0.1); });
+    M.prop_coin = model(function (g) { g.blob(2.5, 9, 7, 3.6, 3.8, 3.6, hex('#8a6440'), 0, 5, 0.12); g.box(2.5, 12.6, 7, 1.8, 1.4, 1.8, hex('#5a3a22')); g.cyl(5.5, 15, 7, 2.2, 2.2, 0.8, 8, GOLDC, 0.8); });
+    M.prop_dice = model(function (g) { g.box(5, 10, 7, 3.6, 3.6, 3.6, hex('#f4f0e0')); g.box(6.9, 11.2, 7, 0.3, 0.9, 0.9, hex('#1f5a4a')); g.box(4, 14, 8.5, 2.6, 2.6, 2.6, hex('#ffd6d6')); });
     // ---- 敌人 ----
     M.imp = model(function (g) {
       var b = hex('#6a3f8e');
@@ -493,7 +537,7 @@
     drawSoldiers(g, M);
     drawEnemies(g, M);
     drawCorpses(g, M);
-    if (!orbit) drawHero(g, M);
+    if (!orbit || g.mode === 'down') drawHero(g, M);
     drawPickups(g, M);
     // 1. 阴影贴图：覆盖当前可见范围
     if (GL.fx.shadow && GL.shadowRT) {
@@ -535,33 +579,56 @@
     return WHITE;
   }
 
+  // 手持物发光点（本地坐标：前 +X、右 +Z、上 +Y）
+  var PROP_GLOW = { staff: [2, 32, 7, '#ffb347', 9], book: [5, 12, 7.5, '#fff1a8', 8], bomb: [5, 18.4, 7, '#ffb347', 6], coin: [5.5, 15.4, 7, '#ffe066', 6] };
   function drawHero(g, M) {
     var p = g.player;
-    if (g.mode === 'down' || g.mode === 'revive' || g.mode === 'result') return;
-    if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && Math.sin(W3.t * 45) > 0) return;
+    if (g.mode === 'revive' || g.mode === 'result') return;
+    if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) return;
+    var d = g.cls || RW.CLASSES.mage, look = d.look || { hat: 'wizard', prop: 'staff' };
     var sc = p.r / 10 * 1.35, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-    var walk = W3.heroWalk = (W3.heroWalk || 0) + speed * 0.03 * (1 / 60) * 60 / 60;
-    var sw = Math.min(1, speed / 120) * 0.6 * Math.sin(W3.t * 14), bob = Math.abs(Math.sin(W3.t * 14)) * Math.min(1, speed / 120) * 1.5;
-    var cls = g.clsId || 'mage', cx = p.x, cz = p.y, cs = Math.cos(face), sn = Math.sin(face);
-    var lean = p.dashT > 0 ? -0.35 : 0;
-    // 两条腿：侧向偏移后前后摆
-    GL.put(M.heroLeg, cx - sn * 2.6 * sc, 0, cz + cs * 2.6 * sc, face, sc, sc, sc, sw);
-    GL.put(M.heroLeg, cx + sn * 2.6 * sc, 0, cz - cs * 2.6 * sc, face, sc, sc, sc, -sw);
-    GL.put(M.heroBody, cx, bob, cz, face, sc, sc, sc, lean);
-    var capeLift = Math.min(0.9, speed / 200) + (p.dashT > 0 ? 0.4 : 0) + Math.sin(W3.t * 6) * 0.05;
-    GL.put(cls === 'ranger' ? M.capeRanger : M.capeMage, cx, bob, cz, face, sc, sc, sc, -capeLift * 0.6 + lean);
-    GL.put(cls === 'ranger' ? M.crossbow : M.staff, cx, bob, cz, face, sc, sc, sc, lean);
+    var mv = Math.min(1, speed / 120), t = W3.t;
+    var sw = mv * 0.6 * Math.sin(t * 14), bob = Math.abs(Math.sin(t * 14)) * mv * 1.5;
+    var cx = p.x, cz = p.y, cs = Math.cos(face), sn = Math.sin(face);
+    // ---- 动作 ----
+    var lean = p.dashT > 0 ? -0.35 : 0, propTilt = 0, sy = sc, fall = 0;
+    var atk = 0;
+    for (var wi = 0; wi < g.weapons.length; wi++) atk = Math.max(atk, g.weapons[wi].kick || 0);
+    lean -= atk * 0.07; propTilt -= atk * 0.5;                                           // 攻击：身体前压，武器前送
+    if (p.castT > 0) { var ck = p.castT / 0.45; propTilt -= 1.1 * Math.sin(ck * Math.PI); bob += 3 * Math.sin(ck * Math.PI); }   // 施法：举起武器、轻跳
+    if (p.hurtT > 0) { var hk = p.hurtT / 0.3; lean += 0.32 * hk; sy *= 1 - 0.1 * hk; }            // 受击：后仰、压扁
+    if (speed < 12 && g.mode === 'battle') sy *= 1 + 0.025 * Math.sin(t * 3.2);                  // 待机：呼吸
+    if (g.mode === 'clear') { bob += Math.abs(Math.sin(t * 9)) * 5; propTilt -= 0.7; }             // 过波：欢呼跳
+    if (g.mode === 'down') { fall = Math.min(1, (1.1 - (g.downT || 0)) / 0.45); lean += 1.45 * fall; bob = 0; }   // 倒地
+    if (fall < 0.6) {
+      GL.put(M.heroLeg, cx - sn * 2.6 * sc, 0, cz + cs * 2.6 * sc, face, sc, sc, sc, sw);
+      GL.put(M.heroLeg, cx + sn * 2.6 * sc, 0, cz - cs * 2.6 * sc, face, sc, sc, sc, -sw);
+    }
+    var by = fall > 0 ? 3 * fall : bob;
+    GL.put(M.heroBody, cx, by, cz, face, sc, sy, sc, lean);
+    var capeLift = mv * 0.9 + (p.dashT > 0 ? 0.4 : 0) + Math.sin(t * 6) * 0.05;
+    var cc = hex(d.cape);
+    GL.put(M.cape, cx, by, cz, face, sc, sy, sc, -Math.min(0.9, capeLift) * 0.6 + lean, cc[0], cc[1], cc[2]);
+    var hat = M['hat_' + look.hat];
+    if (hat) {
+      var tinted = look.hat === 'wizard' || look.hat === 'hood';
+      GL.put(hat, cx, by, cz, face, sc, sy, sc, lean, tinted ? cc[0] : 1, tinted ? cc[1] : 1, tinted ? cc[2] : 1);
+    }
+    var prop = M['prop_' + look.prop];
+    if (prop) GL.put(prop, cx, by, cz, face, sc, sy, sc, lean + propTilt);
+    var pg = PROP_GLOW[look.prop];
+    if (pg && fall < 0.5 && Math.abs(propTilt) < 0.3) GL.glow(cx + (cs * pg[0] - sn * pg[2]) * sc, pg[1] * sc + by, cz + (sn * pg[0] + cs * pg[2]) * sc, pg[4], hex(pg[3]), 0.8);
+    if (look.hat === 'halo' && fall < 0.5) GL.glow(cx, 35 * sc + by, cz, 10, hex('#fff1a8'), 0.35);
+    if (g.mode === 'down') return;
     // 影子 + 脚下光圈（位阶颜色）
     GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, (0.35) * W3.blobShadow());
     var ec = hex(RW.EVO[p.stage].color);
     GL.ground(true, cx, 1, cz, 16 * sc, 1, 0.15, ec, 0.45);
     if (g.momTier > 0) GL.ground(true, cx, 1.2, cz, (22 + g.momTier * 5) * sc, 0, 0, g.momTier >= 3 ? hex('#ff5a2e') : hex('#ffc861'), 0.25 + 0.1 * Math.sin(W3.t * 10));
-    if (g.clsId === 'ranger' && g.focus > 0) {
+    if (g.cls && g.cls.focus && g.focus > 0) {
       var fk = g.focus / g.cls.focus.max;
       GL.ground(true, cx, 1.3, cz, 24 * sc - fk * 8, 1, 0.08, fk >= 1 ? WHITE : hex('#9dff7a'), 0.3 + 0.5 * fk);
     }
-    // 武器发光
-    if (cls === 'mage') GL.glow(cx + (cs * 2 - sn * 7) * sc, 32 * sc + bob, cz + (sn * 2 + cs * 7) * sc, 9, hex('#ffb347'), 0.8);
     // 冲刺残影
     if (p.trailT > 0 && p.trailN > 1) {
       for (var i = 0; i < p.trailN - 1; i++) {

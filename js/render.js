@@ -1009,10 +1009,15 @@
     var names = ['战意', '战意 · 振奋', '战意 · 激昂', '战意 · 狂热'];
     var col = tier >= 3 ? '#ff5a2e' : (tier >= 1 ? '#ffc861' : '#8a8fa0');
     D.text(names[tier], x, y - 5, 10, col, 'left', true);
-    if (g.clsId === 'ranger') {
+    // 右侧：英雄特性指示（凝神层数 / 狂怒加成 / 特性名）
+    if (g.cls && g.cls.focus) {
       var F = g.cls.focus;
       for (var f = 0; f < F.max; f++) { c.fillStyle = f < g.focus ? (g.focus >= F.max ? '#ffffff' : '#9dff7a') : 'rgba(255,255,255,0.15)'; c.fillRect(x + w - 50 + f * 10, y - 9, 7, 7); }
-    } else if (g.clsId === 'mage') D.text('近焰', x + w, y - 5, 9, '#ff9a3c', 'right', true);
+    } else if (g.cls) {
+      var tagName = g.cls.passive.split('：')[0];
+      if (g.st.rage > 0) { var pl = g.player; tagName += ' +' + Math.round(g.st.rage * Math.max(0, 1 - pl.hp / pl.maxHp) * 100) + '%'; }
+      D.text(tagName, x + w, y - 5, 9, g.cls.color, 'right', true);
+    }
     c.fillStyle = '#1a1420'; c.fillRect(x, y + 3, w, 5);
     c.fillStyle = col; c.fillRect(x, y + 3, w * k, 5);
     for (var q = 0; q < M.tiers.length; q++) { c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(x + w * M.tiers[q] / M.max, y + 2, 1, 7); }

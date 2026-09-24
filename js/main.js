@@ -9,7 +9,7 @@
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: false };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, prog: g.prog, hero: UI.heroSel }); }
   function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
   function resetStick() { js.active = false; js.id = null; js.mx = js.my = js.kx = js.ky = 0; }
 
@@ -19,6 +19,9 @@
     var save = P.load(SAVE_KEY, { best: 0, muted: false }) || {};
     g = new RW.Game();
     g.best = save.best || 0;
+    // 局外进度（解锁、各英雄最高波数、累计数据）；老存档没有这一项
+    g.prog = save.prog || { unlocked: {}, heroBest: {}, kills: 0, coins: 0, built: 0, runs: 0 };
+    UI.heroSel = save.hero && RW.CLASSES[save.hero] ? save.hero : 'mage';
     muted = !!save.muted;
     S.setMuted(muted);
     RW.game = g;
@@ -108,10 +111,17 @@
       if (showHow) { showHow = false; return; }
       if (paused) { paused = false; return; }
       if (g.mode === 'title') action('start');
+      else if (g.mode === 'pick') action('pick:' + UI.heroSel);
       else if (g.mode === 'shop') action('next');
       else if (g.mode === 'result') action('again');
     }
-    if (g.mode === 'pick' && /^Digit[12]$/.test(code)) action('pick:' + g.offers[+code.slice(5) - 1]);
+    if (g.mode === 'pick') {
+      var idx = RW.CLASS_ORDER.indexOf(UI.heroSel), n = RW.CLASS_ORDER.length;
+      if (code === 'ArrowRight' || code === 'KeyD') { action('hero:' + RW.CLASS_ORDER[(idx + 1) % n]); return; }
+      if (code === 'ArrowLeft' || code === 'KeyA') { action('hero:' + RW.CLASS_ORDER[(idx + n - 1) % n]); return; }
+      if (code === 'ArrowDown' || code === 'KeyS') { action('hero:' + RW.CLASS_ORDER[(idx + 5) % n]); return; }
+      if (code === 'ArrowUp' || code === 'KeyW') { action('hero:' + RW.CLASS_ORDER[(idx + n - 5) % n]); return; }
+    }
     if (g.mode === 'shop' && /^Digit[1234]$/.test(code)) action('buy:' + (+code.slice(5) - 1));
     if (g.mode === 'shop' && code === 'KeyR') action('reroll');
   }
@@ -127,7 +137,12 @@
       case 'howtoClose': showHow = false; break;
       case 'mute': muted = !muted; S.setMuted(muted); persist(); break;
       case 'back': case 'home': g.mode = 'title'; break;
-      case 'pick': g.startRun(arg); resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true; break;
+      case 'hero': UI.heroSel = arg; break;
+      case 'pick':
+        if (!RW.isUnlocked(arg, g.prog)) { UI.toast('还没解锁：' + RW.CLASSES[arg].unlock.text); S.play({ type: 'deny' }); break; }
+        UI.heroSel = arg; persist();
+        g.startRun(arg); resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+        break;
       case 'resume': paused = false; break;
       case 'quit': paused = false; resetStick(); g.finishRun(); break;
       case 'revive':
@@ -170,7 +185,7 @@
     for (var i = 0; i < ev.length; i++) {
       S.play(ev[i]);
       if (ev[i].type === 'result') persist();
-      if (ev[i].type === 'shop') { UI.sel = null; buildMenu = false; }
+      if (ev[i].type === 'shop') { UI.sel = null; buildMenu = false; if (g.shop.interest > 0) UI.toast('利息到账 +' + g.shop.interest + ' 金币'); }
     }
     ev.length = 0;
   }

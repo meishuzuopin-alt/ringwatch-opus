@@ -124,49 +124,186 @@
     UI.button('howtoClose', 110, 634, 200, 40, '知道了', { style: 'primary' });
   };
 
-  // ================= 选择职业 =================
+  // ================= 选择英雄 =================
+  // 上半：10 个英雄头像（5 × 2）；下半：选中英雄的详情；未解锁的显示条件与进度
+  UI.heroSel = 'mage';
   UI.pick = function (g) {
+    var c = D.ctx, ids = RW.CLASS_ORDER, prog = g.prog, nUn = 0, i;
+    for (i = 0; i < ids.length; i++) if (RW.isUnlocked(ids[i], prog)) nUn++;
+    if (!RW.CLASSES[UI.heroSel]) UI.heroSel = ids[0];
     D.drawBg(true);
-    UI.dim(0.45);
-    D.text('选择职业', W / 2, 60, 24, C.text, 'center', true, 3);
-    D.text('两种完全不同的打法', W / 2, 90, 12, C.dim, 'center', false, 3);
-    for (var i = 0; i < g.offers.length; i++) {
-      var id = g.offers[i], d = RW.CLASSES[id], y = 118 + i * 262;
-      UI.button('pick:' + id, 20, y, W - 40, 248, '', { draw: (function (d, id) {
-        return function (x, y, w, h, pressed) {
-          var c = D.ctx;
-          c.fillStyle = pressed ? 'rgba(40,30,20,0.95)' : 'rgba(18,14,12,0.9)'; D.rr(x, y, w, h, 12); c.fill();
-          c.strokeStyle = d.color; c.lineWidth = 2; D.rr(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
-          UI.classGlyph(id, x + 60, y + 80, d);
-          D.text(d.name, x + 124, y + 36, 26, d.color, 'left', true);
-          var wn = RW.WEAPONS[d.weapon].name, sn = RW.SKILLS[d.skill].name;
-          D.text('起手：' + wn + ' · 技能：' + sn, x + 124, y + 66, 11, C.dim, 'left');
-          D.text('生命 ' + d.hp, x + 124, y + 84, 11, C.dim, 'left');
-          var pl = D.wrap(d.passive, w - 150, 12);
-          for (var q = 0; q < pl.length; q++) D.text(pl[q], x + 124, y + 106 + q * 16, 12, '#ffe2a8', 'left', true);
-          UI.prosCons(x + 24, y + 164, w - 48, d.pros, d.cons);
-        };
-      })(d, id) });
+    UI.dim(0.5);
+    D.text('选择英雄', W / 2, 38, 24, C.text, 'center', true, 3);
+    D.text('已解锁 ' + nUn + ' / ' + ids.length + ' · 每个英雄自带不同的属性和特性', W / 2, 64, 11, C.dim, 'center', false, 3);
+    for (i = 0; i < ids.length; i++) {
+      var col = i % 5, row = (i / 5) | 0;
+      UI.button('hero:' + ids[i], 14 + col * 80, 80 + row * 96, 72, 88, '', { draw: UI.heroTile(g, ids[i]) });
     }
-    UI.button('back', 20, 670, 120, 40, '返回', { style: 'ghost', size: 13 });
+    UI.heroDetail(g, UI.heroSel, 20, 280, W - 40, 376);
+    var sel = UI.heroSel, ok = RW.isUnlocked(sel, prog);
+    UI.button('back', 20, 670, 120, 44, '返回', { style: 'ghost', size: 13 });
+    UI.button('pick:' + sel, 152, 670, 248, 44, ok ? '出发 · ' + RW.CLASSES[sel].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 16, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
   };
-  UI.classGlyph = function (id, x, y, d) {
+  UI.heroTile = function (g, id) {
+    return function (x, y, w, h, pressed) {
+      var c = D.ctx, d = RW.CLASSES[id], ok = RW.isUnlocked(id, g.prog), on = UI.heroSel === id;
+      c.fillStyle = pressed ? 'rgba(50,38,26,0.96)' : (on ? 'rgba(40,30,22,0.96)' : 'rgba(18,14,12,0.9)'); D.rr(x, y, w, h, 10); c.fill();
+      c.strokeStyle = on ? d.color : (ok ? '#5a4630' : '#2a2016'); c.lineWidth = on ? 2.5 : 1.2; D.rr(x + 1, y + 1, w - 2, h - 2, 10); c.stroke();
+      c.globalAlpha = ok ? 1 : 0.28;
+      UI.heroGlyph(id, x + w / 2, y + 36, 0.56);
+      c.globalAlpha = 1;
+      if (!ok) UI.lockIcon(x + w / 2, y + 36);
+      D.text(d.name, x + w / 2, y + h - 14, 12, ok ? (on ? d.color : C.text) : C.faint, 'center', true);
+    };
+  };
+  UI.lockIcon = function (x, y) {
     var c = D.ctx;
-    c.fillStyle = 'rgba(255,255,255,0.05)'; c.beginPath(); c.arc(x, y, 44, 0, TAU); c.fill();
-    c.strokeStyle = d.color; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 44, 0, TAU); c.stroke();
-    // 简笔人物：头、斗篷、武器
-    c.fillStyle = d.cape; c.beginPath(); c.moveTo(x - 14, y - 6); c.lineTo(x + 14, y - 6); c.lineTo(x + 20, y + 30); c.lineTo(x - 20, y + 30); c.closePath(); c.fill();
-    c.fillStyle = '#2d2a33'; c.fillRect(x - 9, y - 8, 18, 30);
-    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(x, y - 16, 8, 0, TAU); c.fill();
-    c.fillStyle = '#4a2f1f'; c.beginPath(); c.arc(x, y - 20, 8, Math.PI, 0); c.fill();
-    if (id === 'mage') {
-      c.strokeStyle = '#8a6440'; c.lineWidth = 3; c.beginPath(); c.moveTo(x + 22, y + 30); c.lineTo(x + 22, y - 26); c.stroke();
-      c.shadowColor = '#ffb347'; c.shadowBlur = 14; c.fillStyle = '#ffb347'; c.beginPath(); c.arc(x + 22, y - 30, 6, 0, TAU); c.fill(); c.shadowBlur = 0;
-    } else {
-      c.strokeStyle = '#8a6440'; c.lineWidth = 4; c.beginPath(); c.moveTo(x + 4, y + 4); c.lineTo(x + 30, y + 4); c.stroke();
-      c.strokeStyle = '#4a3020'; c.lineWidth = 3; c.beginPath(); c.moveTo(x + 26, y - 10); c.quadraticCurveTo(x + 34, y + 4, x + 26, y + 18); c.stroke();
-      c.strokeStyle = '#f6e2b0'; c.lineWidth = 1; c.beginPath(); c.moveTo(x + 26, y - 10); c.lineTo(x + 26, y + 18); c.stroke();
+    c.strokeStyle = '#c8b89a'; c.lineWidth = 2.2;
+    c.beginPath(); c.arc(x, y - 4, 6, Math.PI, 0); c.stroke();
+    c.fillStyle = '#c8b89a'; D.rr(x - 9, y - 4, 18, 13, 3); c.fill();
+    c.fillStyle = '#2a2016'; c.fillRect(x - 1.2, y, 2.4, 5);
+  };
+  // 属性加成 -> 「强 / 弱」两行文字（英雄和道具共用）
+  UI.fxText = function (fx) {
+    var up = [], down = [];
+    for (var k in fx) {
+      var v = fx[k], s = RW.STATS[k];
+      if (!s || s.special) continue;
+      var good = s.inverse ? v < 0 : v > 0;
+      (good ? up : down).push(UI.fmtStat(k, v));
     }
+    return { pros: up.join('，'), cons: down.join('，') };
+  };
+  UI.heroDetail = function (g, id, x, y, w, h) {
+    var c = D.ctx, d = RW.CLASSES[id], ok = RW.isUnlocked(id, g.prog);
+    c.fillStyle = 'rgba(18,14,12,0.92)'; D.rr(x, y, w, h, 12); c.fill();
+    c.strokeStyle = d.color; c.lineWidth = 2; D.rr(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
+    UI.heroGlyph(id, x + 60, y + 70, 1);
+    D.text(d.name, x + 122, y + 34, 26, d.color, 'left', true);
+    c.font = D.font(26, true);
+    var nw = c.measureText(d.name).width;
+    c.fillStyle = 'rgba(255,255,255,0.08)'; D.rr(x + 130 + nw, y + 24, 64, 20, 10); c.fill();
+    D.text(d.tag, x + 162 + nw, y + 34, 10, C.text, 'center', true);
+    D.text('起手：' + RW.WEAPONS[d.weapon].name + ' · 技能：' + RW.SKILLS[d.skill].name, x + 122, y + 64, 11, C.dim, 'left');
+    var best = (g.prog && g.prog.heroBest && g.prog.heroBest[id]) || 0;
+    D.text('生命 ' + d.hp + (best ? '　·　最高到第 ' + best + ' 波' : ''), x + 122, y + 82, 11, C.dim, 'left');
+    var yy = y + 106;
+    var pl = D.wrap(d.passive, w - 142, 12);
+    for (var q = 0; q < pl.length; q++) D.text(pl[q], x + 122, yy + q * 16, 12, '#ffe2a8', 'left', true);
+    yy = Math.max(y + 150, yy + pl.length * 16 + 10);
+    var ft = UI.fxText(d.fx);
+    if (ft.pros || ft.cons) {
+      c.fillStyle = 'rgba(255,255,255,0.04)'; D.rr(x + 14, yy - 12, w - 28, ft.pros && ft.cons ? 42 : 24, 6); c.fill();
+      if (ft.pros) { D.text('↑ ' + ft.pros, x + 24, yy, 11, C.good, 'left', true); yy += 18; }
+      if (ft.cons) { D.text('↓ ' + ft.cons, x + 24, yy, 11, C.bad, 'left', true); yy += 18; }
+      yy += 12;
+    }
+    UI.prosCons(x + 24, yy + 4, w - 48, d.pros, d.cons);
+    if (!ok) {
+      var u = d.unlock, up = RW.unlockProgress(id, g.prog), k = Math.min(1, up.have / up.need), by = y + h - 58;
+      c.fillStyle = 'rgba(0,0,0,0.55)'; D.rr(x + 12, by, w - 24, 46, 8); c.fill();
+      UI.lockIcon(x + 34, by + 22);
+      D.text('解锁条件：' + u.text, x + 56, by + 15, 12, C.gold, 'left', true);
+      c.fillStyle = '#2a2016'; D.rr(x + 56, by + 27, w - 140, 8, 4); c.fill();
+      c.fillStyle = C.gold; D.rr(x + 56, by + 27, Math.max(8, (w - 140) * k), 8, 4); c.fill();
+      D.text(Math.min(up.have, up.need) + ' / ' + up.need, x + w - 24, by + 31, 11, C.text, 'right', true);
+    }
+  };
+  // 头像：斗篷 + 身体 + 头 + 帽子 + 手持物；k 为缩放（1 = 半径 44 的大头像）
+  UI.heroGlyph = function (id, x, y, k) {
+    var c = D.ctx, d = RW.CLASSES[id], L = d.look || {};
+    c.save(); c.translate(x, y); c.scale(k, k);
+    c.fillStyle = 'rgba(255,255,255,0.05)'; c.beginPath(); c.arc(0, 0, 44, 0, TAU); c.fill();
+    c.strokeStyle = d.color; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, 44, 0, TAU); c.stroke();
+    c.fillStyle = d.cape; c.beginPath(); c.moveTo(-14, -6); c.lineTo(14, -6); c.lineTo(20, 30); c.lineTo(-20, 30); c.closePath(); c.fill();
+    c.fillStyle = '#2d2a33'; c.fillRect(-9, -8, 18, 30);
+    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(0, -16, 8, 0, TAU); c.fill();
+    UI.hatGlyph(L.hat, d);
+    UI.propGlyph(L.prop, d);
+    c.restore();
+  };
+  UI.hatGlyph = function (hat, d) {
+    var c = D.ctx;
+    switch (hat) {
+      case 'wizard':
+        c.fillStyle = d.cape; c.beginPath(); c.moveTo(-14, -20); c.lineTo(14, -20); c.lineTo(4, -44); c.closePath(); c.fill();
+        c.fillStyle = '#c8963c'; c.fillRect(-12, -23, 24, 3); break;
+      case 'hood':
+        c.fillStyle = d.cape; c.beginPath(); c.arc(0, -17, 11, Math.PI * 0.9, Math.PI * 2.1); c.lineTo(0, -34); c.closePath(); c.fill();
+        c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(0, -14, 6, 0, TAU); c.fill(); break;
+      case 'helm':
+        c.fillStyle = '#b8c4d8'; c.beginPath(); c.arc(0, -17, 10, Math.PI, 0); c.fill(); c.fillRect(-10, -17, 20, 6);
+        c.fillStyle = '#2a2a3a'; c.fillRect(-7, -15, 14, 2.5);
+        c.fillStyle = '#ff6a4a'; c.fillRect(-1.5, -34, 3, 8); break;
+      case 'bandana':
+        c.fillStyle = '#2a1a3a'; c.fillRect(-9, -21, 18, 6);
+        c.beginPath(); c.moveTo(-9, -18); c.lineTo(-18, -12); c.lineTo(-16, -20); c.closePath(); c.fill();
+        c.fillStyle = '#1a1020'; c.fillRect(-8, -14, 16, 6); break;
+      case 'goggles':
+        c.fillStyle = '#4a2f1f'; c.beginPath(); c.arc(0, -20, 8, Math.PI, 0); c.fill();
+        c.fillStyle = '#6b4428'; c.fillRect(-9, -21, 18, 3);
+        c.fillStyle = '#8fe3ff'; c.beginPath(); c.arc(-4, -20, 3, 0, TAU); c.arc(4, -20, 3, 0, TAU); c.fill(); break;
+      case 'horn':
+        c.fillStyle = '#8a8a90'; c.beginPath(); c.arc(0, -18, 9, Math.PI, 0); c.fill();
+        c.fillStyle = '#f0e6d0';
+        c.beginPath(); c.moveTo(-8, -20); c.quadraticCurveTo(-18, -24, -16, -34); c.lineTo(-6, -24); c.closePath(); c.fill();
+        c.beginPath(); c.moveTo(8, -20); c.quadraticCurveTo(18, -24, 16, -34); c.lineTo(6, -24); c.closePath(); c.fill(); break;
+      case 'halo':
+        c.fillStyle = '#e8d8a0'; c.beginPath(); c.arc(0, -18, 9, Math.PI, 0); c.fill(); c.fillRect(-9, -18, 3, 12); c.fillRect(6, -18, 3, 12);
+        c.shadowColor = '#fff1a8'; c.shadowBlur = 10; c.strokeStyle = '#fff1a8'; c.lineWidth = 2.5;
+        c.beginPath(); c.ellipse(0, -31, 10, 3.5, 0, 0, TAU); c.stroke(); c.shadowBlur = 0; break;
+      case 'cap':
+        c.fillStyle = '#5a4630'; c.beginPath(); c.arc(0, -19, 9, Math.PI, 0); c.fill(); c.fillRect(0, -21, 14, 3); break;
+      case 'tophat':
+        c.fillStyle = '#2a1a2a'; c.fillRect(-12, -24, 24, 3); c.fillRect(-7, -38, 14, 14);
+        c.fillStyle = '#ffe066'; c.fillRect(-7, -28, 14, 2.5); break;
+      case 'crown':
+        c.fillStyle = '#4a2f1f'; c.beginPath(); c.arc(0, -19, 8, Math.PI, 0); c.fill();
+        c.fillStyle = '#ffd24a'; c.beginPath(); c.moveTo(-9, -22); c.lineTo(-9, -32); c.lineTo(-4.5, -27); c.lineTo(0, -34); c.lineTo(4.5, -27); c.lineTo(9, -32); c.lineTo(9, -22); c.closePath(); c.fill(); break;
+      default:
+        c.fillStyle = '#4a2f1f'; c.beginPath(); c.arc(0, -20, 8, Math.PI, 0); c.fill();
+    }
+  };
+  UI.propGlyph = function (prop, d) {
+    var c = D.ctx;
+    c.lineCap = 'round';
+    switch (prop) {
+      case 'staff':
+        c.strokeStyle = '#8a6440'; c.lineWidth = 3; c.beginPath(); c.moveTo(22, 30); c.lineTo(22, -26); c.stroke();
+        c.shadowColor = '#ffb347'; c.shadowBlur = 14; c.fillStyle = '#ffb347'; c.beginPath(); c.arc(22, -30, 6, 0, TAU); c.fill(); c.shadowBlur = 0; break;
+      case 'crossbow':
+        c.strokeStyle = '#8a6440'; c.lineWidth = 4; c.beginPath(); c.moveTo(4, 4); c.lineTo(30, 4); c.stroke();
+        c.strokeStyle = '#4a3020'; c.lineWidth = 3; c.beginPath(); c.moveTo(26, -10); c.quadraticCurveTo(34, 4, 26, 18); c.stroke();
+        c.strokeStyle = '#f6e2b0'; c.lineWidth = 1; c.beginPath(); c.moveTo(26, -10); c.lineTo(26, 18); c.stroke(); break;
+      case 'sword':
+        c.strokeStyle = '#dfe8f5'; c.lineWidth = 4; c.beginPath(); c.moveTo(22, 14); c.lineTo(22, -26); c.stroke();
+        c.strokeStyle = '#c8963c'; c.lineWidth = 3; c.beginPath(); c.moveTo(15, 14); c.lineTo(29, 14); c.stroke();
+        c.fillStyle = '#3f5f9e'; c.beginPath(); c.moveTo(-26, -6); c.lineTo(-12, -6); c.lineTo(-12, 12); c.lineTo(-19, 20); c.lineTo(-26, 12); c.closePath(); c.fill(); break;
+      case 'dagger':
+        c.strokeStyle = '#dfe8f5'; c.lineWidth = 3; c.beginPath(); c.moveTo(20, 12); c.lineTo(30, -6); c.stroke();
+        c.beginPath(); c.moveTo(-20, 12); c.lineTo(-30, -6); c.stroke(); break;
+      case 'wrench':
+        c.strokeStyle = '#b8c4d8'; c.lineWidth = 4; c.beginPath(); c.moveTo(20, 24); c.lineTo(24, -12); c.stroke();
+        c.lineWidth = 3; c.beginPath(); c.arc(24, -16, 6, Math.PI * 0.2, Math.PI * 1.6); c.stroke(); break;
+      case 'axe':
+        c.strokeStyle = '#6b4428'; c.lineWidth = 4; c.beginPath(); c.moveTo(22, 28); c.lineTo(22, -24); c.stroke();
+        c.fillStyle = '#dfe8f5'; c.beginPath(); c.moveTo(22, -24); c.quadraticCurveTo(40, -18, 36, -2); c.lineTo(22, -8); c.closePath(); c.fill(); break;
+      case 'book':
+        c.fillStyle = '#8a2a1a'; c.fillRect(14, -2, 18, 22);
+        c.fillStyle = '#ffe2a8'; c.fillRect(17, 1, 12, 16);
+        c.shadowColor = '#fff1a8'; c.shadowBlur = 12; c.fillStyle = '#fff1a8'; c.fillRect(21, 4, 4, 10); c.fillRect(18, 7, 10, 3); c.shadowBlur = 0; break;
+      case 'bomb':
+        c.fillStyle = '#2a2a30'; c.beginPath(); c.arc(24, 8, 9, 0, TAU); c.fill();
+        c.strokeStyle = '#c8963c'; c.lineWidth = 2; c.beginPath(); c.moveTo(28, 0); c.quadraticCurveTo(32, -8, 36, -6); c.stroke();
+        c.shadowColor = '#ff7a4a'; c.shadowBlur = 10; c.fillStyle = '#ffb347'; c.beginPath(); c.arc(36, -6, 3, 0, TAU); c.fill(); c.shadowBlur = 0; break;
+      case 'coin':
+        c.shadowColor = '#ffe066'; c.shadowBlur = 10; c.fillStyle = '#ffd24a'; c.beginPath(); c.arc(24, 6, 9, 0, TAU); c.fill(); c.shadowBlur = 0;
+        c.fillStyle = '#b8862a'; D.text('¥', 24, 7, 11, '#8a5a1a', 'center', true); break;
+      case 'dice':
+        c.fillStyle = '#f4f0e0'; D.rr(15, -2, 18, 18, 3); c.fill();
+        c.fillStyle = '#1f5a4a'; [[20, 3], [28, 11], [24, 7]].forEach(function (p) { c.beginPath(); c.arc(p[0], p[1], 1.8, 0, TAU); c.fill(); }); break;
+    }
+    c.lineCap = 'butt';
   };
 
   UI.weaponGlyph = function (id, x, y, r, color) {
@@ -225,15 +362,10 @@
     return s.label + ' ' + (v > 0 ? '+' : '') + (Math.round(v * 10) / 10);
   };
   UI.modText = function (id) {
-    var m = RW.MODS[id], up = [], down = [];
-    for (var k in m.fx) {
-      var v = m.fx[k], s = RW.STATS[k];
-      if (s.special) continue;
-      var good = s.inverse ? v < 0 : v > 0;
-      (good ? up : down).push(UI.fmtStat(k, v));
-    }
-    if (id === 'bounty') { up.push('精英掉落金币 ×2'); down.push('第 3 波起每波多来 1 只精英'); }
-    return { pros: up.join('，'), cons: down.join('，'), note: id === 'bounty' ? '' : (m.note || '') };
+    var m = RW.MODS[id], t = UI.fxText(m.fx);
+    if (id === 'bounty') { t.pros = '精英掉落金币 ×2'; t.cons = '第 3 波起每波多来 1 只精英'; }
+    if (!t.cons) t.cons = '无';
+    return { pros: t.pros, cons: t.cons, note: id === 'bounty' ? '' : (m.note || '') };
   };
 
   UI.cardInfo = function (g, sl) {
@@ -264,8 +396,8 @@
       info.stat = '冷却 ' + sd.cd + 's';
     } else if (sl.kind === 'mod') {
       var md = RW.MODS[sl.id], mt = UI.modText(sl.id);
-      info.name = md.name; info.color = C.violet;
-      info.tag = '改造 · 已有 ' + g.modCount(sl.id) + '/' + md.max;
+      info.name = md.name; info.color = RW.RARITY[md.r || 0].color;
+      info.tag = '道具 · 已有 ' + g.modCount(sl.id) + '/' + md.max;
       info.pros = mt.pros; info.cons = mt.cons; info.note = mt.note;
     }
     return info;
@@ -400,11 +532,11 @@
     var info = UI.cardInfo(g, sl);
     var afford = g.shardCount >= sl.price;
     c.fillStyle = 'rgba(26,20,16,0.96)'; D.rr(x, y, w, h, 8); c.fill();
-    var rare = (sl.kind === 'weapon' || sl.kind === 'skill' || sl.kind === 'tech') ? sl.tier : (RW.MODS[sl.id] && RW.MODS[sl.id].cost >= 20 ? 2 : 1);
-    var rc = rare >= 3 ? '#c07bff' : (rare === 2 ? '#4f8cff' : '#5a4630');
-    if (rare >= 2) { c.fillStyle = rare >= 3 ? 'rgba(192,123,255,0.08)' : 'rgba(79,140,255,0.06)'; D.rr(x, y, w, h, 8); c.fill(); }
-    c.strokeStyle = sl.locked ? C.gold : rc; c.lineWidth = sl.locked ? 2 : (rare >= 2 ? 1.8 : 1.2); D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 8); c.stroke();
-    D.text(rare >= 3 ? '史诗' : (rare === 2 ? '稀有' : '普通'), x + w - 108, y + h - 12, 9, rare >= 3 ? '#d9b3ff' : (rare === 2 ? '#8fb6ff' : C.faint), 'right', true);
+    // 品质：道具看表里的 r；武器 / 技能 / 科技按品阶 I→普通 II→精良 III→稀有
+    var rare = sl.kind === 'mod' ? (RW.MODS[sl.id].r || 0) : Math.max(0, sl.tier - 1), RQ = RW.RARITY[rare];
+    if (rare >= 1) { c.globalAlpha = 0.07 + rare * 0.02; c.fillStyle = RQ.color; D.rr(x, y, w, h, 8); c.fill(); c.globalAlpha = 1; }
+    c.strokeStyle = sl.locked ? C.gold : (rare ? RQ.color : '#5a4630'); c.lineWidth = sl.locked ? 2 : (rare >= 1 ? 1.4 + rare * 0.3 : 1.2); D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 8); c.stroke();
+    D.text(RQ.name, x + w - 108, y + h - 12, 9, rare ? RQ.color : C.faint, 'right', true);
     c.fillStyle = info.color; c.fillRect(x + 1, y + 10, 3, h - 20);
     D.text(info.name, x + 14, y + 16, 16, info.color, 'left', true);
     c.font = D.font(16, true);
@@ -462,7 +594,8 @@
     D.text('位阶', 280, 182, 11, C.dim, 'center'); D.text(r.stage, 280, 204, 16, C.text, 'center', true);
     D.text('最高连杀', 370, 182, 11, C.dim, 'center'); D.text('×' + (r.streak || 0), 370, 204, 18, C.gold, 'center', true);
     // 输出构成
-    var rows = Math.max(1, Math.min(9, r.list.length)), ph = 44 + rows * 25;
+    var un = r.unlocked || [];
+    var rows = Math.max(1, Math.min(un.length ? 6 : 9, r.list.length)), ph = 44 + rows * 25;
     UI.panel(16, 236, W - 32, ph);
     D.text('输出构成', 30, 256, 13, C.text, 'left', true);
     var max = 1, i;
@@ -483,6 +616,14 @@
       var hh = r.hits[r.hits.length - 1 - i];
       D.text((i === 0 ? '致命 · ' : '之前 · ') + hh.src, 30, dy + 46 + i * 20, 12, i === 0 ? '#ffb3c1' : C.dim, 'left', i === 0);
       D.text('-' + (Math.round(hh.dmg * 10) / 10), W - 30, dy + 46 + i * 20, 12, '#ff6b81', 'right', true);
+    }
+    if (un.length) {   // 新解锁的英雄
+      var uy = dy + 114;
+      c.fillStyle = 'rgba(60,44,12,0.95)'; D.rr(16, uy, W - 32, 54, 10); c.fill();
+      c.strokeStyle = C.gold; c.lineWidth = 2; D.rr(17, uy + 1, W - 34, 52, 10); c.stroke();
+      for (i = 0; i < Math.min(3, un.length); i++) UI.heroGlyph(un[i], 48 + i * 40, uy + 27, 0.4);
+      var names = un.map(function (id) { return RW.CLASSES[id].name; }).join('、');
+      D.glowText('解锁新英雄：' + names, 48 + Math.min(3, un.length) * 40 - 10, uy + 28, 15, C.gold, 'left', 8);
     }
     UI.button('again', 16, 628, 250, 58, '再来一局', { style: 'primary', size: 20 });
     UI.button('home', 276, 628, 128, 58, '返回标题', { size: 14 });

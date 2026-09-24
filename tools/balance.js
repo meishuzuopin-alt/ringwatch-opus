@@ -74,7 +74,9 @@ function botInput(g, out) {
 }
 
 var PREF = { weapon: 3, mod: 2, skill: 1.6, tech: 1.2 };
-var MOD_PREF = { coil: 3, fins: 3, plate: 2.5, nano: 2, prism: 2.5, sight: 1.5, lens: 1.5, hull: 1, magnet: 1, overclock: 1.2, greed: 0.5, bounty: 0.3 };
+var MOD_PREF = { coil: 3, fins: 3, plate: 2.5, nano: 2, prism: 2.5, sight: 1.5, lens: 1.5, hull: 1, magnet: 1, overclock: 1.2, greed: 0.5, bounty: 0.3,
+  whet: 2.5, bracer: 2, apple: 2, heart: 4, belt: 4, trident: 3.5, crown: 2.5, drum: 3, fang: 2, cloak: 2, piggy: 0.6, clover: 0.8 };
+function modPref(id) { return MOD_PREF[id] || 1.5; }
 function shopPolicy(g, policy) {
   if (policy === 'none') return;
   for (var round = 0; round < 6; round++) {
@@ -82,8 +84,8 @@ function shopPolicy(g, policy) {
     var order = g.shop.slots.map(function (s, i) { return i; }).filter(function (i) { var s = g.shop.slots[i]; return s && !s.sold && s.kind !== 'none'; });
     order.sort(function (a, b) {
       var sa = g.shop.slots[a], sb = g.shop.slots[b];
-      var va = PREF[sa.kind] * (sa.kind === 'mod' ? MOD_PREF[sa.id] : 1) / sa.price;
-      var vb = PREF[sb.kind] * (sb.kind === 'mod' ? MOD_PREF[sb.id] : 1) / sb.price;
+      var va = PREF[sa.kind] * (sa.kind === 'mod' ? modPref(sa.id) : 1) / sa.price;
+      var vb = PREF[sb.kind] * (sb.kind === 'mod' ? modPref(sb.id) : 1) / sb.price;
       return vb - va;
     });
     for (var k = 0; k < order.length; k++) {
@@ -138,20 +140,21 @@ var runs = +process.argv[2] || 12;
 var maxWave = +process.argv[3] || 14;
 var policies = process.argv[4] ? process.argv[4].split(',') : ['none', 'random', 'smart'];
 var t0 = Date.now();
+// 可选第 5 个参数：只跑指定英雄，逗号分隔
+var heroes = process.argv[5] ? process.argv[5].split(',') : RW.CLASS_ORDER;
 for (var pi = 0; pi < policies.length; pi++) {
-  var pol = policies[pi], line = [], all = [], stages = [0, 0, 0, 0], causes = {};
-  for (var wi = 0; wi < RW.CLASS_ORDER.length; wi++) {
-    var wid = RW.CLASS_ORDER[wi], sum = 0, c8 = 0;
+  var pol = policies[pi], stages = [0, 0, 0, 0], causes = {};
+  console.log('[' + pol + '] 平均通过波数（≥8 波占比）');
+  for (var wi = 0; wi < heroes.length; wi++) {
+    var wid = heroes[wi], sum = 0, c8 = 0, all = [];
     for (var s = 0; s < runs; s++) {
       var r = runOne(1000 + s * 7919 + wi, wid, pol, maxWave);
       sum += r.cleared; all.push(r.cleared); stages[r.stage]++; if (r.cause) causes[r.cause] = (causes[r.cause] || 0) + 1;
       if (r.cleared >= 8) c8++;
     }
-    line.push(wid + ' ' + (sum / runs).toFixed(1) + ' (≥8:' + Math.round(100 * c8 / runs) + '%)');
+    all.sort(function (a, b) { return a - b; });
+    console.log('    ' + (RW.CLASSES[wid].name + '　　　').slice(0, 4) + ' ' + (sum / runs).toFixed(1) + '  (≥8:' + Math.round(100 * c8 / runs) + '%)  各局 ' + all.join(' '));
   }
-  var hist = {};
-  all.forEach(function (v) { hist[v] = (hist[v] || 0) + 1; });
-  console.log('[' + pol + '] 平均通过波数: ' + line.join(' | '));
-  console.log('    分布(通过波数:局数) ' + JSON.stringify(hist) + '  最终形态分布 ' + JSON.stringify(stages) + '\n    死因 ' + JSON.stringify(causes));
+  console.log('    最终形态分布 ' + JSON.stringify(stages) + '\n    死因 ' + JSON.stringify(causes));
 }
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');

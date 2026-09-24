@@ -17,7 +17,7 @@ fs.mkdirSync(out, { recursive: true });
   const toS = (x, y) => page.evaluate(([x, y]) => { const v = RW.Plat.view; return [v.ox + x * v.s, v.oy + y * v.s]; }, [x, y]);
   const tap = async (x, y) => { const [a, b] = await toS(x, y); await page.mouse.click(a, b); await page.waitForTimeout(150); };
   const shot = n => page.screenshot({ path: path.join(out, n + '.png') });
-  await tap(210, 511); await page.waitForTimeout(200); await shot('f_pick'); await tap(210, 240);
+  await tap(210, 511); await page.waitForTimeout(200); await tap(50, 124); await shot('f_pick'); await tap(276, 692);   // 选第一个英雄 -> 出发
   await page.waitForTimeout(500);
   // 战斗中：点造塔 → 点哨炮
   await tap(46, 712); await shot('f0_buildmenu'); await tap(58, 637);

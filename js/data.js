@@ -37,7 +37,11 @@
     priceGrowth: 0.08,          // 每波物价 +8%
     rerollBase: 2, rerollPerWave: 1, rerollStep: 2,
     sellRate: 0.5,
-    armorPerPoint: 0.07         // 每点护甲 受伤 -7%
+    armorPerPoint: 0.07,        // 每点护甲 受伤 -7%
+    lifestealPerSec: 8,         // 吸血每秒最多触发次数
+    dodgeCap: 0.6,              // 闪避上限
+    thornsR: 70,                // 反伤范围
+    interestCap: 40             // 单次利息上限
   };
 
   // ---------- 位阶（吸收灵火 / 践踏小怪 攒魂量） ----------
@@ -99,24 +103,112 @@
   RW.TIER_COST = [1, 1.6, 2.6];     // 买 I / 升 II / 升 III 的价格倍率
   RW.MAX_SLOTS = 6;
 
-  // ---------- 职业（开局二选一） ----------
+  // ---------- 英雄（开局选一个；多数需要解锁） ----------
+  // fx：与改造同一套属性（见 RW.STATS），英雄特性也用属性表达，卡面文字自动生成。
+  // near / focus：法师、弩手的专属机制。look：3D 与头像的造型（帽子 hat、手持 prop）。
+  // unlock：{ kind: 'free' } 默认可用；'wave' 用任意（或指定 hero）英雄打到第 n 波；'kills' / 'coins' / 'built' 为累计击杀 / 金币 / 建造。
   RW.CLASSES = {
     mage: {
-      name: '法师', color: '#ff9a3c', cape: '#ff8a2a', weapon: 'arc', skill: 'nova', hp: 26,
+      name: '法师', tag: '贴脸爆发', color: '#ff9a3c', cape: '#ff8a2a', look: { hat: 'wizard', prop: 'staff' },
+      weapon: 'arc', skill: 'nova', hp: 26, fx: {},
       passive: '近焰：离敌人越近伤害越高，贴身 +40%',
       near: { r0: 60, r1: 200, bonus: 0.4 },
       pros: '起手连锁闪电 + 炎爆；站进怪堆里打最痛',
-      cons: '血薄；逃跑时输出会跟着掉'
+      cons: '血薄；逃跑时输出会跟着掉',
+      unlock: { kind: 'free' }
     },
     ranger: {
-      name: '弩手', color: '#9dff7a', cape: '#3e8a3a', weapon: 'needle', skill: 'storm', hp: 30,
+      name: '弩手', tag: '站桩狙击', color: '#9dff7a', cape: '#3e8a3a', look: { hat: 'hood', prop: 'crossbow' },
+      weapon: 'needle', skill: 'storm', hp: 30, fx: {},
       passive: '凝神：站定射击叠层，每层暴击 +8%，满 5 层弩箭穿透',
       focus: { still: 40, per: 0.45, max: 5, crit: 0.08, decay: 1.2 },
       pros: '起手飞弩 + 追魂箭雨；站稳了暴击高、能穿透',
-      cons: '一移动凝神就掉，被围住很难受'
+      cons: '一移动凝神就掉，被围住很难受',
+      unlock: { kind: 'free' }
+    },
+    knight: {
+      name: '盾骑士', tag: '反伤坦克', color: '#9fc4ff', cape: '#3f5f9e', look: { hat: 'helm', prop: 'sword' },
+      weapon: 'blades', skill: 'nova', hp: 38, fx: { armor: 3, thorns: 6, speed: -0.08, rate: -0.1 },
+      passive: '荆棘：挨打时反震身边的敌人',
+      pros: '血厚甲硬，挨打还能反伤，适合贴着桥头硬扛',
+      cons: '走得慢、攻速低，追不上逃跑的怪',
+      unlock: { kind: 'wave', wave: 5, text: '任意英雄打到第 5 波' }
+    },
+    rogue: {
+      name: '影刺客', tag: '暴击收割', color: '#d6a8ff', cape: '#3a2a55', look: { hat: 'bandana', prop: 'dagger' },
+      weapon: 'needle', skill: 'storm', hp: 22, fx: { crit: 0.15, critMul: 1, speed: 0.12, dashCd: -0.3, armor: -1 },
+      passive: '致命：暴击伤害 ×3（别人 ×2），冲刺冷却 -30%',
+      pros: '暴击高、暴击伤害高、跑得快，冲刺很勤',
+      cons: '血最薄，还自带 -1 护甲，被摸两下就危险',
+      unlock: { kind: 'wave', wave: 6, hero: 'ranger', text: '用弩手打到第 6 波' }
+    },
+    engineer: {
+      name: '工匠', tag: '建筑流', color: '#ffd27a', cape: '#8a6440', look: { hat: 'goggles', prop: 'wrench' },
+      weapon: 'mines', skill: 'well', hp: 28, fx: { buildCost: -0.3, towerDmg: 0.4, dmg: -0.12 },
+      passive: '图纸：建筑便宜 30%，建筑伤害 +40%',
+      pros: '满地是塔，塔替你打，自己专心走位捡钱',
+      cons: '自己的伤害 -12%，塔被拆了就很脆弱',
+      unlock: { kind: 'built', n: 25, text: '累计建造 25 座建筑' }
+    },
+    berserker: {
+      name: '狂战士', tag: '残血暴走', color: '#ff6a4a', cape: '#8a2a1a', look: { hat: 'horn', prop: 'axe' },
+      weapon: 'blades', skill: 'nova', hp: 34, fx: { rage: 0.8, dmg: 0.1, dmgTaken: 0.15 },
+      passive: '狂怒：生命越低伤害越高，残血时最多 +80%',
+      pros: '血越少越猛，残血时一刀一片',
+      cons: '受到伤害 +15%，玩脱了就是一瞬间',
+      unlock: { kind: 'kills', n: 1500, text: '累计击杀 1500 只敌人' }
+    },
+    priest: {
+      name: '圣女', tag: '续航守护', color: '#fff1a8', cape: '#f4f0e0', look: { hat: 'halo', prop: 'book' },
+      weapon: 'arc', skill: 'veil', hp: 30, fx: { regen: 0.5, healOrb: 1.5, healCore: 4, dmg: -0.12 },
+      passive: '祝福：回血火光多 2.5 倍，捡到时还给圣火回 4 点',
+      pros: '自己能回血，还能顺手修圣火，很难被磨死',
+      cons: '伤害 -12%，杀得慢',
+      unlock: { kind: 'wave', wave: 8, hero: 'mage', text: '用法师打到第 8 波' }
+    },
+    bomber: {
+      name: '爆破手', tag: '范围轰炸', color: '#ff7a4a', cape: '#5a4630', look: { hat: 'cap', prop: 'bomb' },
+      weapon: 'mines', skill: 'well', hp: 28, fx: { blastR: 0.35, knock: 0.3, range: -0.2 },
+      passive: '火药：所有爆炸范围 +35%',
+      pros: '符文陷阱、炎爆、黑洞的爆炸都更大，一炸一片',
+      cons: '射程 -20%，远程武器不好用',
+      unlock: { kind: 'wave', wave: 10, text: '任意英雄打到第 10 波' }
+    },
+    merchant: {
+      name: '商人', tag: '滚雪球', color: '#ffe066', cape: '#6a3a8a', look: { hat: 'tophat', prop: 'coin' },
+      weapon: 'needle', skill: 'storm', hp: 26, fx: { harvest: 0.3, interest: 0.1, shopPrice: -0.1, dmg: -0.15 },
+      passive: '生意经：每次整备按手上金币给 10% 利息，商店打九折',
+      pros: '钱越攒越多，中后期装备最好',
+      cons: '伤害 -15%，前几波会比较难熬',
+      unlock: { kind: 'coins', n: 3000, text: '累计获得 3000 金币' }
+    },
+    gambler: {
+      name: '赌徒', tag: '看脸', color: '#7affd0', cape: '#1f5a4a', look: { hat: 'crown', prop: 'dice' },
+      weapon: 'scatter', skill: 'veil', hp: 28, fx: { luck: 0.6, freeReroll: 1, crit: 0.05, dmgTaken: 0.1 },
+      passive: '好运：高品质道具更常出现，每次整备免费刷新 1 次',
+      pros: '更容易刷到稀有、传说道具',
+      cons: '受到伤害 +10%',
+      unlock: { kind: 'wave', wave: 12, text: '任意英雄打到第 12 波' }
     }
   };
-  RW.CLASS_ORDER = ['mage', 'ranger'];
+  RW.CLASS_ORDER = ['mage', 'ranger', 'knight', 'rogue', 'engineer', 'berserker', 'priest', 'bomber', 'merchant', 'gambler'];
+
+  // 解锁判定：prog = { unlocked: {id:1}, heroBest: {id: 波数}, kills, coins, built }
+  RW.isUnlocked = function (id, prog) {
+    var u = RW.CLASSES[id].unlock;
+    return u.kind === 'free' || !!(prog && prog.unlocked && prog.unlocked[id]);
+  };
+  RW.unlockProgress = function (id, prog) {
+    var u = RW.CLASSES[id].unlock, pr = prog || {};
+    if (u.kind === 'free') return { have: 1, need: 1 };
+    if (u.kind === 'wave') {
+      var best = 0, hb = pr.heroBest || {};
+      if (u.hero) best = hb[u.hero] || 0;
+      else for (var k in hb) best = Math.max(best, hb[k]);
+      return { have: best, need: u.wave };
+    }
+    return { have: pr[u.kind] || 0, need: u.n };
+  };
 
   // ---------- 主动技能（1 个技能槽；冲刺人人都有） ----------
   RW.SKILLS = {
@@ -259,7 +351,7 @@
     return { dur: 40, r0: 3.5 + 0.25 * k, r1: 5.0 + 0.3 * k, mix: RW.WAVES[10].mix, elites: el };
   };
 
-  // ---------- 改造表（12） ----------
+  // ---------- 改造 / 道具表 ----------
   // fx 里的值：pct 类是比例（0.3 = +30%），flat 类是绝对值。卡面「强/弱」由 fx 自动生成，数据和文字永远一致。
   RW.STATS = {
     dmg: { label: '伤害', pct: true },
@@ -276,21 +368,75 @@
     extra: { label: '额外弹数', pct: false },
     cdr: { label: '技能冷却', pct: true, inverse: true },
     dmgTaken: { label: '受到伤害', pct: true, inverse: true },
-    bounty: { label: '精英悬赏', pct: false, special: true }
+    bounty: { label: '精英悬赏', pct: false, special: true },
+    lifesteal: { label: '吸血几率', pct: true },
+    dodge: { label: '闪避', pct: true },
+    critMul: { label: '暴击伤害', pct: true },
+    luck: { label: '幸运', pct: true },
+    towerDmg: { label: '建筑伤害', pct: true },
+    blastR: { label: '爆炸范围', pct: true },
+    thorns: { label: '反伤', pct: false },
+    interest: { label: '整备利息', pct: true },
+    healOrb: { label: '回血火光', pct: true },
+    healCore: { label: '火光修圣火', pct: false },
+    coreRegen: { label: '圣火每秒回复', pct: false },
+    buildCost: { label: '建造价格', pct: true, inverse: true },
+    rage: { label: '残血增伤', pct: true },
+    shopPrice: { label: '商店价格', pct: true, inverse: true },
+    freeReroll: { label: '免费刷新', pct: false },
+    dashCd: { label: '冲刺冷却', pct: true, inverse: true }
+  };
+  // 道具品质：r = 0 普通 / 1 精良 / 2 稀有 / 3 传说。越往后的波次、幸运越高，高品质越常见。
+  RW.RARITY = [
+    { name: '普通', color: '#b8b0a0' },
+    { name: '精良', color: '#5ab0ff' },
+    { name: '稀有', color: '#c07bff' },
+    { name: '传说', color: '#ffb13b' }
+  ];
+  // 返回各品质的权重（第 w 波、幸运 luck）
+  RW.rarityWeights = function (w, luck) {
+    var L = 1 + Math.max(0, luck || 0);
+    return [100, Math.max(0, (w - 1) * 7) * L, Math.max(0, (w - 3) * 3.5) * L, Math.max(0, (w - 6) * 1.4) * L];
   };
   RW.MODS = {
-    coil:    { name: '狂暴药剂', cost: 20, max: 3, fx: { dmg: 0.30, maxHp: -4 } },
-    fins:    { name: '轻灵手套', cost: 18, max: 3, fx: { rate: 0.22, dmg: -0.08 } },
-    prism:   { name: '分裂符文', cost: 26, max: 2, fx: { extra: 1, dmg: -0.18 }, note: '每把武器含义不同：见武器说明' },
-    lens:    { name: '鹰眼', cost: 16, max: 3, fx: { range: 0.30, rate: -0.10 }, note: '剑环半径、陷阱范围也吃射程' },
-    sight:   { name: '致命之眼', cost: 18, max: 3, fx: { crit: 0.15, maxHp: -3 }, note: '暴击 ×2 伤害' },
-    plate:   { name: '重甲', cost: 20, max: 3, fx: { armor: 2, speed: -0.12 }, note: '每点护甲受伤 -7%' },
-    hull:    { name: '疾风靴', cost: 16, max: 3, fx: { speed: 0.16, armor: -1 } },
-    nano:    { name: '再生护符', cost: 20, max: 3, fx: { regen: 0.4, dmg: -0.06 } },
-    magnet:  { name: '磁石', cost: 14, max: 2, fx: { pickup: 0.7, rate: -0.05 } },
-    greed:   { name: '贪婪之戒', cost: 16, max: 2, fx: { harvest: 0.3, dmgTaken: 0.15 } },
-    overclock: { name: '时之沙', cost: 18, max: 2, fx: { cdr: -0.25, rate: -0.1 }, note: '冲刺和技能都算' },
-    bounty:  { name: '悬赏令', cost: 18, max: 1, fx: { bounty: 1 }, note: '强：精英掉落金币 ×2　弱：第3波起每波多来 1 只精英' }
+    // ---- 普通 ----
+    fins:    { name: '轻灵手套', r: 0, cost: 18, max: 3, fx: { rate: 0.22, dmg: -0.08 } },
+    lens:    { name: '鹰眼', r: 0, cost: 16, max: 3, fx: { range: 0.30, rate: -0.10 }, note: '剑环半径、陷阱范围也吃射程' },
+    hull:    { name: '疾风靴', r: 0, cost: 16, max: 3, fx: { speed: 0.16, armor: -1 } },
+    nano:    { name: '再生护符', r: 0, cost: 20, max: 3, fx: { regen: 0.4, dmg: -0.06 } },
+    magnet:  { name: '磁石', r: 0, cost: 14, max: 2, fx: { pickup: 0.7, rate: -0.05 } },
+    whet:    { name: '磨刀石', r: 0, cost: 14, max: 5, fx: { dmg: 0.08 } },
+    bracer:  { name: '皮护腕', r: 0, cost: 13, max: 5, fx: { armor: 1 } },
+    apple:   { name: '红苹果', r: 0, cost: 12, max: 5, fx: { maxHp: 3 } },
+    feather: { name: '羽毛', r: 0, cost: 12, max: 3, fx: { speed: 0.06, pickup: 0.2 } },
+    purse:   { name: '小钱袋', r: 0, cost: 14, max: 3, fx: { harvest: 0.12 } },
+    herb:    { name: '草药', r: 0, cost: 13, max: 3, fx: { regen: 0.25 } },
+    // ---- 精良 ----
+    coil:    { name: '狂暴药剂', r: 1, cost: 20, max: 3, fx: { dmg: 0.30, maxHp: -4 } },
+    sight:   { name: '致命之眼', r: 1, cost: 18, max: 3, fx: { crit: 0.15, maxHp: -3 }, note: '暴击默认 ×2 伤害' },
+    plate:   { name: '重甲', r: 1, cost: 20, max: 3, fx: { armor: 2, speed: -0.12 }, note: '每点护甲受伤 -7%' },
+    greed:   { name: '贪婪之戒', r: 1, cost: 16, max: 2, fx: { harvest: 0.3, dmgTaken: 0.15 } },
+    overclock: { name: '时之沙', r: 1, cost: 18, max: 2, fx: { cdr: -0.25, rate: -0.1 }, note: '冲刺和技能都算' },
+    bounty:  { name: '悬赏令', r: 1, cost: 18, max: 1, fx: { bounty: 1 }, note: '强：精英掉落金币 ×2　弱：第3波起每波多来 1 只精英' },
+    fang:    { name: '吸血獠牙', r: 1, cost: 20, max: 3, fx: { lifesteal: 0.06, maxHp: -2 }, note: '武器和技能命中时按几率回 1 血，每秒最多 8 次' },
+    cloak:   { name: '幻影斗篷', r: 1, cost: 20, max: 3, fx: { dodge: 0.08, armor: -1 }, note: '闪避上限 60%' },
+    maul:    { name: '重锤头', r: 1, cost: 18, max: 3, fx: { knock: 0.4, dmg: 0.08, rate: -0.08 } },
+    blueprint: { name: '建筑图纸', r: 1, cost: 18, max: 3, fx: { towerDmg: 0.25, dmg: -0.05 } },
+    powder:  { name: '火药桶', r: 1, cost: 18, max: 3, fx: { blastR: 0.2, dmgTaken: 0.08 }, note: '符文陷阱、炎爆、黑洞内爆都算' },
+    thornmail: { name: '荆棘甲', r: 1, cost: 20, max: 3, fx: { thorns: 5, speed: -0.05 }, note: '挨打时对身边 70 内的敌人造成伤害' },
+    piggy:   { name: '存钱罐', r: 1, cost: 16, max: 2, fx: { interest: 0.05, harvest: -0.08 }, note: '每次整备按手上金币发利息（单次最多 40）' },
+    // ---- 稀有 ----
+    prism:   { name: '分裂符文', r: 2, cost: 26, max: 2, fx: { extra: 1, dmg: -0.18 }, note: '每把武器含义不同：见武器说明' },
+    contract: { name: '暗杀契约', r: 2, cost: 26, max: 2, fx: { critMul: 0.5, crit: 0.05, maxHp: -4 } },
+    clover:  { name: '四叶草', r: 2, cost: 22, max: 2, fx: { luck: 0.4, dmg: -0.05 } },
+    holy:    { name: '圣水', r: 2, cost: 24, max: 2, fx: { healOrb: 1, regen: 0.2 } },
+    drum:    { name: '战鼓', r: 2, cost: 26, max: 2, fx: { rate: 0.2, dmg: 0.1, armor: -2 } },
+    ember:   { name: '圣火护符', r: 2, cost: 24, max: 2, fx: { coreRegen: 1, healCore: 2, dmg: -0.05 } },
+    // ---- 传说 ----
+    heart:   { name: '龙之心', r: 3, cost: 40, max: 1, fx: { maxHp: 12, regen: 0.6, speed: -0.1 } },
+    crown:   { name: '时之王冠', r: 3, cost: 40, max: 1, fx: { cdr: -0.35, rate: 0.15, dmgTaken: 0.2 } },
+    belt:    { name: '巨人腰带', r: 3, cost: 42, max: 1, fx: { dmg: 0.4, maxHp: 6, speed: -0.15 } },
+    trident: { name: '三叉符文', r: 3, cost: 44, max: 1, fx: { extra: 1, crit: 0.1, rate: -0.1 } }
   };
-  RW.MOD_ORDER = ['coil', 'fins', 'prism', 'lens', 'sight', 'plate', 'hull', 'nano', 'magnet', 'greed', 'overclock', 'bounty'];
+  RW.MOD_ORDER = Object.keys(RW.MODS);
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));

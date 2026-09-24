@@ -186,10 +186,13 @@
     this.dashSrc = src('冲刺', '#5ef2ff', false);
     this.eatSrc = src('践踏', '#9dff7a', false);
     this.envSrc = src('爆囊连锁', '#ff5a1f', false);
+    this.thornSrc = src('荆棘反伤', '#9fc4ff', false);
     this.shardCount = 0; this.shardFrac = 0; this.totalShards = 0; this.built = 0;
     this.mom = 0; this.momT = 9; this.momTier = 0; this.focusT = 0; this.focus = 0;
     this.kills = 0; this.wave = 0; this.reviveUsed = false; this.streak = 0; this.streakT = 0; this.bestStreak = 0;
     this.lastHits = [];
+    this.lsT = 0; this.runHeals = 0;
+    p.hurtT = 0; p.castT = 0;
     this.combo = 0; this.comboT = 0;
     this.shake = 0; this.freeze = 0; this.lastStop = -9; this.flash = 0;
     this.banner = 0; this.enemyCount = 0; this.evolveT = 0;
@@ -221,7 +224,7 @@
   };
 
   G.rollStartOffers = function () {
-    this.offers = RW.CLASS_ORDER.slice();
+    this.offers = RW.CLASS_ORDER.slice();   // 全部英雄都列出；未解锁的由界面挡住
     this.mode = 'pick';
     return this.offers;
   };
@@ -231,6 +234,7 @@
     this.resetRun();
     this.cls = cls; this.clsId = RW.CLASSES[classId] ? classId : 'mage';
     this.recalc(); this.player.hp = this.player.maxHp;
+    this.runHeals = 0;
     this.addWeapon(cls.weapon);
     this.setSkill(cls.skill);
     this.shardCount = 16;   // 开局给一点钱：第一波就能在脚下建一座塔
@@ -254,16 +258,23 @@
   };
 
   G.recalc = function () {
-    var s = { dmg: 1, rate: 1, speed: 1, range: 1, crit: P.crit, maxHp: this.cls ? this.cls.hp : P.hp, armor: 0, regen: 0, pickup: 1, harvest: 1, knock: 1, extra: 0, cdr: 1, dmgTaken: 1, bounty: 0 };
+    var s = { dmg: 1, rate: 1, speed: 1, range: 1, crit: P.crit, maxHp: this.cls ? this.cls.hp : P.hp, armor: 0, regen: 0, pickup: 1, harvest: 1, knock: 1, extra: 0, cdr: 1, dmgTaken: 1, bounty: 0,
+      lifesteal: 0, dodge: 0, critMul: P.critMul, luck: 0, towerDmg: 1, blastR: 1, thorns: 0, interest: 0, healOrb: 1, healCore: 0, coreRegen: 0,
+      buildCost: 1, rage: 0, shopPrice: 1, freeReroll: 0, dashCd: 1 };
+    var k;
+    if (this.cls && this.cls.fx) for (k in this.cls.fx) s[k] += this.cls.fx[k];
     for (var id in this.mods) {
       var n = this.mods[id], fx = RW.MODS[id].fx;
-      for (var k in fx) s[k] += fx[k] * n;
+      for (k in fx) s[k] += fx[k] * n;
     }
     var evo = RW.EVO[this.player.stage];
     s.armor += evo.armor; s.maxHp += evo.hp; s.dmg += evo.dmg;
     s.dmg = Math.max(0.3, s.dmg); s.rate = Math.max(0.4, s.rate); s.speed = Math.max(0.55, s.speed) * evo.speed;
     s.range = Math.max(0.5, s.range); s.maxHp = Math.max(6, s.maxHp); s.pickup = Math.max(0.5, s.pickup);
     s.crit = Math.min(0.9, Math.max(0, s.crit)); s.knock = Math.max(0.2, s.knock); s.cdr = Math.max(0.5, s.cdr);
+    s.dodge = Math.min(T.dodgeCap, Math.max(0, s.dodge)); s.lifesteal = Math.max(0, s.lifesteal); s.harvest = Math.max(0.2, s.harvest);
+    s.buildCost = Math.max(0.4, s.buildCost); s.shopPrice = Math.max(0.5, s.shopPrice); s.dashCd = Math.max(0.4, s.dashCd);
+    s.towerDmg = Math.max(0.3, s.towerDmg); s.blastR = Math.max(0.5, s.blastR);
     s.takenMul = s.dmgTaken * Math.min(1.6, Math.max(0.4, 1 - s.armor * T.armorPerPoint));
     this.st = s;
     var p = this.player;
@@ -338,6 +349,9 @@
     if (p.inv > 0) p.inv -= DT;
     if (p.dashCd > 0) p.dashCd -= DT;
     if (m === 'battle' && this.st.regen > 0) p.hp = Math.min(p.maxHp, p.hp + this.st.regen * DT);
+    if (m === 'battle' && this.st.coreRegen > 0) this.core.hp = Math.min(this.core.maxHp, this.core.hp + this.st.coreRegen * DT);
+    if (p.hurtT > 0) p.hurtT -= DT;
+    if (p.castT > 0) p.castT -= DT;
     if (m === 'battle' && this.wt < this.dur) this.updateSpawner();
     if ((this.navTick = (this.navTick || 0) + 1) % 10 === 0 || this.navTick === 1) bfs(DIST_PLAYER, cellIdx(p.x, p.y));
     this.updateFocus();
@@ -426,7 +440,7 @@
     var ix = inp.mx || 0, iy = inp.my || 0, m = Math.sqrt(ix * ix + iy * iy);
     if (m > 0.2) { p.dx = ix / m; p.dy = iy / m; }
     else { p.dx = Math.cos(p.face); p.dy = Math.sin(p.face); }
-    p.dashT = DASH.time; p.dashCd = DASH.cd * this.st.cdr;
+    p.dashT = DASH.time; p.dashCd = DASH.cd * this.st.cdr * this.st.dashCd;
     p.inv = Math.max(p.inv, DASH.iframes);
     p.dashId++; p.trailN = 0;
     this.recordTrail();
@@ -595,7 +609,11 @@
   };
 
   // ================= 武器 =================
-  G.momDmg = function () { return this.momTier > 0 ? 1 + T.momentum.dmg[this.momTier - 1] : 1; };
+  G.momDmg = function () {
+    var m = this.momTier > 0 ? 1 + T.momentum.dmg[this.momTier - 1] : 1;
+    if (this.st.rage > 0) { var p = this.player; m *= 1 + this.st.rage * Math.max(0, 1 - p.hp / p.maxHp); }   // 狂怒：越残血越痛
+    return m;
+  };
   G.momRate = function () { return this.momTier > 0 ? 1 + T.momentum.rate[this.momTier - 1] : 1; };
   G.weaponDmg = function (w) { return w.d.dmg * RW.TIER_DMG[w.tier - 1] * this.st.dmg * this.momDmg(); };
 
@@ -613,7 +631,7 @@
           if (!e) { w.cd = 0; break; }
           a = Math.atan2(e.y - p.y, e.x - p.x); w.ang = a; w.kick = 1;
           n = 1 + s.extra;
-          var prc = this.clsId === 'ranger' && this.focus >= this.cls.focus.max ? 2 : 0;
+          var prc = this.cls.focus && this.focus >= this.cls.focus.max ? 2 : 0;
           for (k = 0; k < n; k++) this.fireBullet(p.x, p.y, a + (k - (n - 1) / 2) * 0.12, d.speed, (d.range * s.range) / d.speed + 0.05, this.weaponDmg(w), d.knock * s.knock, prc ? 4.5 : 3.5, w, prc, prc ? '#ffffff' : d.color);
           this.muzzle(p.x + Math.cos(a) * 14, p.y + Math.sin(a) * 14, a, d.color, 0.5);
           w.cd = d.cd[t] / (s.rate * this.momRate());
@@ -819,6 +837,7 @@
   // ---------- 爆炸：统一排队处理，连锁不会递归 ----------
   G.queueBlast = function (x, y, rad, dmgEnemies, dmgPlayer, source, color, who, knock) {
     var b = take(this.blasts, true);
+    if (dmgPlayer <= 0 && this.st) rad *= this.st.blastR;   // 火药：只放大我方的爆炸
     b.x = x; b.y = y; b.rad = rad; b.de = dmgEnemies; b.dp = dmgPlayer; b.src = source; b.color = color; b.who = who || ''; b.knock = knock || 220;
   };
   G.processBlasts = function () {
@@ -876,6 +895,7 @@
   G.castSkill = function () {
     var sk = this.skill, p = this.player;
     if (!sk || sk.cd > 0) return false;
+    p.castT = 0.45;
     var d = sk.d, i, e;
     sk.cd = d.cd * this.st.cdr;
     switch (sk.id) {
@@ -1033,7 +1053,7 @@
   // ================= 建筑 =================
   G.towerCount = function () { return countOn(this.towers); };
   G.buildPrice = function (id) {
-    return Math.round(RW.TOWERS[id].cost * this.priceMul() * (1 + T.build.step * this.towerCount()));
+    return Math.round(RW.TOWERS[id].cost * this.priceMul() * this.st.buildCost * (1 + T.build.step * this.towerCount()));
   };
   // 返回 'ok' 或原因
   G.canBuildHere = function (x, y) {
@@ -1101,7 +1121,7 @@
         if (!e) { tw.cd = 0; continue; }
         var a = Math.atan2(e.y - tw.y, e.x - tw.x);
         tw.ang = a;
-        this.fireBullet(tw.x + Math.cos(a) * 12, tw.y + Math.sin(a) * 12, a, d.speed, range / d.speed + 0.05, d.dmg * RW.TOWER_TIER.dmg[ti], d.knock, 3, st, 0, d.color);
+        this.fireBullet(tw.x + Math.cos(a) * 12, tw.y + Math.sin(a) * 12, a, d.speed, range / d.speed + 0.05, d.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg, d.knock, 3, st, 0, d.color);
         this.muzzle(tw.x + Math.cos(a) * 14, tw.y + Math.sin(a) * 14, a, d.color, 0.5);
         tw.cd = d.cd;
         this.emit('shot', 'tower');
@@ -1116,7 +1136,7 @@
           if (d2 > rr * rr) continue;
           var dd = Math.sqrt(d2) || 1;
           en.slowT = d.slowTime; en.slowAmt = d.slow;
-          this.hitEnemy(en, d.dmg * RW.TOWER_TIER.dmg[ti], dx / dd, dy / dd, d.knock, st, false);
+          this.hitEnemy(en, d.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg, dx / dd, dy / dd, d.knock, st, false);
           hit = true;
         }
         this.ringFx(tw.x, tw.y, 10, range, 0.4, d.color, 2.5);
@@ -1213,7 +1233,7 @@
       collideGrid(s, s.r);
       if (tgt && dl <= reach + 2 && s.cd <= 0) {
         s.cd = sd.atkCd;
-        this.hitEnemy(tgt, sd.dmg * RW.TOWER_TIER.dmg[ti], dx / dl, dy / dl, 70, this.towerStats.barracks, false);
+        this.hitEnemy(tgt, sd.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg, dx / dl, dy / dl, 70, this.towerStats.barracks, false);
         var f = take(this.fx, true);
         f.kind = 'slash'; f.x = s.x + dx / dl * 6; f.y = s.y + dy / dl * 6; f.r = s.ang; f.life = f.max = 0.12; f.color = '#ffd1e8';
       }
@@ -1247,12 +1267,17 @@
     if (!e.on) return;
     var crit = false, critCh = this.st.crit;
     if (source && source.crit && this.cls) {
-      if (this.clsId === 'mage') {
+      if (this.cls.near) {
         var nr = this.cls.near, mdx = e.x - this.player.x, mdy = e.y - this.player.y, md = Math.sqrt(mdx * mdx + mdy * mdy);
         dmg *= 1 + nr.bonus * Math.max(0, Math.min(1, (nr.r1 - md) / (nr.r1 - nr.r0)));
-      } else if (this.clsId === 'ranger') critCh += this.focus * this.cls.focus.crit;
+      } else if (this.cls.focus) critCh += this.focus * this.cls.focus.crit;
     }
-    if (source && source.crit && this.R() < critCh) { dmg *= P.critMul; crit = true; }
+    if (source && source.crit && this.R() < critCh) { dmg *= this.st.critMul; crit = true; }
+    // 吸血：只算主角自己的武器与技能（它们的 source.crit 为真），每秒次数有上限
+    if (source && source.crit && this.st.lifesteal > 0 && this.clock >= this.lsT && this.R() < this.st.lifesteal) {
+      var pl = this.player;
+      if (pl.hp < pl.maxHp && this.mode === 'battle') { pl.hp = Math.min(pl.maxHp, pl.hp + 1); this.lsT = this.clock + 1 / T.lifestealPerSec; this.addNum(pl.x, pl.y - 18, 1, 'heal'); }
+    }
     e.hx = kx; e.hy = ky; e.hk = knock;
     if (e.shieldT > 0) dmg *= 1 - RW.ENEMIES.shielder.reduce;
     var dd = Math.max(1, dmg - e.armor);
@@ -1282,7 +1307,7 @@
     if (how === 'silent') return;
     var pl = this.player, kdx = e.x - pl.x, kdy = e.y - pl.y, near = kdx * kdx + kdy * kdy < T.momentum.near * T.momentum.near;
     if (near || how === 'eat') this.addMomentum(d.boss ? 25 : (e.elite ? 6 : 1));
-    if (near && this.R() < T.healOrb.chance) this.spawnHeal(e.x, e.y);
+    if (near && this.R() < T.healOrb.chance * this.st.healOrb) this.spawnHeal(e.x, e.y);
     this.kills++;
     if (source) source.kills++;
     this.streak = this.streakT > 0 ? this.streak + 1 : 1; this.streakT = 1.3;
@@ -1723,6 +1748,26 @@
   G.hurtPlayer = function (dmg, source, fx, fy) {
     var p = this.player;
     if (p.inv > 0 || this.mode !== 'battle') return;
+    if (this.st.dodge > 0 && this.R() < this.st.dodge) {   // 闪避：不掉血，短暂无敌
+      p.inv = 0.25;
+      var nd = take(this.nums, true);
+      nd.x = p.x; nd.y = p.y - 16; nd.kind = 'heal'; nd.text = '闪避'; nd.vy = -50; nd.life = nd.max = 0.6;
+      this.emit('dodge');
+      return;
+    }
+    if (this.st.thorns > 0) {   // 荆棘：反震身边的敌人
+      var tr = T.thornsR, near = this.near(p.x, p.y, tr), td = this.st.thorns * this.st.dmg, ids = [];
+      for (var ti = 0; ti < near; ti++) ids.push(this.nbuf[ti]);   // 先拷出来：击杀可能再次用到 nbuf
+      for (ti = 0; ti < ids.length; ti++) {
+        var te = this.enemies[ids[ti]];
+        if (!te.on || te.spawnT > 0) continue;
+        var tx = te.x - p.x, ty = te.y - p.y, tl = Math.sqrt(tx * tx + ty * ty) || 1;
+        if (tl > tr + te.r) continue;
+        this.hitEnemy(te, td, tx / tl, ty / tl, 160, this.thornSrc, false);
+      }
+      this.ringFx(p.x, p.y, 8, tr, 0.3, '#9fc4ff', 3);
+    }
+    p.hurtT = 0.3;
     var d = dmg * this.st.takenMul;
     p.hp -= d; p.inv = P.iframes;
     var ax = p.x - fx, ay = p.y - fy, al = Math.sqrt(ax * ax + ay * ay) || 1;
@@ -1780,10 +1825,31 @@
     for (i = 0; i < extra.length; i++) { var x = extra[i]; if (x && x.dmg > 0) ws.push({ name: x.name, dmg: Math.round(x.dmg), kills: x.kills, color: x.color }); }
     if (this.eatSrc.kills > 0) ws.push({ name: '践踏（只数）', dmg: this.eatSrc.kills, kills: this.eatSrc.kills, color: this.eatSrc.color, count: true });
     ws.sort(function (a, b) { return b.dmg - a.dmg; });
-    this.result = { wave: reached, kills: this.kills, shards: this.totalShards, list: ws, hits: this.lastHits.slice(), newBest: newBest, best: this.best,
+    var unlocked = this.recordProgress(reached);
+    this.result = { unlocked: unlocked, hero: this.clsId, wave: reached, kills: this.kills, shards: this.totalShards, list: ws, hits: this.lastHits.slice(), newBest: newBest, best: this.best,
       stage: RW.EVO[this.player.stage].name, towers: this.built, streak: this.bestStreak, coreDown: this.deathCause === 'core' };
     this.mode = 'result';
     this.emit('result');
+  };
+
+  // 局外进度：累计数据 + 各英雄最高波数，返回本局新解锁的英雄
+  G.recordProgress = function (reached) {
+    var pr = this.prog || (this.prog = {});
+    pr.unlocked = pr.unlocked || {}; pr.heroBest = pr.heroBest || {};
+    pr.kills = (pr.kills || 0) + this.kills;
+    pr.coins = (pr.coins || 0) + this.totalShards;
+    pr.built = (pr.built || 0) + this.built;
+    pr.runs = (pr.runs || 0) + 1;
+    var id = this.clsId;
+    if (id) pr.heroBest[id] = Math.max(pr.heroBest[id] || 0, reached);   // 「打到第 n 波」= 到达第 n 波
+    var out = [];
+    for (var i = 0; i < RW.CLASS_ORDER.length; i++) {
+      var h = RW.CLASS_ORDER[i];
+      if (RW.isUnlocked(h, pr)) continue;
+      var up = RW.unlockProgress(h, pr);
+      if (up.have >= up.need) { pr.unlocked[h] = 1; out.push(h); }
+    }
+    return out;
   };
 
   // ================= 战意 / 凝神 / 回血火光 / 尸体 =================
@@ -1811,7 +1877,7 @@
     }
   };
   G.updateFocus = function () {
-    if (this.clsId !== 'ranger') { this.focus = 0; return; }
+    if (!this.cls || !this.cls.focus) { this.focus = 0; return; }
     var F = this.cls.focus, p = this.player, sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     if (sp < F.still && this.mode === 'battle') this.focusT = Math.min(F.per * F.max + 0.01, this.focusT + DT);
     else this.focusT = Math.max(0, this.focusT - DT * (F.per * F.max / F.decay));
@@ -1838,6 +1904,7 @@
         var before = p.hp;
         p.hp = Math.min(p.maxHp, p.hp + T.healOrb.heal);
         if (p.hp > before) this.addNum(p.x, p.y - 18, p.hp - before, 'heal');
+        if (this.st.healCore > 0) { var co = this.core; co.hp = Math.min(co.maxHp, co.hp + this.st.healCore); }
         this.emit('heal');
       }
     }
@@ -1954,12 +2021,18 @@
   };
 
   // ================= 整备（商店） =================
-  G.priceMul = function () { return 1 + T.priceGrowth * Math.max(0, this.wave - 1); };
+  G.priceMul = function () { return (1 + T.priceGrowth * Math.max(0, this.wave - 1)) * (this.st ? this.st.shopPrice : 1); };
   G.enterShop = function () {
     clearPool(this.shards); clearPool(this.mines); clearPool(this.bullets);
     for (var w = 0; w < this.weapons.length; w++) this.weapons[w].mineCount = 0;
     if (!this.shop) this.shop = { slots: [], rerolls: 0, adUsed: false };
     this.shop.rerolls = 0; this.shop.adUsed = false;
+    this.shop.free = Math.round(this.st.freeReroll);
+    this.shop.interest = 0;
+    if (this.st.interest > 0) {   // 利息：按手上金币发放
+      var it = Math.min(T.interestCap, Math.floor(this.shardCount * this.st.interest));
+      if (it > 0) { this.shardCount += it; this.totalShards += it; this.shop.interest = it; }
+    }
     this.rollShop(true);
     this.mode = 'shop';
     this.emit('shop');
@@ -2023,7 +2096,7 @@
         var c = this.candidates(kind, used);
         if (firstNew) { var self = this; c = c.filter(function (id) { return !self.findWeapon(id); }); }
         if (!c.length) continue;
-        var id = c[Math.floor(this.R() * c.length)];
+        var id = kind === 'mod' ? this.pickMod(c) : c[Math.floor(this.R() * c.length)];
         o = this.offerFor(kind, id);
         used[kind + ':' + id] = true;
       }
@@ -2032,10 +2105,24 @@
     }
     shop.slots = slots;
   };
+  // 按品质权重抽道具：先抽品质，该品质没货就往低一档找
+  G.pickMod = function (c) {
+    var wts = RW.rarityWeights(this.wave, this.st.luck), sum = 0, r, i;
+    for (i = 0; i < wts.length; i++) sum += wts[i];
+    var roll = this.R() * sum, want = 0;
+    for (i = 0; i < wts.length; i++) { roll -= wts[i]; if (roll < 0) { want = i; break; } }
+    for (r = want; r >= 0; r--) {
+      var pool = c.filter(function (id) { return (RW.MODS[id].r || 0) === r; });
+      if (pool.length) return pool[Math.floor(this.R() * pool.length)];
+    }
+    return c[Math.floor(this.R() * c.length)];
+  };
   G.rerollCost = function () {
+    if (this.shop.free > 0) return 0;
     return Math.round(T.rerollBase + T.rerollPerWave * (this.wave - 1) + T.rerollStep * this.shop.rerolls);
   };
   G.reroll = function (free) {
+    if (!free && this.shop.free > 0) { this.shop.free--; free = true; }
     if (!free) {
       var c = this.rerollCost();
       if (this.shardCount < c) return false;
