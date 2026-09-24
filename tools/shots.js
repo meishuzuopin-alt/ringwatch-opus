@@ -68,6 +68,7 @@ fs.mkdirSync(out, { recursive: true });
     p.x = g.core.x + 160; p.y = g.core.y - 120;
     p.vx = p.vy = 0;
     p.hp = p.maxHp = 9999;
+    p.inv = p.hurtT = p.dashT = 0;
     g.cls = RW.CLASSES.rogue; g.clsId = 'rogue'; g.mode = 'battle';
     g.update = function () {};
     RW.W3.envFor = () => 'day';
