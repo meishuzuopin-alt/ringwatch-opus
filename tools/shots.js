@@ -14,7 +14,7 @@ fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ args: CHROMIUM_ARGS });
   const errors = [];
   const open = async (query) => {
-    const page = await browser.newPage({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 });
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     await page.goto(base + (query || ''));
@@ -43,7 +43,8 @@ fs.mkdirSync(out, { recursive: true });
     await shot(page, name);
   }
   await page.evaluate(() => { RW.game.clearWave(); });
-  await page.waitForTimeout(2200);
+  await page.waitForFunction(() => RW.game.mode === 'shop', null, { timeout: 60000 });
+  await page.waitForTimeout(500);
   await shot(page, '07_shop');
   await page.close();
 

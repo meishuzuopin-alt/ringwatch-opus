@@ -11,10 +11,10 @@
 
   // ---------- 全局手感/规格 ----------
   RW.TUNE = {
-    W: 420, H: 760, DT: 1 / 60,
+    W: 960, H: 540, DT: 1 / 60,                   // 逻辑分辨率：横屏 16:9，按窗口等比缩放
     WORLD: { w: 1120, h: 1520 },                 // 地图总尺寸（由 js/map.js 决定，sim 启动时会校正）
     ARENA: { x: 0, y: 0, w: 1120, h: 1520 },
-    VIEW: { x: 0, y: 100, w: 420, h: 660 },      // 屏幕上的战场视口
+    VIEW: { x: 0, y: 0, w: 960, h: 540 },        // 战场视口：铺满全屏，HUD 悬浮在四角
     MAX_ENEMIES: 120,
     FONT: 'Consolas, "Courier New", monospace',
     player: {

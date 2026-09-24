@@ -476,13 +476,15 @@
   };
 
   // ================= 镜头 =================
-  var CAM = { pitch: 44 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 1080 };
+  var CAM = { pitch: 46 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 980 };
   W3.updateCamera = function (g, dt, orbit, aspect) {
     var p = g.player, WD = T.WORLD, ct = W3.camT;
     var tx, tz;
     if (orbit) { tx = T.core.x + Math.cos(W3.t * 0.12) * 120; tz = T.core.y - 120 + Math.sin(W3.t * 0.12) * 80; }
     else { tx = p.x + p.vx * T.camera.lead; tz = p.y + p.vy * T.camera.lead; }
-    tx = Math.max(200, Math.min(WD.w - 200, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
+    // 横屏视野很宽：按地面上的可见半宽限制镜头，别拍到地图外面
+    var asp = aspect || V.w / V.h, mx = Math.min(WD.w / 2, Math.tan(CAM.fov / 2) * CAM.dist * asp * 0.92);
+    tx = Math.max(mx, Math.min(WD.w - mx, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
     if (W3.snap) { ct.x = tx; ct.z = tz; W3.snap = false; }
     else { var k = 1 - Math.exp(-T.camera.follow * dt); ct.x += (tx - ct.x) * k; ct.z += (tz - ct.z) * k; }
     var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) : 0;

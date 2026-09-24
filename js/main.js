@@ -59,7 +59,7 @@
           if (b.disabled) { if (b.why) UI.toast(b.why, 1.2); S.play({ type: 'deny' }); return; }
           UI.pressed = b.id; battleButton(b.id); return;
         }
-        if (buildMenu && y > 604 && y < 668) return;       // 点在造塔菜单条上，不启动摇杆
+        if (buildMenu && y > T.H - 74 && x < 600) return;   // 点在造塔菜单条上，不启动摇杆
         if (!js.active) { js.active = true; js.id = id; js.ox = x; js.oy = y; js.kx = js.ky = js.mx = js.my = 0; }
       } else if (type === 'move') {
         if (js.active && id === js.id) updateStick(x, y);
