@@ -33,6 +33,9 @@
 | **你（Cursor）** | 微调：数值、手感、文案、小修小改 | `data.js`、`ui.js` 文案、任意小改动 | `main` 或自建分支 |
 | **Codex** | 美术指导：定风格、调色板、光照氛围、模型造型、特效观感 | `docs/ART.md`、`world3d.js` 的 `PAL` 与昼夜预设、模型造型函数 | `codex/*` |
 
+**所有工作都要推到 GitHub**：Claude 用 `claude/*`、Cursor 用 `cursor/*`、Codex 用 `codex/*` 分支，改完就提交并推送，不要只留在本地。
+没推送的改动别人看不到，全面升级时会被漏掉。`npm run sync` 汇总所有分支的进度和可能冲突的文件；全面升级方案见 `docs/UPGRADE-PLAN.md`。
+
 交接方式：美术方案先写进 `docs/ART.md`（要什么、参考、验收标准），能直接改颜色 / 造型的就直接改；
 需要渲染器新能力（新着色器、后处理、贴图等）的，在 `docs/ART.md` 的「待工程实现」里列出来，由 Claude 落地。
 
@@ -55,6 +58,7 @@ npm run test:flow    # 改了界面或流程时跑（需要 Playwright + Chromiu
 npm run shots        # 改了画面时跑，截图在 shots/art/，前后对比
 npm run balance      # 改了数值时跑：node tools/balance.js [局数] [最高波数]
 npm run music        # 改了音乐时跑：离线渲染每段音乐为 WAV，检查爆音 / 静音
+npm run sync         # 汇总三方分支进度与可能冲突的文件
 npm run dev          # 浏览器预览：http://localhost:8080/
 npm run desktop      # 桌面版（Electron）
 npm run dist:win     # 打 Windows 免安装目录到 dist/（也可在 Actions 手动触发三平台打包）
