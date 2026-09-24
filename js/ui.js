@@ -258,12 +258,17 @@
         c.fillStyle = '#2a2a3a'; c.fillRect(-7, -15, 14, 2.5);
         c.fillStyle = '#ff6a4a'; c.fillRect(-1.5, -34, 3, 8); break;
       case 'bandana':
+        c.fillStyle = '#9b72ce';
+        c.beginPath(); c.moveTo(-7, -21); c.lineTo(-16, -20); c.lineTo(-19, -13); c.lineTo(-8, -16); c.closePath(); c.fill();
+        c.beginPath(); c.moveTo(7, -21); c.lineTo(16, -20); c.lineTo(19, -13); c.lineTo(8, -16); c.closePath(); c.fill();
         c.fillStyle = '#2a1a3a'; c.fillRect(-9, -21, 18, 6);
-        c.beginPath(); c.moveTo(-9, -18); c.lineTo(-18, -12); c.lineTo(-16, -20); c.closePath(); c.fill();
+        c.fillStyle = '#cfb0f3'; c.fillRect(-7, -20, 14, 1.7);
         c.fillStyle = '#1a1020'; c.fillRect(-8, -14, 16, 6); break;
       case 'goggles':
         c.fillStyle = '#4a2f1f'; c.beginPath(); c.arc(0, -20, 8, Math.PI, 0); c.fill();
+        c.fillStyle = '#a9753c'; c.fillRect(-12, -22, 24, 4);
         c.fillStyle = '#6b4428'; c.fillRect(-9, -21, 18, 3);
+        c.fillStyle = '#dfaa58'; c.fillRect(-13, -21, 2, 2); c.fillRect(11, -21, 2, 2);
         c.fillStyle = '#8fe3ff'; c.beginPath(); c.arc(-4, -20, 3, 0, TAU); c.arc(4, -20, 3, 0, TAU); c.fill(); break;
       case 'horn':
         c.fillStyle = '#8a8a90'; c.beginPath(); c.arc(0, -18, 9, Math.PI, 0); c.fill();

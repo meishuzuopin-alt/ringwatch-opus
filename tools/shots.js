@@ -1,5 +1,5 @@
-// 美术评审截图：固定几个场景各拍一张，方便对比改动前后的画面。node tools/shots.js [输出目录]
-// 场景：标题、选职业、白天/黄昏/夜晚/Boss 光照下的战斗、整备页、2D 退路画面。
+// 美术评审截图：固定场景和英雄角度各拍一张，方便对比改动前后的画面。node tools/shots.js [输出目录]
+// 场景：标题、选英雄、白天/黄昏/夜晚/Boss 战斗、整备页、2D 退路、影刺客/工匠配饰特写。
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
@@ -47,6 +47,47 @@ fs.mkdirSync(out, { recursive: true });
   await page.waitForTimeout(500);
   await shot(page, '07_shop');
   await page.close();
+
+  // 英雄配饰专项图：解锁影刺客后拍选人页，再用近景相机检查背面轮廓。
+  const heroArt = await open('?hifx');
+  await heroArt.evaluate(() => RW.Main.action('start'));
+  await heroArt.evaluate(() => {
+    const g = RW.game;
+    g.prog = g.prog || {};
+    g.prog.unlocked = g.prog.unlocked || {};
+    for (const id of RW.CLASS_ORDER) g.prog.unlocked[id] = 1;
+    RW.Main.action('hero:rogue');
+  });
+  await heroArt.waitForTimeout(250);
+  await shot(heroArt, '09_hero_rogue_pick');
+  await heroArt.evaluate(() => {
+    RW.Main.action('pick:rogue');
+    const g = RW.game, p = g.player;
+    g.startWave(1);
+    p.r = 14;
+    p.face = -Math.PI / 2; // 镜头在 +Z 一侧，朝 -Z 即展示后脑。
+    p.x = g.core.x + 160; p.y = g.core.y - 120;
+    p.vx = p.vy = 0;
+    p.hp = p.maxHp = 9999;
+    p.inv = p.hurtT = p.dashT = 0;
+    g.cls = RW.CLASSES.rogue; g.clsId = 'rogue'; g.mode = 'battle';
+    g.banner = 0; g.evolveT = 0; g.eliteAlert = 0;   // 逻辑冻结后横幅不会自己消失，先清掉，别挡住角色
+    g.update = function () {};
+    RW.W3.envFor = () => 'day';
+    RW.W3.updateCamera = (game, dt, orbit, aspect) => {
+      const player = game.player, x = player.x, z = player.y;
+      RW.GL.setCamera([x, 160, z + 210], [x, 24, z], 30 * Math.PI / 180, aspect);
+      RW.GL.updateBillboardAxes();
+      const b = RW.W3.bounds;
+      b.x0 = x - 230; b.x1 = x + 230; b.z0 = z - 270; b.z1 = z + 130;
+    };
+  });
+  await heroArt.waitForTimeout(450);
+  await shot(heroArt, '10_hero_rogue_rear');
+  await heroArt.evaluate(() => { RW.game.cls = RW.CLASSES.engineer; });
+  await heroArt.waitForTimeout(180);
+  await shot(heroArt, '11_hero_engineer_rear');
+  await heroArt.close();
 
   const p2 = await open('?2d');
   await p2.evaluate(() => { RW.Main.action('start'); RW.Main.action('pick:' + RW.game.offers[0]); });
