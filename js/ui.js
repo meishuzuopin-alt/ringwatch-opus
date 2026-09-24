@@ -91,14 +91,23 @@
     D.glowText('环带值守', W / 2, 120, 64, C.cyan, 'center', 24);
     D.text('R I N G W A T C H', W / 2, 170, 13, '#e8d8b8', 'center', true, 3);
     D.text('夜色压境，守住村子的圣火。撑过倒计时，整备，再迎下一波。', W / 2, 214, 14, C.text, 'center', true, 3);
-    if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波', W / 2, 244, 13, C.gold, 'center', true, 3);
-    UI.button('start', W / 2 - 150, 280, 300, 62, '开始值守', { style: 'primary', size: 22 });
-    UI.button('mute', W / 2 - 150, 356, 96, 42, muted ? '声音：关' : '声音：开', { size: 13 });
-    UI.button('music', W / 2 - 48, 356, 96, 42, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
-    UI.button('howto', W / 2 + 54, 356, 96, 42, '玩法说明', { size: 13 });
-    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q 技能 · B 造塔 · Enter 开始 · F11 全屏', W / 2, 430, 12, C.dim, 'center', false, 3);
+    var pr = g.prog || {};
+    if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波' + (pr.wins ? ' · 通关 ' + pr.wins + ' 次' : '') + (pr.bestScore ? ' · 最高分 ' + pr.bestScore : ''), W / 2, 244, 13, C.gold, 'center', true, 3);
+    UI.button('start', W / 2 - 150, 272, 300, 58, '开始值守', { style: 'primary', size: 22 });
+    UI.button('mute', W / 2 - 150, 340, 96, 40, muted ? '声音：关' : '声音：开', { size: 13 });
+    UI.button('music', W / 2 - 48, 340, 96, 40, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
+    UI.button('howto', W / 2 + 54, 340, 96, 40, '玩法说明', { size: 13 });
+    var dk = UI.dayKey(), ds = RW.dailySetup(dk), db = pr.daily && pr.daily[dk];
+    UI.button('daily', W / 2 - 150, 390, 148, 46, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
+    UI.button('records', W / 2 + 2, 390, 148, 46, '成就与纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
+    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q/E/R 技能 · B 造塔 · Enter 开始 · F11 全屏', W / 2, 458, 12, C.dim, 'center', false, 3);
     if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出游戏', { style: 'ghost', size: 13 });
     D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
+  };
+
+  UI.dayKey = function () {
+    var d = new Date(), m = d.getMonth() + 1, dd = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd;
   };
 
   UI.howto = function () {
@@ -113,11 +122,12 @@
       ['战意', '在身边击杀会攒战意，攒满进入狂热：攻速、伤害、移速都涨。逃跑会掉。'],
       ['造塔', '按 B 再按 1–4，花金币在脚下建箭塔 / 寒霜塔 / 聚金桩 / 兵营。'],
       ['技能', '空格冲刺（短暂无敌），Q 放技能。整备时可以换技能、升技能。'],
-      ['整备', '买武器 / 改造 / 技能 / 建筑科技。每件货都写了强在哪、弱在哪。'],
+      ['整备', '买武器 / 道具 / 技能 / 建筑科技。同流派武器凑层数有套装加成；III 阶武器配上对应道具能进化。'],
+      ['通关', '一局 20 波，第 20 波击败灭火者即通关，可以接着打无尽。晋升和打倒 Boss 时三选一拿祝福。'],
       ['预警', '红准星＝要刷怪；粉线＝冲锋；黄虚线＝喷刺；橙圈＝爆囊要炸。']
     ];
     for (var i = 0; i < lines.length; i++) {
-      var col = i < 5 ? 0 : 1, y = 110 + (i % 5) * 62, x0 = W / 2 - 336 + col * 350;
+      var col = i < 5 ? 0 : 1, y = 110 + (i % 5) * 62, x0 = W / 2 - 336 + col * 350;   // 10 条，两列各 5 条
       D.text(lines[i][0], x0, y, 14, C.gold, 'left', true);
       var wl = D.wrap(lines[i][1], 270, 12);
       for (var j = 0; j < wl.length; j++) D.text(wl[j], x0 + 50, y + j * 17, 12, C.text, 'left');
@@ -140,21 +150,43 @@
       var col = i % 5, row = (i / 5) | 0;
       UI.button('hero:' + ids[i], 24 + col * 86, 76 + row * 104, 80, 96, '', { draw: UI.heroTile(g, ids[i]) });
     }
-    // 累计进度
-    var pr = prog || {};
-    UI.panel(24, 294, 424, 162);
-    D.text('值守记录', 40, 316, 13, C.text, 'left', true);
-    var rec = [['局数', pr.runs || 0], ['累计击杀', pr.kills || 0], ['累计金币', pr.coins || 0], ['累计建造', pr.built || 0], ['最佳纪录', g.best ? '第 ' + g.best + ' 波' : '—']];
-    for (i = 0; i < rec.length; i++) {
-      var rx = 40 + (i % 3) * 136, ry = 350 + ((i / 3) | 0) * 50;
-      D.text(rec[i][0], rx, ry, 10, C.dim, 'left');
-      D.text(String(rec[i][1]), rx, ry + 20, 17, C.gold, 'left', true);
-    }
+    UI.runSetup(g, 24, 294, 424, 162);
     UI.heroDetail(g, UI.heroSel, 468, 24, W - 492, 432);
     var sel = UI.heroSel, ok = RW.isUnlocked(sel, prog);
     UI.button('back', 24, 472, 160, 48, '返回', { style: 'ghost', size: 14 });
     UI.button('pick:' + sel, 468, 472, W - 492, 48, ok ? '出发 · ' + RW.CLASSES[sel].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 17, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
   };
+  // 本局设置：危险等级（按英雄解锁）+ 变异器；记在 UI 上，存档一起保存
+  UI.runDanger = 0; UI.runMuts = [];
+  UI.maxDanger = function (g, id) {
+    var hd = g.prog && g.prog.heroDanger ? g.prog.heroDanger[id] : undefined;
+    return hd == null ? 0 : Math.min(RW.DANGER.length - 1, hd + 1);
+  };
+  UI.scoreMul = function (danger, muts) {
+    var m = 1 + danger * RW.SCORE.danger;
+    for (var i = 0; i < muts.length; i++) m += RW.MUTATORS[muts[i]].score;
+    return m;
+  };
+  UI.runSetup = function (g, x, y, w, h) {
+    var c = D.ctx, id = UI.heroSel, top = UI.maxDanger(g, id), i;
+    if (UI.runDanger > top) UI.runDanger = top;
+    UI.panel(x, y, w, h);
+    D.text('本局设置', x + 16, y + 20, 13, C.text, 'left', true);
+    D.text('分数倍率 ×' + UI.scoreMul(UI.runDanger, UI.runMuts).toFixed(2), x + w - 16, y + 20, 12, C.gold, 'right', true);
+    D.text('危险', x + 16, y + 48, 11, C.dim, 'left');
+    for (i = 0; i < RW.DANGER.length; i++) {
+      var on = UI.runDanger === i, open = i <= top;
+      UI.button('danger:' + i, x + 50 + i * 42, y + 34, 38, 28, String(i), { style: on ? 'danger' : 'normal', size: 13, disabled: !open,
+        why: '先用' + RW.CLASSES[id].name + '通关危险 ' + (i - 1) });
+    }
+    D.text(RW.DANGER[UI.runDanger].note, x + 310, y + 48, 10, UI.runDanger ? '#ffb3c1' : C.dim, 'left');
+    D.text('变异器（点选开关，难度越高分越多）', x + 16, y + 80, 11, C.dim, 'left');
+    for (i = 0; i < RW.MUT_ORDER.length; i++) {
+      var mid = RW.MUT_ORDER[i], mo = UI.runMuts.indexOf(mid) >= 0, col = i % 4, row = (i / 4) | 0;
+      UI.button('mut:' + mid, x + 16 + col * 100, y + 92 + row * 32, 94, 27, RW.MUTATORS[mid].name, { style: mo ? 'ad' : 'ghost', size: 12 });
+    }
+  };
+
   UI.heroTile = function (g, id) {
     return function (x, y, w, h, pressed) {
       var c = D.ctx, d = RW.CLASSES[id], ok = RW.isUnlocked(id, g.prog), on = UI.heroSel === id;
@@ -196,8 +228,8 @@
     c.fillStyle = 'rgba(255,255,255,0.08)'; D.rr(x + 130 + nw, y + 24, 64, 20, 10); c.fill();
     D.text(d.tag, x + 162 + nw, y + 34, 10, C.text, 'center', true);
     D.text('起手：' + RW.WEAPONS[d.weapon].name + ' · 技能：' + RW.SKILLS[d.skill].name, x + 122, y + 64, 11, C.dim, 'left');
-    var best = (g.prog && g.prog.heroBest && g.prog.heroBest[id]) || 0;
-    D.text('生命 ' + d.hp + (best ? '　·　最高到第 ' + best + ' 波' : ''), x + 122, y + 82, 11, C.dim, 'left');
+    var best = (g.prog && g.prog.heroBest && g.prog.heroBest[id]) || 0, hd = g.prog && g.prog.heroDanger ? g.prog.heroDanger[id] : undefined;
+    D.text('生命 ' + d.hp + (best ? '　·　最高到第 ' + best + ' 波' : '') + (hd != null ? '　·　已通关危险 ' + hd : ''), x + 122, y + 82, 11, hd != null ? C.gold : C.dim, 'left');
     var yy = y + 106;
     var pl = D.wrap(d.passive, w - 142, 12);
     for (var q = 0; q < pl.length; q++) D.text(pl[q], x + 122, yy + q * 16, 12, '#ffe2a8', 'left', true);
@@ -330,6 +362,7 @@
 
   UI.weaponGlyph = function (id, x, y, r, color) {
     var c = D.ctx;
+    if (id === 'cleaver') id = 'swing';
     c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 2.5;
     c.beginPath(); c.arc(x, y, r, 0, TAU); c.globalAlpha = 0.12; c.fill(); c.globalAlpha = 1; c.stroke();
     c.lineWidth = 2;
@@ -340,6 +373,11 @@
       case 'lance': c.lineWidth = 4; c.beginPath(); c.moveTo(x - 12, y); c.lineTo(x + 12, y); c.stroke(); break;
       case 'arc': c.beginPath(); c.moveTo(x - 10, y - 6); c.lineTo(x - 2, y + 4); c.lineTo(x + 2, y - 4); c.lineTo(x + 10, y + 6); c.stroke(); break;
       case 'mines': c.beginPath(); c.arc(x, y, 7, 0, TAU); c.stroke(); c.beginPath(); c.arc(x, y, 2.5, 0, TAU); c.fill(); break;
+      case 'repeater': for (var q = -1; q <= 1; q++) { c.beginPath(); c.moveTo(x - 10, y + q * 5 + 4); c.lineTo(x + 8, y + q * 5 - 4); c.stroke(); } break;
+      case 'javelin': c.beginPath(); c.moveTo(x - 12, y + 8); c.lineTo(x + 10, y - 8); c.stroke(); c.beginPath(); c.moveTo(x + 12, y - 10); c.lineTo(x + 4, y - 8); c.lineTo(x + 10, y - 2); c.closePath(); c.fill(); break;
+      case 'swing': c.lineWidth = 3; c.beginPath(); c.arc(x - 4, y + 4, 12, -1.4, 0.2); c.stroke(); c.beginPath(); c.moveTo(x - 4, y + 4); c.lineTo(x + 8, y - 8); c.stroke(); break;
+      case 'pike': c.beginPath(); c.moveTo(x - 13, y); c.lineTo(x + 8, y); c.stroke(); c.beginPath(); c.moveTo(x + 13, y); c.lineTo(x + 6, y - 4); c.lineTo(x + 6, y + 4); c.closePath(); c.fill(); break;
+      case 'flail': c.beginPath(); c.moveTo(x - 10, y + 8); c.lineTo(x + 2, y - 2); c.stroke(); c.beginPath(); c.arc(x + 5, y - 5, 5, 0, TAU); c.fill(); break;
       default: c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fill();
     }
   };
@@ -354,6 +392,7 @@
       case 'lance': return lane + ' ' + dmg + ' · 间隔 ' + d.cd[tier - 1] + 's · 贯穿 · 射程 ' + d.range;
       case 'arc': return lane + ' ' + dmg + ' · 连跳 ' + (d.jumps + tier - 1) + ' 次 · 间隔 ' + d.cd[tier - 1] + 's';
       case 'mines': return lane + ' ' + dmg + ' · 范围 ' + d.range + ' · 同时 ' + (d.maxMines + tier - 1) + ' 颗';
+      case 'swing': return lane + ' ' + dmg + ' · 扇形横扫 · 间隔 ' + d.cd[tier - 1] + 's · 距离 ' + d.range;
     }
     return '';
   };
@@ -404,6 +443,8 @@
       } else { info.pros = d.pros; info.cons = d.cons; }
       info.stat = UI.weaponStatLine(sl.id, sl.tier, g);
       info.note = d.extraNote;
+      var evo = RW.EVOLVE[sl.id];
+      if (evo && sl.tier === 3) info.pros += '；配上「' + RW.MODS[evo.mod].name + '」可进化为' + evo.name;
     } else if (sl.kind === 'tech') {
       var td = RW.TOWERS[sl.id];
       info.name = td.name + '科技 ' + ROMAN[sl.tier - 1]; info.color = td.color;
@@ -423,6 +464,7 @@
       info.name = md.name; info.color = RW.RARITY[md.r || 0].color;
       info.tag = '道具 · 已有 ' + g.modCount(sl.id) + '/' + md.max;
       info.pros = mt.pros; info.cons = mt.cons; info.note = mt.note;
+      for (var ek in RW.EVOLVE) if (RW.EVOLVE[ek].mod === sl.id && g.findWeapon(ek)) { info.tag += ' · 可进化' + RW.WEAPONS[ek].name; break; }
     }
     return info;
   };
@@ -434,6 +476,7 @@
       case 'lance': return '贯线变宽，间隔缩短';
       case 'arc': return '多跳 1 次';
       case 'mines': return '同时存在的雷 +1';
+      case 'swing': return '扫得更快';
     }
     return '';
   };
@@ -448,8 +491,9 @@
     for (k = 0; k < def.elites.length; k++) { var nm = RW.ENEMIES[def.elites[k][1]].name; el[nm] = (el[nm] || 0) + 1; }
     var es = [];
     for (k in el) es.push(k + '×' + el[k]);
-    var boss = n % RW.BOSS_WAVES.every === 0;
-    return { boss: boss, text: '下一波 ' + n + '：' + names.join(' ') + (es.length ? ' · 精英 ' + es.join(' ') : '') + (boss ? ' · BOSS ' + RW.ENEMIES.boss.name + '！' : '') };
+    var boss = n % RW.BOSS_WAVES.every === 0, fin = n === RW.RUN.waves && !g.endless;
+    var bn = fin ? RW.ENEMIES.tyrant.name + '（终局）' : RW.ENEMIES.boss.name;
+    return { boss: boss, text: '下一波 ' + n + (g.endless ? '（无尽）' : ' / ' + RW.RUN.waves) + '：' + names.join(' ') + (es.length ? ' · 精英 ' + es.join(' ') : '') + (boss ? ' · BOSS ' + bn + '！' : '') };
   };
   UI.countTowers = function (g, id) {
     var n = 0;
@@ -473,19 +517,19 @@
     // 属性条
     UI.statStrip(g, 74);
     // 武器槽
-    var y = 124;
+    var y = 128;
     D.text('武器 ' + g.weapons.length + '/' + RW.MAX_SLOTS + ' · 点两次出售（返还 50%）', 16, y, 11, C.dim, 'left');
     for (i = 0; i < RW.MAX_SLOTS; i++) {
-      var sx = 16 + i * 66, sy = y + 12;
+      var sx = 16 + i * 66, sy = y + 9;
       var w = g.weapons[i];
       if (!w) { c.strokeStyle = '#4a3a28'; c.lineWidth = 1; if (c.setLineDash) c.setLineDash([3, 3]); D.rr(sx, sy, 60, 42, 6); c.stroke(); if (c.setLineDash) c.setLineDash([]); continue; }
       UI.button('wslot:' + i, sx, sy, 60, 42, '', { draw: (function (w, i) {
         return function (x, yy, bw, bh) {
           var sel = UI.sel === 'w:' + i;
           c.fillStyle = sel ? '#2a0b14' : '#1e1712'; D.rr(x, yy, bw, bh, 6); c.fill();
-          c.strokeStyle = sel ? C.red : w.d.color; c.lineWidth = sel ? 2 : 1.5; D.rr(x, yy, bw, bh, 6); c.stroke();
+          c.strokeStyle = sel ? C.red : (w.ev ? C.gold : w.d.color); c.lineWidth = sel || w.ev ? 2 : 1.5; D.rr(x, yy, bw, bh, 6); c.stroke();
           if (sel) { D.text('出售', x + bw / 2, yy + 14, 12, '#ffc2cd', 'center', true); D.text('+' + g.weaponSellValue(w), x + bw / 2, yy + 30, 11, C.shard, 'center', true); }
-          else { D.text(w.d.name, x + bw / 2, yy + 15, 12, w.d.color, 'center', true); D.text(ROMAN[w.tier - 1], x + bw / 2, yy + 31, 11, C.text, 'center', true); }
+          else { D.text(w.name || w.d.name, x + bw / 2, yy + 15, (w.name || w.d.name).length > 3 ? 11 : 12, w.ev ? C.gold : w.d.color, 'center', true); D.text(w.ev ? '进化' : ROMAN[w.tier - 1], x + bw / 2, yy + 31, 11, w.ev ? C.gold : C.text, 'center', true); }
         };
       })(w, i) });
     }
@@ -512,6 +556,8 @@
     }
     // 圣火之后：键位提示
     D.text('1–4 购买 · R 刷新 · Enter 开始下一波', 16, 268, 11, C.faint, 'left');
+    UI.setsPanel(g, 16, 280, LW - 32);
+    UI.evolvePanel(g, 16, 360, LW - 32);
     // 底部操作（左栏）
     var by = H - 66;
     var rc = g.rerollCost();
@@ -521,9 +567,51 @@
     UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '开始第 ' + (g.wave + 1) + ' 波', { style: 'primary', size: adOk ? 15 : 18 });
   };
 
+  // 流派套装：同流派武器阶数之和，2 / 4 / 6 层各一档
+  UI.setText = function (fx) { var t = UI.fxText(fx); return t.pros + (t.cons ? '，' + t.cons : ''); };
+  UI.setsPanel = function (g, x, y, w) {
+    var c = D.ctx, cnt = g.sets || {};
+    D.text('流派套装 · 同流派武器的阶数相加（I=1 II=2 III=3）', x, y + 4, 10, C.dim, 'left');
+    for (var k = 0; k < RW.SET_ORDER.length; k++) {
+      var tag = RW.SET_ORDER[k], S = RW.SETS[tag], n = cnt[tag] || 0, yy = y + 22 + k * 20, nx = null, j;
+      D.text(S.name, x, yy, 11, n >= 2 ? S.color : C.faint, 'left', true);
+      for (j = 0; j < 6; j++) {
+        c.fillStyle = j < n ? S.color : '#2a2016';
+        c.fillRect(x + 32 + j * 11 + (j >= 2 ? 3 : 0) + (j >= 4 ? 3 : 0), yy - 5, 9, 10);
+      }
+      D.text(String(n), x + 112, yy, 11, n >= 2 ? C.text : C.faint, 'left', true);
+      for (j = 0; j < S.tiers.length; j++) if (n < S.tiers[j][0]) { nx = S.tiers[j]; break; }
+      var txt = nx ? (nx[0] + ' 层：' + UI.setText(nx[1])) : '三档全部生效';
+      D.text(txt, x + 132, yy, 10, nx ? C.dim : S.color, 'left');
+    }
+  };
+  // 武器进化：III 阶 + 指定道具 → 整备时免费进化
+  UI.evolvePanel = function (g, x, y, w) {
+    var c = D.ctx, cw = (w - 8) / 2;
+    D.text('武器进化 · III 阶武器 + 对应道具 → 免费进化，伤害 ×' + RW.EVOLVE_MUL, x, y + 4, 10, C.dim, 'left');
+    for (var i = 0; i < g.weapons.length; i++) {
+      var wp = g.weapons[i], ev = RW.EVOLVE[wp.id], col = i % 2, row = (i / 2) | 0;
+      var bx = x + col * (cw + 8), by = y + 14 + row * 31;
+      if (!ev) continue;
+      if (g.canEvolve(wp)) {
+        UI.button('evolve:' + i, bx, by, cw, 27, '进化 → ' + ev.name, { style: 'ad', size: 12 });
+        continue;
+      }
+      c.fillStyle = 'rgba(30,24,18,0.9)'; D.rr(bx, by, cw, 27, 6); c.fill();
+      if (wp.ev) { c.strokeStyle = C.gold; c.lineWidth = 1; D.rr(bx + 0.5, by + 0.5, cw - 1, 26, 6); c.stroke(); D.text(ev.name + ' · ' + ev.note, bx + 8, by + 14, 10, C.gold, 'left', true); continue; }
+      var hasT = wp.tier >= 3, hasM = g.modCount(ev.mod) > 0;
+      D.text(wp.d.name, bx + 8, by + 14, 11, wp.d.color, 'left', true);
+      c.font = D.font(11, true);
+      var nx = bx + 12 + c.measureText(wp.d.name).width;
+      D.text('III', nx, by + 14, 10, hasT ? C.good : C.faint, 'left', true);
+      D.text('+ ' + RW.MODS[ev.mod].name, nx + 22, by + 14, 10, hasM ? C.good : C.faint, 'left', true);
+      D.text('→ ' + ev.name, bx + cw - 8, by + 14, 10, C.dim, 'right');
+    }
+  };
+
   UI.statStrip = function (g, y) {
     var s = g.st, c = D.ctx;
-    c.fillStyle = 'rgba(30,24,18,0.9)'; D.rr(10, y, 400, 36, 6); c.fill();
+    c.fillStyle = 'rgba(30,24,18,0.9)'; D.rr(10, y, 400, 44, 6); c.fill();
     var items = [
       ['生命', Math.round(s.maxHp), s.maxHp - T.player.hp],
       ['伤害', pct(s.dmg - 1), s.dmg - 1],
@@ -542,7 +630,7 @@
       ['受伤', pct(s.takenMul - 1), -(s.takenMul - 1)]
     ];
     for (var i = 0; i < items.length; i++) {
-      var col = i % 6, row = (i / 6) | 0, x = 16 + col * 66, yy = y + 10 + row * 16;
+      var col = i % 6, row = (i / 6) | 0, x = 16 + col * 66, yy = y + 9 + row * 13;
       var it = items[i], color = it[2] > 0.001 ? C.good : (it[2] < -0.001 ? C.bad : C.text);
       D.text(it[0], x, yy, 9, C.dim, 'left');
       D.text(String(it[1]), x + 26, yy, 10, color, 'left', true);
@@ -595,6 +683,40 @@
     UI.button('lock:' + i, x + w - 100, y + 60, 90, 28, sl.locked ? '已锁定' : '锁定', { style: sl.locked ? 'ad' : 'ghost', size: 11 });
   };
 
+  // ================= 祝福三选一 =================
+  UI.bless = function (g) {
+    var c = D.ctx, o = g.blessOffers || [], cw = 260, gap = 24, x0 = (W - cw * 3 - gap * 2) / 2;
+    D.drawBg(true);
+    UI.dim(0.72);
+    D.glowText('圣火的祝福', W / 2, 70, 34, C.gold, 'center', 16);
+    D.text('三选一 · 立即生效，本局一直有效' + (g.blessPending > 1 ? ' · 还有 ' + (g.blessPending - 1) + ' 次' : '') + ' · 按 1–3 选择', W / 2, 106, 12, C.dim, 'center');
+    for (var i = 0; i < o.length; i++) UI.button('bless:' + i, x0 + i * (cw + gap), 140, cw, 280, '', { draw: UI.blessCard(o[i], i) });
+    // 已有的祝福
+    var have = UI.fxText(g.bless || {});
+    if (have.pros) {
+      var hl = D.wrap('已有祝福：' + have.pros, W - 160, 11);
+      for (var j = 0; j < Math.min(2, hl.length); j++) D.text(hl[j], W / 2, 452 + j * 16, 11, '#c9ffd6', 'center');
+    }
+  };
+  UI.blessCard = function (id, i) {
+    return function (x, y, w, h, pressed) {
+      var c = D.ctx, b = RW.BLESSINGS[id], RQ = RW.RARITY[b.r];
+      c.fillStyle = pressed ? 'rgba(60,46,30,0.98)' : 'rgba(26,20,16,0.97)'; D.rr(x, y, w, h, 12); c.fill();
+      c.globalAlpha = 0.1 + b.r * 0.04; c.fillStyle = RQ.color; D.rr(x, y, w, h, 12); c.fill(); c.globalAlpha = 1;
+      c.strokeStyle = RQ.color; c.lineWidth = 2 + b.r * 0.5; D.rr(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
+      // 圣火徽记
+      var cx = x + w / 2, cy = y + 66, fl = 0.9 + 0.1 * Math.sin(UI.t * 5 + i);
+      c.fillStyle = 'rgba(255,200,97,0.12)'; c.beginPath(); c.arc(cx, cy, 36, 0, TAU); c.fill();
+      c.fillStyle = RQ.color; c.beginPath(); c.moveTo(cx, cy - 26 * fl); c.quadraticCurveTo(cx + 18, cy, cx, cy + 20); c.quadraticCurveTo(cx - 18, cy, cx, cy - 26 * fl); c.fill();
+      c.fillStyle = '#fff4d6'; c.beginPath(); c.moveTo(cx, cy - 10 * fl); c.quadraticCurveTo(cx + 8, cy + 6, cx, cy + 16); c.quadraticCurveTo(cx - 8, cy + 6, cx, cy - 10 * fl); c.fill();
+      D.text(b.name, cx, y + 122, 20, RQ.color, 'center', true);
+      D.text(RQ.name, cx, y + 146, 11, C.dim, 'center', true);
+      var t = UI.fxText(b.fx).pros.split('，');
+      for (var k = 0; k < t.length; k++) D.text(t[k], cx, y + 178 + k * 22, 14, '#c9ffd6', 'center', true);
+      D.text('按 ' + (i + 1), cx, y + h - 18, 11, C.faint, 'center');
+    };
+  };
+
   // ================= 复活 =================
   UI.revive = function (g, adLabel) {
     var cx = W / 2;
@@ -614,11 +736,16 @@
     var r = g.result, c = D.ctx, i;
     D.drawBg(true);
     UI.dim(0.6);
-    D.text('值守结束' + (r.hero && RW.CLASSES[r.hero] ? ' · ' + RW.CLASSES[r.hero].name : ''), W / 2, 30, 14, C.dim, 'center', true);
-    D.glowText('撑到第 ' + r.wave + ' 波', W / 2, 70, 36, r.newBest ? C.gold : C.cyan, 'center', 16);
-    if (r.coreDown) D.text('圣火熄灭了', W / 2, 104, 13, C.red, 'center', true);
-    else if (r.newBest) D.text('新纪录', W / 2, 104, 13, C.gold, 'center', true);
-    else D.text('最佳：第 ' + r.best + ' 波', W / 2, 104, 12, C.dim, 'center');
+    var victory = r.won && !r.endless, head = r.daily ? '每日挑战 ' + r.daily : (victory ? '通关' : (r.endless ? '无尽模式' : '值守结束'));
+    var setup = '危险 ' + (r.danger || 0) + (r.mutators && r.mutators.length ? ' · ' + r.mutators.map(function (m) { return RW.MUTATORS[m].name; }).join(' ') : '');
+    D.text(head + (r.hero && RW.CLASSES[r.hero] ? ' · ' + RW.CLASSES[r.hero].name : '') + ' · ' + setup, W / 2, 30, 14, C.dim, 'center', true);
+    if (victory) D.glowText('圣火长明', W / 2, 70, 40, C.gold, 'center', 22);
+    else D.glowText((r.endless ? '无尽 · ' : '') + '撑到第 ' + r.wave + ' 波', W / 2, 70, 36, r.newBest ? C.gold : C.cyan, 'center', 16);
+    var sub = '得分 ' + r.score + (r.newScore ? '（新纪录）' : '');
+    if (victory) sub = '击败灭火者 · 20 波全部守住 · ' + sub;
+    else if (r.coreDown) sub = '圣火熄灭了 · ' + sub;
+    else if (r.newBest) sub = '新纪录 · ' + sub;
+    D.text(sub, W / 2, 104, 13, victory || r.newScore ? C.gold : (r.coreDown ? C.red : C.dim), 'center', true);
     // 左栏：数据 + 输出构成
     var LX = 24, LW = 440;
     UI.panel(LX, 124, LW, 62);
@@ -627,7 +754,7 @@
       var sx = LX + 55 + i * 110;
       D.text(st[i][0], sx, 144, 11, C.dim, 'center'); D.text(st[i][1], sx, 166, 18, st[i][2], 'center', true);
     }
-    var rows = Math.max(1, Math.min(10, r.list.length)), ph = 40 + rows * 26;
+    var ach = r.achievements || [], rows = Math.max(1, Math.min(ach.length ? 6 : 10, r.list.length)), ph = 40 + rows * 26;
     UI.panel(LX, 196, LW, ph);
     D.text('输出构成', LX + 14, 214, 13, C.text, 'left', true);
     var max = 1;
@@ -639,6 +766,14 @@
       c.fillStyle = it.color; c.fillRect(LX + 130, yy - 6, 230 * it.dmg / max, 12);
       D.text(String(it.dmg), LX + LW - 14, yy, 11, C.text, 'right');
     }
+    if (ach.length) {   // 本局新成就
+      var an = ach.map(function (id) { for (var q = 0; q < RW.ACHIEVEMENTS.length; q++) if (RW.ACHIEVEMENTS[q].id === id) return RW.ACHIEVEMENTS[q].name; return id; });
+      var al = D.wrap(an.join('、'), LW - 28, 12), ay = 196 + ph + 10, ah = Math.min(H - 16 - ay, 36 + al.length * 17);
+      c.fillStyle = 'rgba(40,32,14,0.95)'; D.rr(LX, ay, LW, ah, 10); c.fill();
+      c.strokeStyle = C.gold; c.lineWidth = 1.5; D.rr(LX + 0.5, ay + 0.5, LW - 1, ah - 1, 10); c.stroke();
+      D.text('新成就 ×' + ach.length, LX + 14, ay + 18, 13, C.gold, 'left', true);
+      for (i = 0; i < al.length && ay + 40 + i * 17 < ay + ah - 6; i++) D.text(al[i], LX + 14, ay + 40 + i * 17, 12, '#ffe2a8', 'left', true);
+    }
     // 右栏：死因 / 解锁 / 按钮
     var RX = 488, RWd = W - RX - 24;
     UI.panel(RX, 124, RWd, 118);
@@ -649,7 +784,7 @@
       D.text((i === 0 ? '致命 · ' : '之前 · ') + hh.src, RX + 14, 170 + i * 22, 12, i === 0 ? '#ffb3c1' : C.dim, 'left', i === 0);
       D.text('-' + (Math.round(hh.dmg * 10) / 10), RX + RWd - 14, 170 + i * 22, 12, '#ff6b81', 'right', true);
     }
-    var adv = D.wrap(UI.adviceFor(r), RWd - 28, 12);
+    var adv = D.wrap(victory ? '提示：这个英雄解锁了下一级危险。继续无尽的话，敌人每波再硬 ' + Math.round(RW.RUN.endlessHp * 100) + '%。' : UI.adviceFor(r), RWd - 28, 12);
     for (i = 0; i < adv.length; i++) D.text(adv[i], RX + 14, 262 + i * 18, 12, C.dim, 'left');
     var un = r.unlocked || [];
     if (un.length) {   // 新解锁的英雄
@@ -657,12 +792,21 @@
       c.fillStyle = 'rgba(60,44,12,0.95)'; D.rr(RX, uy, RWd, 64, 10); c.fill();
       c.strokeStyle = C.gold; c.lineWidth = 2; D.rr(RX + 1, uy + 1, RWd - 2, 62, 10); c.stroke();
       for (i = 0; i < Math.min(3, un.length); i++) UI.heroGlyph(un[i], RX + 36 + i * 44, uy + 32, 0.44);
-      var names = un.map(function (id) { return RW.CLASSES[id].name; }).join('、');
-      D.glowText('解锁新英雄：' + names, RX + 36 + Math.min(3, un.length) * 44 - 12, uy + 33, 16, C.gold, 'left', 8);
+      var names = un.map(function (id) { return RW.CLASSES[id].name; }).join('、'), tx = RX + 36 + Math.min(3, un.length) * 44 - 12;
+      c.font = D.font(16, true);
+      if (c.measureText('解锁新英雄：' + names).width < RX + RWd - 12 - tx) D.glowText('解锁新英雄：' + names, tx, uy + 33, 16, C.gold, 'left', 8);
+      else { D.glowText('解锁新英雄 ×' + un.length, tx, uy + 22, 15, C.gold, 'left', 8); D.text(names, tx, uy + 44, 12, '#ffe2a8', 'left', true); }
     }
-    UI.button('again', RX, 404, RWd - 150, 58, '再来一局', { style: 'primary', size: 20 });
-    UI.button('home', RX + RWd - 140, 404, 140, 58, '返回标题', { size: 14 });
-    D.text('Enter 再来一局', RX + (RWd - 150) / 2, 476, 10, C.faint, 'center');
+    if (r.canEndless) {
+      UI.button('endless', RX, 404, RWd - 300, 58, '继续无尽', { style: 'ad', size: 18, sub: '从第 ' + (r.wave + 1) + ' 波接着打' });
+      UI.button('again', RX + RWd - 290, 404, 140, 58, '再来一局', { style: 'primary', size: 16 });
+      UI.button('home', RX + RWd - 140, 404, 140, 58, '返回标题', { size: 14 });
+      D.text('Enter 再来一局 · C 继续无尽', RX + RWd / 2, 476, 10, C.faint, 'center');
+    } else {
+      UI.button('again', RX, 404, RWd - 150, 58, '再来一局', { style: 'primary', size: 20 });
+      UI.button('home', RX + RWd - 140, 404, 140, 58, '返回标题', { size: 14 });
+      D.text('Enter 再来一局', RX + (RWd - 150) / 2, 476, 10, C.faint, 'center');
+    }
   };
   UI.adviceFor = function (r) {
     var h = r.hits[r.hits.length - 1];
@@ -675,6 +819,44 @@
     if (h.src.indexOf('孢塔') >= 0) return '提示：孢塔充能发红时拉开距离，弹幕之间有空隙。';
     if (h.src === '壳虫') return '提示：壳虫有护甲，贯线、布雷、升级后的武器更好打。';
     return '提示：被围时往怪少的一侧斜着走，比直线后退安全。';
+  };
+
+  // ================= 成就与纪录 =================
+  UI.records = function (g) {
+    var c = D.ctx, pr = g.prog || {}, got = pr.ach || {}, i;
+    D.drawBg(true);
+    UI.dim(0.72);
+    D.text('成就与纪录', 24, 36, 24, C.text, 'left', true, 3);
+    D.text('成就 ' + RW.countKeys(got) + ' / ' + RW.ACHIEVEMENTS.length + ' · 以后上架时与 Steam 成就一一对应', 24, 60, 11, C.dim, 'left', false, 3);
+    // 左栏：累计数据 + 各英雄
+    UI.panel(24, 74, 300, 404);
+    var rec = [['局数', pr.runs || 0], ['通关', pr.wins || 0], ['最高分', pr.bestScore || 0], ['累计击杀', pr.kills || 0], ['累计金币', pr.coins || 0], ['无尽最高', pr.endlessBest ? '第 ' + pr.endlessBest + ' 波' : '—']];
+    for (i = 0; i < rec.length; i++) {
+      var rx = 40 + (i % 3) * 94, ry = 96 + ((i / 3) | 0) * 44;
+      D.text(rec[i][0], rx, ry, 10, C.dim, 'left');
+      D.text(String(rec[i][1]), rx, ry + 19, 15, C.gold, 'left', true);
+    }
+    D.text('英雄 · 最高波数 · 已通关危险', 40, 196, 11, C.dim, 'left');
+    for (i = 0; i < RW.CLASS_ORDER.length; i++) {
+      var id = RW.CLASS_ORDER[i], d = RW.CLASSES[id], ok = RW.isUnlocked(id, pr), yy = 218 + i * 25;
+      var hb = pr.heroBest && pr.heroBest[id], hd = pr.heroDanger ? pr.heroDanger[id] : undefined;
+      D.text(d.name, 40, yy, 12, ok ? d.color : C.faint, 'left', true);
+      D.text(ok ? (hb ? '第 ' + hb + ' 波' : '—') : '未解锁', 130, yy, 11, ok ? C.text : C.faint, 'left');
+      for (var k = 0; k < RW.DANGER.length; k++) {
+        c.fillStyle = hd != null && k <= hd ? (k >= 4 ? C.red : C.gold) : '#2a2016';
+        D.rr(214 + k * 16, yy - 6, 12, 12, 3); c.fill();
+      }
+    }
+    // 右栏：成就两列
+    var half = Math.ceil(RW.ACHIEVEMENTS.length / 2), cw = (W - 364) / 2;
+    for (i = 0; i < RW.ACHIEVEMENTS.length; i++) {
+      var a = RW.ACHIEVEMENTS[i], on = !!got[a.id], col = (i / half) | 0, ax = 344 + col * cw, ay = 84 + (i % half) * 20;
+      c.fillStyle = on ? C.gold : 'rgba(0,0,0,0)'; c.strokeStyle = on ? C.gold : '#5a4630'; c.lineWidth = 1.2;
+      c.beginPath(); c.arc(ax + 6, ay, 5, 0, TAU); c.fill(); c.stroke();
+      D.text(a.name, ax + 18, ay, 11, on ? '#ffe2a8' : C.dim, 'left', true);
+      D.text(a.desc, ax + 96, ay, 10, on ? C.text : C.faint, 'left');
+    }
+    UI.button('home', 24, 488, 160, 40, '返回', { style: 'ghost', size: 14 });
   };
 
   // ================= 暂停 =================

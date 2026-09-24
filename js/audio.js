@@ -460,6 +460,7 @@
       case 'soldier': if (this.ok('soldier', 0.3)) this.bell(494, 0.16, 0.05); break;
       case 'eat': if (this.ok('eat', 0.04)) { this.impact(0.2); this.whoosh(0.08, 0.05, 300, 120); } break;
       case 'gulp': if (this.ok('gulp', 0.04)) this.bell(520, 0.08, 0.04); break;
+      case 'victory': if (this.ok('victory', 2)) { this.impact(0.9); for (var vz = 0; vz < 5; vz++) this.bell([262, 330, 392, 523, 659][vz], 1.4, 0.07, vz * 0.16); } break;
       case 'evolve': if (this.ok('evolve')) { this.bell(392, 0.2, 0.06); this.bell(494, 0.24, 0.06, 0.12); this.bell(587, 0.3, 0.06, 0.24); this.bell(784, 0.7, 0.07, 0.38); } break;
       case 'fuse': if (this.ok('fuse', 0.2)) { for (var z = 0; z < 3; z++) this.bell(700 + z * 80, 0.05, 0.03, z * 0.08); } break;
       case 'spitAim': if (this.ok('saim', 0.3)) this.whoosh(0.12, 0.04, 900, 1400); break;

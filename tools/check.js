@@ -1,6 +1,6 @@
 // 提交前快速自检（不需要浏览器，几秒跑完）：node tools/check.js
 // 1. 所有 js 语法检查  2. json 可解析  3. game.js 与 preview.html 加载的脚本清单与顺序一致
-// 4. 无头模拟冒烟：两种职业各跑 3 波，确认逻辑不抛异常  5. 统计桌面版游戏文件体积
+// 4. 无头模拟冒烟：两种职业各跑 3 波，确认逻辑不抛异常；玩法闭环测试（tools/simtest.js）  5. 统计桌面版游戏文件体积
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -46,6 +46,11 @@ try {
   const out = execFileSync(process.execPath, [path.join(__dirname, 'balance.js'), '1', '3', 'smart'], { encoding: 'utf8' });
   if (/NaN|undefined/.test(out)) bad('数值输出异常\n' + out); else ok('两种职业各跑 3 波无异常');
 } catch (e) { bad('模拟抛异常\n' + (e.stderr || e.message)); }
+console.log('玩法闭环');
+try {
+  const out = execFileSync(process.execPath, [path.join(__dirname, 'simtest.js')], { encoding: 'utf8' });
+  ok('通关 / 无尽 / 危险 / 变异器 / 祝福 / 套装 / 进化 / 每日挑战 / 成就：' + out.trim().replace(/^✓\s*/, ''));
+} catch (e) { bad('玩法闭环测试失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 
 // 桌面（Steam）版会打进安装包的游戏文件：preview.html + js/ + vendor/ + desktop/（不含 Electron 运行时本身）
 console.log('包体');

@@ -1183,19 +1183,20 @@
     for (var i = 0; i < g.weapons.length; i++) {
       var w = g.weapons[i];
       c.fillStyle = 'rgba(20,15,11,0.85)'; D.rr(x, y, 34, 28, 5); c.fill();
-      c.strokeStyle = w.d.color; c.lineWidth = 1.5; D.rr(x, y, 34, 28, 5); c.stroke();
+      c.strokeStyle = w.ev ? C.gold : w.d.color; c.lineWidth = w.ev ? 2 : 1.5; D.rr(x, y, 34, 28, 5); c.stroke();
       var cd = w.d.kind === 'blades' ? 0 : Math.max(0, Math.min(1, w.cd / (w.d.cd[w.tier - 1] / g.st.rate)));
       if (cd > 0) { c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(x + 1, y + 1 + 26 * (1 - cd), 32, 26 * cd); }
-      D.text(w.d.name[0], x + 13, y + 14, 13, w.d.color, 'center', true);
+      D.text((w.name || w.d.name)[0], x + 13, y + 14, 13, w.ev ? C.gold : w.d.color, 'center', true);
       D.text(['I', 'II', 'III'][w.tier - 1], x + 27, y + 21, 8, C.text, 'center', true);
       x += 38;
     }
     // ---- 上方正中：波次 / 倒计时 / 圣火 ----
     var left = Math.max(0, Math.ceil(g.dur - g.wt)), cx = W / 2;
     D.hudPanel(cx - 90, 8, 180, 70);
-    D.text('第 ' + g.wave + ' 波', cx, 22, 12, C.dim, 'center', true);
+    D.text(g.endless ? '无尽 · 第 ' + g.wave + ' 波' : '第 ' + g.wave + ' / ' + RW.RUN.waves + ' 波' + (g.danger ? ' · 危险 ' + g.danger : ''), cx, 22, 12, g.danger >= 4 ? '#ffb3c1' : C.dim, 'center', true);
     var urgent = g.mode === 'battle' && left <= 5;
-    D.text(g.mode === 'clear' ? '清场' : String(left), cx, 46, 28, urgent ? C.gold : C.text, 'center', true);
+    var duel = g.final && !g.won && left <= 0;   // 终局：倒计时走完后要打倒灭火者才算守住
+    D.text(g.mode === 'clear' ? (g.won ? '守住了' : '清场') : (duel ? '决战' : String(left)), cx, 46, duel ? 22 : 28, duel ? C.red : (urgent ? C.gold : C.text), 'center', true);
     var co = g.core, ck = Math.max(0, co.hp / co.maxHp), cbx = cx - 62, cby = 64;
     D.text('火', cbx - 10, cby + 3, 10, co.alert > 0 && Math.sin(g.clock * 14) > 0 ? C.red : '#ffd27a', 'center', true);
     c.fillStyle = '#1e1712'; c.fillRect(cbx, cby, 132, 7);
@@ -1221,12 +1222,13 @@
     }
     D.battleButtons(g, ui, menu);
     // 横幅
-    if (g.banner > 0 && g.mode === 'battle') {
+    if (g.banner > 0 && (g.mode === 'battle' || (g.mode === 'clear' && g.won))) {
       var k = g.banner / 1.6, al = Math.min(1, k * 3);
       c.globalAlpha = al;
       c.fillStyle = 'rgba(4,8,16,0.7)'; c.fillRect(0, 196, W, 76);
       D.glowText(g.bannerText || ('第 ' + g.wave + ' 波'), W / 2, 226, g.bannerText ? 28 : 34, C.cyan, 'center', 16);
-      var sub = g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒');
+      var sub = g.won ? (RW.RUN.waves + ' 波全部守住') : (g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒'));
+      if (!g.won && g.final && !g.bannerText) sub = '终局 · 坚守 ' + g.dur + ' 秒并击败灭火者';
       if (g.eliteQ.length) sub += ' · 精英 ×' + g.eliteQ.length;
       D.text(sub, W / 2, 256, 13, C.dim, 'center');
       c.globalAlpha = 1;

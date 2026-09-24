@@ -1,5 +1,5 @@
-// 无头数值测试：node tools/balance.js [每把起手武器跑几局] [最多打到第几波]
-// 用一个「普通玩家水平」的走位机器人 + 三种购物策略跑整局，看能打到第几波。
+// 无头数值测试：node tools/balance.js [每个英雄跑几局] [最多打到第几波] [策略] [英雄] [危险等级]
+// 用一个「普通玩家水平」的走位机器人 + 三种购物策略跑整局，看能打到第几波、通关率多少（一局 20 波）。
 // 机器人会：躲不能吞的怪、躲冲锋线/喷刺线/爆囊圈/弹幕、安全时吃绿球捡晶屑、怪贴脸时冲刺、怪多时放技能。
 require('../js/data.js');
 require('../js/map.js');
@@ -29,6 +29,15 @@ function botInput(g, out) {
       if (Math.abs(sd) < 30) { fx += -uy * s2 * 2; fy += ux * s2 * 2; }
     }
     if (e.type === 'bomber' && e.state === 1 && d < e.d.blast + 20) { fx += dx / d * 3; fy += dy / d * 3; danger += 2; }
+    // Boss：砸地红圈往圈外跑；冲撞瞄准时横向让开（普通玩家都会躲这两招）
+    if (e.d.boss && e.state === 1) {
+      var sx = p.x - e.ax, sy = p.y - e.ay, sl = Math.sqrt(sx * sx + sy * sy) || 1;
+      if (sl < e.d.slam.r + p.r + 24) { fx += sx / sl * 4; fy += sy / sl * 4; danger += 3; }
+    }
+    if (e.d.boss && e.state === 3) {
+      var ca = dx * e.dx + dy * e.dy, cs = -dx * e.dy + dy * e.dx, cg = cs >= 0 ? 1 : -1;
+      if (ca > -20 && Math.abs(cs) < e.r + 40) { fx += -e.dy * cg * 3; fy += e.dx * cg * 3; danger += 2; }
+    }
     if (d < R) { var w = (R - d) / R * (e.elite ? 2 : 1); fx += dx / d * w; fy += dy / d * w; danger += w; }
     if (d < e.r + p.r + 14) close++;
   }
@@ -79,6 +88,10 @@ var MOD_PREF = { coil: 3, fins: 3, plate: 2.5, nano: 2, prism: 2.5, sight: 1.5, 
 function modPref(id) { return MOD_PREF[id] || 1.5; }
 function shopPolicy(g, policy) {
   if (policy === 'none') return;
+  // 先顾圣火：残血就修；聪明策略手头宽裕时升级圣火
+  var co = g.core;
+  if (co.hp < co.maxHp * 0.7 && g.shardCount >= g.coreRepairCost()) g.repairCore();
+  if (policy === 'smart' && RW.CORE_LV[(co.lv || 1) + 1] && g.shardCount >= g.coreUpgradeCost() + 10) g.upgradeCore();
   for (var round = 0; round < 6; round++) {
     var bought = false;
     var order = g.shop.slots.map(function (s, i) { return i; }).filter(function (i) { var s = g.shop.slots[i]; return s && !s.sold && s.kind !== 'none'; });
@@ -116,45 +129,69 @@ function buildPolicy(g, policy, state) {
   }
 }
 
-function runOne(seed, weapon, policy, maxWave) {
+// 祝福：稀有度高的优先，同稀有度取第一个
+function blessPolicy(g, policy) {
+  var o = g.blessOffers || [], pick = 0;
+  if (policy === 'random') pick = Math.floor(g.R() * o.length);
+  else for (var i = 1; i < o.length; i++) if (RW.BLESSINGS[o[i]].r > RW.BLESSINGS[o[pick]].r) pick = i;
+  g.chooseBless(pick);
+}
+function evolvePolicy(g, policy) {
+  if (policy === 'none') return;
+  for (var i = 0; i < g.weapons.length; i++) if (g.canEvolve(g.weapons[i])) g.evolveWeapon(i);
+}
+
+function runOne(seed, weapon, policy, maxWave, danger) {
   var g = new RW.Game({ seed: seed }), inp = { mx: 0, my: 0 }, bs = { n: 0, lastWave: 0 };
-  g.startRun(weapon);
+  g.startRun(weapon, { danger: danger });
   var frames = 0;
   while (frames < 60 * 60 * 40) {
     frames++;
     g.update(botInput(g, inp));
     g.events.length = 0;
     buildPolicy(g, policy, bs);
+    if (g.mode === 'bless') blessPolicy(g, policy);
     if (g.mode === 'shop') {
       if (g.wave >= maxWave) return { wave: g.wave + 1, cleared: g.wave, stage: g.player.stage };
+      evolvePolicy(g, policy);
       shopPolicy(g, policy);
+      evolvePolicy(g, policy);
       g.nextWave();
     }
     if (g.mode === 'revive') g.finishRun();
-    if (g.mode === 'result') return { wave: g.wave, cleared: g.wave - 1, stage: g.player.stage, cause: g.deathCause === 'core' ? 'core' : (g.lastHits.length ? g.lastHits[g.lastHits.length - 1].src : '?') };
+    if (g.mode === 'result') {
+      if (g.won) return { wave: g.wave, cleared: g.wave, stage: g.player.stage, won: true, ev: g.rs.evolved };
+      return { wave: g.wave, cleared: g.wave - 1, stage: g.player.stage, ev: g.rs.evolved, cause: g.deathCause === 'core' ? 'core' : (g.lastHits.length ? g.lastHits[g.lastHits.length - 1].src : '?') };
+    }
   }
   return { wave: g.wave, cleared: g.wave - 1, stage: g.player.stage };
 }
 
 var runs = +process.argv[2] || 12;
-var maxWave = +process.argv[3] || 14;
+var maxWave = +process.argv[3] || RW.RUN.waves;
+var danger = +process.argv[6] || 0;
 var policies = process.argv[4] ? process.argv[4].split(',') : ['none', 'random', 'smart'];
 var t0 = Date.now();
 // 可选第 5 个参数：只跑指定英雄，逗号分隔
 var heroes = process.argv[5] ? process.argv[5].split(',') : RW.CLASS_ORDER;
 for (var pi = 0; pi < policies.length; pi++) {
-  var pol = policies[pi], stages = [0, 0, 0, 0], causes = {};
-  console.log('[' + pol + '] 平均通过波数（≥8 波占比）');
+  var pol = policies[pi], stages = {}, causes = {}, dieAt = {}, winAll = 0, evAll = 0;
+  console.log('[' + pol + '] 危险 ' + danger + '：平均通过波数（≥10 波占比 / 通关率）');
   for (var wi = 0; wi < heroes.length; wi++) {
-    var wid = heroes[wi], sum = 0, c8 = 0, all = [];
+    var wid = heroes[wi], sum = 0, c10 = 0, wins = 0, all = [];
     for (var s = 0; s < runs; s++) {
-      var r = runOne(1000 + s * 7919 + wi, wid, pol, maxWave);
-      sum += r.cleared; all.push(r.cleared); stages[r.stage]++; if (r.cause) causes[r.cause] = (causes[r.cause] || 0) + 1;
-      if (r.cleared >= 8) c8++;
+      var r = runOne(1000 + s * 7919 + wi, wid, pol, maxWave, danger);
+      sum += r.cleared; all.push(r.cleared); stages[r.stage] = (stages[r.stage] || 0) + 1; evAll += r.ev || 0;
+      if (r.cause) { causes[r.cause] = (causes[r.cause] || 0) + 1; dieAt[r.wave] = (dieAt[r.wave] || 0) + 1; }
+      if (r.cleared >= 10) c10++;
+      if (r.won) wins++;
     }
+    winAll += wins;
     all.sort(function (a, b) { return a - b; });
-    console.log('    ' + (RW.CLASSES[wid].name + '　　　').slice(0, 4) + ' ' + (sum / runs).toFixed(1) + '  (≥8:' + Math.round(100 * c8 / runs) + '%)  各局 ' + all.join(' '));
+    console.log('    ' + (RW.CLASSES[wid].name + '　　　').slice(0, 4) + ' ' + (sum / runs).toFixed(1) + '  (≥10:' + Math.round(100 * c10 / runs) + '% 通关:' + Math.round(100 * wins / runs) + '%)  各局 ' + all.join(' '));
   }
-  console.log('    最终形态分布 ' + JSON.stringify(stages) + '\n    死因 ' + JSON.stringify(causes));
+  var tot = runs * heroes.length;
+  console.log('    总通关率 ' + Math.round(100 * winAll / tot) + '%　平均进化 ' + (evAll / tot).toFixed(2) + ' 把　最终形态分布 ' + JSON.stringify(stages));
+  console.log('    死在第几波 ' + JSON.stringify(dieAt) + '\n    死因 ' + JSON.stringify(causes));
 }
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');

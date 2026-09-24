@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node tools/lib/serve.js 8080",
     "check": "node tools/check.js",
+    "test:sim": "node tools/simtest.js",
     "balance": "node tools/balance.js",
     "test:flow": "node tools/flowtest.js shots/flow",
     "test:play": "node tools/playtest.js shots/play 2",

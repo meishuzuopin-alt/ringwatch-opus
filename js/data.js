@@ -101,7 +101,43 @@
       extraNote: '额外弹数：每 +1 同时存在的雷 +2'
     }
   };
-  RW.WEAPON_ORDER = ['needle', 'scatter', 'blades', 'lance', 'arc', 'mines'];
+  // ---- 第二批武器（M1）：沿用已有攻击方式，按流派补齐，每个流派都能凑满 6 层套装 ----
+  RW.WEAPONS.repeater = {
+    name: '连弩', kind: 'needle', color: '#d8ff8a', cost: 18,
+    dmg: 4, cd: [0.2, 0.17, 0.14], range: 200, speed: 620, knock: 30, tag: 'ranged',
+    pros: '射速极快，适合叠攻速和暴击',
+    cons: '单发很轻，护甲怪会把每一发都削掉',
+    extraNote: '额外弹数：每 +1 多一发'
+  };
+  RW.WEAPONS.javelin = {
+    name: '标枪', kind: 'lance', color: '#ffd9a0', cost: 22,
+    dmg: 26, cd: [1.2, 1.1, 1.0], range: 380, charge: 0.18, width: 9, knock: 140, tag: 'ranged',
+    pros: '远距离贯穿一条线，出手快',
+    cons: '间隔长，近身的怪来不及处理',
+    extraNote: '额外弹数：每 +1 多一支偏 ±6° 的标枪'
+  };
+  RW.WEAPONS.cleaver = {
+    name: '巨斧', kind: 'swing', color: '#ffb08a', cost: 20,
+    dmg: 14, cd: [0.95, 0.85, 0.75], range: 92, arc: 1.2, knock: 260, tag: 'melee',
+    pros: '朝最近的敌人挥出宽扇形一斧，击退很猛',
+    cons: '只打身前，得贴着怪群走',
+    extraNote: '额外弹数：每 +1 挥砍角度更宽'
+  };
+  RW.WEAPONS.pike = {
+    name: '长枪', kind: 'lance', color: '#e0e8ff', cost: 20,
+    dmg: 16, cd: [0.7, 0.62, 0.55], range: 135, charge: 0.1, width: 10, knock: 120, tag: 'melee',
+    pros: '短距离直刺贯穿，出手几乎不用等',
+    cons: '只有一条线，侧面的怪戳不到',
+    extraNote: '额外弹数：每 +1 多刺一枪'
+  };
+  RW.WEAPONS.flail = {
+    name: '流星锤', kind: 'blades', color: '#c8b8ff', cost: 22,
+    dmg: 10, cd: [0.5, 0.46, 0.42], range: 78, spin: 3.2, knock: 220, count: 1, bladeR: 12, tag: 'melee',
+    pros: '一颗大锤绕身转，伤害和击退都比剑环重',
+    cons: '只有一颗，转一圈才打一次',
+    extraNote: '额外弹数：每 +1 多一颗锤'
+  };
+  RW.WEAPON_ORDER = ['needle', 'repeater', 'scatter', 'javelin', 'blades', 'flail', 'cleaver', 'pike', 'lance', 'arc', 'mines'];
   RW.TIER_DMG = [1, 1.85, 3.1];
   RW.TIER_COST = [1, 1.45, 2.2];     // 买 I / 升 II / 升 III 的价格倍率
   RW.MAX_SLOTS = 6;
@@ -113,7 +149,7 @@
   RW.CLASSES = {
     mage: {
       name: '法师', tag: '贴脸爆发', color: '#ff9a3c', cape: '#ff8a2a', look: { hat: 'wizard', prop: 'staff' },
-      weapon: 'arc', skill: 'nova', hp: 26, fx: { spell: 0.2 },
+      weapon: 'arc', skill: 'nova', hp: 30, fx: { spell: 0.2, regen: 0.2 },   // 新手默认英雄：比别的脆皮多一点容错
       passive: '近焰：离敌人越近伤害越高，贴身 +40%',
       near: { r0: 60, r1: 200, bonus: 0.4 },
       pros: '起手连锁闪电 + 炎爆；站进怪堆里打最痛',
@@ -413,10 +449,21 @@
     phase2: 0.5, summonCd: 8, summon: ['dasher', 'spore', 'spore', 'bomber']
   };
   RW.BOSS_WAVES = { every: 5, at: 0.2, rateCut: 0.35 };
+  // 终局 Boss：沿用巨像的招式（type 仍是 boss），数值更高、更大、召唤更多
+  (function () {
+    var b = RW.ENEMIES.boss, t = {};
+    for (var k in b) t[k] = b[k];
+    t.name = '灭火者'; t.hp = Math.round(b.hp * 2.4); t.r = 48; t.dmg = 9; t.color = '#7a3cff';
+    t.rest = [1.8, 1.1]; t.phase2 = 0.6; t.summonCd = 6;
+    t.summon = ['dasher', 'spore', 'spore', 'bomber', 'shell', 'spitter'];
+    t.shards = 60;
+    RW.ENEMIES.tyrant = t;
+  })();
 
   // 全表只跟这一张走：血、怪伤、物价、开局金币、收成。改这里，战斗和商店一起变。
   RW.SHEET = {
-    hpA: 0.16, hpB: 0.055, hpC9: 0.42, dmgC: 0.05, spdC: 0.012, spdCap: 0.22, priceC: 0.06,
+    // 血量 1 + 0.18k + 0.06k²：第 10 波 7.5 倍、第 20 波 26 倍（白皮书 6.1）
+    hpA: 0.18, hpB: 0.06, hpC9: 0, dmgC: 0.05, spdC: 0.012, spdCap: 0.22, priceC: 0.06,
     startGold: 14, harvestBase: 6, harvestPer: 30
   };
   RW.SHEET.hp = function (w) {
@@ -424,6 +471,9 @@
     return 1 + s.hpA * k + s.hpB * k * k + (w > 8 ? s.hpC9 * (w - 8) * (w - 8) : 0);
   };
   RW.SHEET.dmg = function (w) { return 1 + RW.SHEET.dmgC * (w - 1); };
+  // 防御成长：圣火火舌、建筑、士兵的伤害跟着怪物血量曲线走一部分（科技只有三阶，不成长的话中后期形同虚设）
+  RW.SHEET.defC = 0.3;
+  RW.SHEET.def = function (w) { return 1 + RW.SHEET.defC * (RW.SHEET.hp(w) - 1); };
   RW.SHEET.price = function (w) { return 1 + RW.SHEET.priceC * Math.max(0, w - 1); };
   RW.GROWTH = RW.SHEET;
   RW.TUNE.priceGrowth = RW.SHEET.priceC;
@@ -447,10 +497,11 @@
   ];
   RW.waveDef = function (w) {
     if (w < RW.WAVES.length) return RW.WAVES[w];
-    var k = w - 10, el = [];
-    var n = 4 + Math.floor(k / 2);
+    // 第 11–20 波：时长涨到 60 秒，刷怪更密，精英逐波增加；21 波起为无尽，沿用第 20 波节奏
+    var k = Math.min(w, 20) - 10, el = [];
+    var n = 3 + Math.floor(k / 2);
     for (var i = 0; i < n; i++) el.push([0.1 + 0.8 * i / Math.max(1, n - 1), i % 2 ? 'brood' : 'warden']);
-    return { dur: 40, r0: 3.5 + 0.25 * k, r1: 5.0 + 0.3 * k, mix: RW.WAVES[10].mix, elites: el };
+    return { dur: Math.min(60, 40 + 2 * k), r0: 3.5 + 0.22 * k, r1: 5.0 + 0.3 * k, mix: RW.WAVES[10].mix, elites: el };
   };
 
   // ---------- 改造 / 道具表 ----------
@@ -489,7 +540,8 @@
     rage: { label: '残血增伤', pct: true },
     shopPrice: { label: '商店价格', pct: true, inverse: true },
     freeReroll: { label: '免费刷新', pct: false },
-    dashCd: { label: '冲刺冷却', pct: true, inverse: true }
+    dashCd: { label: '冲刺冷却', pct: true, inverse: true },
+    mpRegen: { label: '法力回复', pct: true }
   };
   // 道具品质：r = 0 普通 / 1 精良 / 2 稀有 / 3 传说。越往后的波次、幸运越高，高品质越常见。
   RW.RARITY = [
@@ -547,4 +599,140 @@
     trident: { name: '三叉符文', r: 3, cost: 44, max: 1, fx: { extra: 1, crit: 0.1, rate: -0.1 } }
   };
   RW.MOD_ORDER = Object.keys(RW.MODS);
+
+  // =====================================================================
+  // M1 · 一局闭环与构筑深度（白皮书第 4–8 节）
+  // =====================================================================
+
+  // 一局 20 波；第 20 波是终局 Boss，击败即通关，之后可选无尽
+  RW.RUN = { waves: 20, endlessHp: 0.12 };
+
+  // 危险等级：每个英雄独立，通关 n 级解锁 n+1 级；高等级包含低等级的全部规则
+  RW.DANGER = [
+    { name: '危险 0', hp: 1.00, dmg: 1.00, note: '标准难度' },
+    { name: '危险 1', hp: 1.12, dmg: 1.10, eliteEarly: 1, note: '敌人更硬；第 3 波就有精英' },
+    { name: '危险 2', hp: 1.25, dmg: 1.20, eliteEarly: 1, price: 0.1, note: '物价 +10%' },
+    { name: '危险 3', hp: 1.40, dmg: 1.30, eliteEarly: 1, price: 0.1, elite: 1, note: '每波多一只精英' },
+    { name: '危险 4', hp: 1.55, dmg: 1.40, eliteEarly: 1, price: 0.1, elite: 1, coreHp: -0.2, note: '圣火最大生命 -20%' },
+    { name: '危险 5', hp: 1.75, dmg: 1.55, eliteEarly: 1, price: 0.1, elite: 1, coreHp: -0.2, boss: 0.25, note: 'Boss 血量 +25%、更快' }
+  ];
+  RW.dangerOpen = function (hero, d, prog) {
+    if (!d) return true;
+    var hd = prog && prog.heroDanger ? prog.heroDanger[hero] : undefined;
+    return hd != null && hd >= d - 1;
+  };
+
+  // 祝福：位阶晋升、击败 Boss 时获得，进整备前三选一。纯正面，数值约为同品质道具的 1.2 倍
+  RW.BLESSINGS = {
+    b_dmg:    { name: '战火祝福', r: 0, fx: { dmg: 0.1 } },
+    b_hp:     { name: '坚韧祝福', r: 0, fx: { maxHp: 6 } },
+    b_armor:  { name: '石肤祝福', r: 0, fx: { armor: 1 } },
+    b_rate:   { name: '疾手祝福', r: 0, fx: { rate: 0.1 } },
+    b_speed:  { name: '轻风祝福', r: 0, fx: { speed: 0.07 } },
+    b_regen:  { name: '甘泉祝福', r: 0, fx: { regen: 0.35 } },
+    b_crit:   { name: '鹰目祝福', r: 0, fx: { crit: 0.06 } },
+    b_pick:   { name: '引金祝福', r: 0, fx: { pickup: 0.35, harvest: 0.08 } },
+    b_melee:  { name: '刃锋祝福', r: 0, fx: { melee: 0.18 } },
+    b_ranged: { name: '弦劲祝福', r: 0, fx: { ranged: 0.18 } },
+    b_spell:  { name: '秘火祝福', r: 0, fx: { spell: 0.18 } },
+    b_range:  { name: '远望祝福', r: 0, fx: { range: 0.14 } },
+    b_dmg2:   { name: '烈焰祝福', r: 1, fx: { dmg: 0.16, crit: 0.03 } },
+    b_hp2:    { name: '巨人祝福', r: 1, fx: { maxHp: 10, regen: 0.2 } },
+    b_armor2: { name: '铁卫祝福', r: 1, fx: { armor: 2, thorns: 3 } },
+    b_rate2:  { name: '狂风祝福', r: 1, fx: { rate: 0.16 } },
+    b_leech:  { name: '血契祝福', r: 1, fx: { lifesteal: 0.05, dmg: 0.04 } },
+    b_dodge:  { name: '幻影祝福', r: 1, fx: { dodge: 0.06, speed: 0.04 } },
+    b_cdr:    { name: '时隙祝福', r: 1, fx: { cdr: -0.1, mpRegen: 0.2 } },
+    b_critm:  { name: '断骨祝福', r: 1, fx: { critMul: 0.35, crit: 0.03 } },
+    b_extra:  { name: '分光祝福', r: 2, fx: { extra: 1 } },
+    b_all:    { name: '圣火眷顾', r: 2, fx: { dmg: 0.2, rate: 0.12, maxHp: 8 } },
+    b_luck:   { name: '命运祝福', r: 2, fx: { luck: 0.35, harvest: 0.2 } },
+    b_core:   { name: '守火祝福', r: 2, fx: { coreRegen: 1.5, healCore: 3, towerDmg: 0.25 } }
+  };
+  RW.BLESS_ORDER = Object.keys(RW.BLESSINGS);
+
+  // 流派套装：按武器槽里同流派武器的「阶数之和」计层（I=1、II=2、III=3）
+  RW.SETS = {
+    melee:  { name: '近战', color: '#ffb08a', tiers: [[2, { armor: 2 }], [4, { melee: 0.2, lifesteal: 0.05 }], [6, { rate: 0.25, knock: 0.5 }]] },
+    ranged: { name: '远程', color: '#d8ff8a', tiers: [[2, { range: 0.15 }], [4, { ranged: 0.2, crit: 0.08 }], [6, { extra: 1 }]] },
+    spell:  { name: '法术', color: '#b58cff', tiers: [[2, { cdr: -0.1 }], [4, { spell: 0.2, blastR: 0.15 }], [6, { cdr: -0.2, mpRegen: 0.5 }]] }
+  };
+  RW.SET_ORDER = ['melee', 'ranged', 'spell'];
+
+  // 武器进化：III 阶武器 + 背包里有指定道具 → 整备时可免费进化；伤害 ×1.5 并获得专属效果
+  RW.EVOLVE = {
+    needle:   { mod: 'lens',     name: '贯日弩',   pierce: 2, note: '每发穿透 2 个敌人' },
+    repeater: { mod: 'fins',     name: '暴雨连弩', extra: 2, note: '每轮多射 2 发' },
+    scatter:  { mod: 'powder',   name: '焚城霰',   extra: 1, note: '多喷两团火' },
+    javelin:  { mod: 'sight',    name: '追星枪',   extra: 2, note: '多投两支标枪' },
+    blades:   { mod: 'gauntlet', name: '千刃环',   extra: 3, range: 0.3, note: '剑刃 +3，半径 +30%' },
+    flail:    { mod: 'plate',    name: '陨星锤',   extra: 1, range: 0.4, note: '锤子 +1，半径 +40%' },
+    cleaver:  { mod: 'maul',     name: '开山斧',   extra: 2, range: 0.3, note: '挥砍更宽、更远' },
+    pike:     { mod: 'contract', name: '龙牙枪',   extra: 2, note: '一次刺出三枪' },
+    lance:    { mod: 'tome',     name: '天罚矛',   extra: 2, note: '两侧各多一道雷光' },
+    arc:      { mod: 'coil',     name: '雷网',     extra: 3, nofall: 1, note: '连跳 +3，跳跃不衰减' },
+    mines:    { mod: 'piggy',    name: '金符阵',   extra: 2, gold: 1, note: '陷阱 +2，炸死的敌人多掉金币' }
+  };
+  RW.EVOLVE_MUL = 1.5;
+
+  // 变异器：开局可选，难度越高分数倍率越高
+  RW.MUTATORS = {
+    night:   { name: '夜行',     score: 0.10, note: '全程夜晚' },
+    swarm:   { name: '狂潮',     score: 0.20, spawn: 0.3, note: '刷怪 +30%' },
+    iron:    { name: '铁壁',     score: 0.15, armor: 2, note: '敌人护甲 +2' },
+    poor:    { name: '穷村',     score: 0.15, gold: -0.25, note: '收成与金币 -25%' },
+    fragile: { name: '脆火',     score: 0.20, coreHp: -0.35, note: '圣火最大生命 -35%' },
+    horde:   { name: '精英横行', score: 0.25, elite: 1, note: '每波多一只精英' },
+    lonely:  { name: '无伴',     score: 0.15, nochest: 1, note: '不刷金箱，没有同伴' },
+    nobuild: { name: '孤身',     score: 0.20, nobuild: 1, note: '不能建造' }
+  };
+  RW.MUT_ORDER = Object.keys(RW.MUTATORS);
+
+  // 分数：清掉的波数、击杀、Boss、通关，乘以危险等级与变异器倍率
+  RW.SCORE = { wave: 100, kill: 1, boss: 500, win: 3000, danger: 0.25 };
+
+  // 成就：id 与以后的 Steam 成就一一对应（ACH_ + 大写 id）。check(pr 局外进度, r 本局汇总)
+  RW.ACHIEVEMENTS = [
+    { id: 'first_run', name: '初次值守', desc: '完成第一局', check: function (pr) { return pr.runs >= 1; } },
+    { id: 'wave5', name: '站稳脚跟', desc: '撑到第 5 波', check: function (pr, r) { return r.wave >= 5; } },
+    { id: 'wave10', name: '守夜人', desc: '撑到第 10 波', check: function (pr, r) { return r.wave >= 10; } },
+    { id: 'wave15', name: '长夜将尽', desc: '撑到第 15 波', check: function (pr, r) { return r.wave >= 15; } },
+    { id: 'boss1', name: '撼山', desc: '击败一个 Boss', check: function (pr, r) { return r.bossKills >= 1; } },
+    { id: 'win', name: '圣火长明', desc: '击败灭火者，通关一局', check: function (pr, r) { return r.won; } },
+    { id: 'win_d1', name: '危险 1', desc: '通关危险 1', check: function (pr, r) { return r.won && r.danger >= 1; } },
+    { id: 'win_d2', name: '危险 2', desc: '通关危险 2', check: function (pr, r) { return r.won && r.danger >= 2; } },
+    { id: 'win_d3', name: '危险 3', desc: '通关危险 3', check: function (pr, r) { return r.won && r.danger >= 3; } },
+    { id: 'win_d4', name: '危险 4', desc: '通关危险 4', check: function (pr, r) { return r.won && r.danger >= 4; } },
+    { id: 'win_d5', name: '不灭之火', desc: '通关危险 5', check: function (pr, r) { return r.won && r.danger >= 5; } },
+    { id: 'heroes3', name: '三人成众', desc: '用 3 个不同英雄通关', check: function (pr) { return RW.countKeys(pr.heroDanger) >= 3; } },
+    { id: 'heroes10', name: '群英', desc: '用 10 个不同英雄通关', check: function (pr) { return RW.countKeys(pr.heroDanger) >= 10; } },
+    { id: 'endless25', name: '无尽之夜', desc: '无尽模式打到第 25 波', check: function (pr, r) { return r.wave >= 25; } },
+    { id: 'endless30', name: '永夜', desc: '无尽模式打到第 30 波', check: function (pr, r) { return r.wave >= 30; } },
+    { id: 'kills1k', name: '初试锋芒', desc: '累计击杀 1000', check: function (pr) { return pr.kills >= 1000; } },
+    { id: 'kills10k', name: '割草人', desc: '累计击杀 10000', check: function (pr) { return pr.kills >= 10000; } },
+    { id: 'kills50k', name: '收割季', desc: '累计击杀 50000', check: function (pr) { return pr.kills >= 50000; } },
+    { id: 'streak100', name: '连斩', desc: '一局最高连杀达到 100', check: function (pr, r) { return r.streak >= 100; } },
+    { id: 'mates6', name: '一队人马', desc: '同时拥有 6 个同伴', check: function (pr, r) { return r.mateMax >= 6; } },
+    { id: 'mate_star', name: '合二为一', desc: '合成一个二星同伴', check: function (pr, r) { return r.mateStar; } },
+    { id: 'evolve1', name: '淬火', desc: '进化一把武器', check: function (pr, r) { return r.evolved >= 1; } },
+    { id: 'evolve3', name: '神兵', desc: '一局进化 3 把武器', check: function (pr, r) { return r.evolved >= 3; } },
+    { id: 'set_melee', name: '近战宗师', desc: '近战流派达到 6 层', check: function (pr, r) { return (r.setMax.melee || 0) >= 6; } },
+    { id: 'set_ranged', name: '远程宗师', desc: '远程流派达到 6 层', check: function (pr, r) { return (r.setMax.ranged || 0) >= 6; } },
+    { id: 'set_spell', name: '法术宗师', desc: '法术流派达到 6 层', check: function (pr, r) { return (r.setMax.spell || 0) >= 6; } },
+    { id: 'core_max', name: '烈焰高塔', desc: '圣火升到满级', check: function (pr, r) { return r.coreLv >= RW.CORE_LV.length - 1; } },
+    { id: 'legend', name: '传说', desc: '买到一件传说道具', check: function (pr, r) { return r.legendary; } },
+    { id: 'rich', name: '富甲一村', desc: '一局累计获得 1000 金币', check: function (pr, r) { return r.gold >= 1000; } },
+    { id: 'builder', name: '筑城者', desc: '一局建造 8 座建筑', check: function (pr, r) { return r.built >= 8; } },
+    { id: 'bless5', name: '蒙福', desc: '一局获得 5 个祝福', check: function (pr, r) { return r.bless >= 5; } },
+    { id: 'no_revive', name: '一命通关', desc: '不复活通关', check: function (pr, r) { return r.won && !r.revived; } },
+    { id: 'mut1', name: '逆风', desc: '开着变异器通关', check: function (pr, r) { return r.won && r.mutators >= 1; } },
+    { id: 'mut4', name: '逆天', desc: '开着 4 个变异器通关', check: function (pr, r) { return r.won && r.mutators >= 4; } },
+    { id: 'no_build', name: '孤胆', desc: '一座建筑都不造就通关', check: function (pr, r) { return r.won && r.built === 0; } },
+    { id: 'daily', name: '今日值守', desc: '完成一次每日挑战', check: function (pr, r) { return !!r.daily; } },
+    { id: 'unlock_all', name: '满堂英雄', desc: '解锁全部英雄', check: function (pr) { for (var i = 0; i < RW.CLASS_ORDER.length; i++) if (!RW.isUnlocked(RW.CLASS_ORDER[i], pr)) return false; return true; } },
+    { id: 'runs10', name: '常客', desc: '完成 10 局', check: function (pr) { return pr.runs >= 10; } },
+    { id: 'runs50', name: '老兵', desc: '完成 50 局', check: function (pr) { return pr.runs >= 50; } },
+    { id: 'score50k', name: '五万分', desc: '一局得分达到 50000', check: function (pr, r) { return r.score >= 50000; } }
+  ];
+  RW.countKeys = function (o) { var n = 0; for (var k in (o || {})) n++; return n; };
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));

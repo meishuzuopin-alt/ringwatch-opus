@@ -449,6 +449,7 @@
   W3.envFor = function (g) {
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
     if (g.wave > 0 && g.wave % RW.BOSS_WAVES.every === 0 && g.mode !== 'shop') return 'boss';
+    if (g.mut && g.mut.night) return 'night';   // 变异器「夜行」
     return g.wave <= 3 ? 'day' : (g.wave <= 6 ? 'dusk' : 'night');
   };
   function lerpEnv(a, b, k) {

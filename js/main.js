@@ -9,7 +9,7 @@
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: 0 };
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts } }); }
   function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
   function resetStick() { js.active = false; js.id = null; js.mx = js.my = js.kx = js.ky = 0; }
 
@@ -22,6 +22,10 @@
     // 局外进度（解锁、各英雄最高波数、累计数据）；老存档没有这一项
     g.prog = save.prog || { unlocked: {}, heroBest: {}, kills: 0, coins: 0, built: 0, runs: 0 };
     UI.heroSel = save.hero && RW.CLASSES[save.hero] ? save.hero : 'mage';
+    if (save.setup) {   // 上次的本局设置：危险等级与变异器
+      UI.runDanger = save.setup.danger | 0;
+      UI.runMuts = (save.setup.muts || []).filter(function (m) { return !!RW.MUTATORS[m]; });
+    }
     muted = !!save.muted;
     S.setMuted(muted);
     musicOff = !!save.musicOff; S.setMusicOff(musicOff); UI.musicOff = musicOff;
@@ -120,7 +124,11 @@
       else if (g.mode === 'pick') action('pick:' + UI.heroSel);
       else if (g.mode === 'shop') action('next');
       else if (g.mode === 'result') action('again');
+      else if (g.mode === 'records') action('home');
     }
+    if (g.mode === 'bless' && /^Digit[123]$/.test(code)) { action('bless:' + (+code.slice(5) - 1)); return; }
+    if (g.mode === 'result' && code === 'KeyC' && g.result && g.result.canEndless) { action('endless'); return; }
+    if (g.mode === 'records' && code === 'Escape') { action('home'); return; }
     if (g.mode === 'pick') {
       var idx = RW.CLASS_ORDER.indexOf(UI.heroSel), n = RW.CLASS_ORDER.length;
       if (code === 'ArrowRight' || code === 'KeyD') { action('hero:' + RW.CLASS_ORDER[(idx + 1) % n]); return; }
@@ -148,7 +156,33 @@
       case 'pick':
         if (!RW.isUnlocked(arg, g.prog)) { UI.toast('还没解锁：' + RW.CLASSES[arg].unlock.text); S.play({ type: 'deny' }); break; }
         UI.heroSel = arg; persist();
-        g.startRun(arg); resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+        g.startRun(arg, { danger: Math.min(UI.runDanger, UI.maxDanger(g, arg)), mutators: UI.runMuts });
+        resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+        break;
+      case 'danger': UI.runDanger = +arg; persist(); break;
+      case 'mut':
+        var mi = UI.runMuts.indexOf(arg), md = RW.MUTATORS[arg];
+        if (mi >= 0) UI.runMuts.splice(mi, 1); else if (md) { UI.runMuts.push(arg); UI.toast(md.name + '：' + md.note + ' · 分数 +' + Math.round(md.score * 100) + '%', 1.6); }
+        persist();
+        break;
+      case 'daily':
+        var dk = UI.dayKey(), ds = RW.dailySetup(dk);
+        g.startRun(ds.hero, { danger: ds.danger, mutators: ds.mutators, seed: ds.seed, daily: dk });
+        resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+        UI.toast('每日挑战 · ' + RW.CLASSES[ds.hero].name + ' · 危险 ' + ds.danger + ' · ' + ds.mutators.map(function (m) { return RW.MUTATORS[m].name; }).join(' '), 2.6);
+        break;
+      case 'records': g.mode = 'records'; break;
+      case 'bless':
+        var rb = g.chooseBless(+arg);
+        if (rb !== 'ok') { UI.toast(rb); S.play({ type: 'deny' }); }
+        break;
+      case 'evolve':
+        var re = g.evolveWeapon(+arg);
+        if (re !== 'ok') { UI.toast(re); S.play({ type: 'deny' }); }
+        else UI.toast('进化成功：' + g.weapons[+arg].name + ' · ' + g.weapons[+arg].ev.note, 2);
+        break;
+      case 'endless':
+        if (g.continueEndless()) { resetStick(); buildMenu = false; UI.toast('无尽模式：敌人每波再硬 ' + Math.round(RW.RUN.endlessHp * 100) + '%', 2); }
         break;
       case 'resume': paused = false; break;
       case 'quit': paused = false; resetStick(); g.finishRun(); break;
@@ -193,7 +227,7 @@
     var ev = g.events;
     for (var i = 0; i < ev.length; i++) {
       S.play(ev[i]);
-      if (ev[i].type === 'result') persist();
+      if (ev[i].type === 'result' || ev[i].type === 'victory') persist();
       if (ev[i].type === 'shop') { UI.sel = null; buildMenu = false; if (g.shop.interest > 0) UI.toast('利息到账 +' + g.shop.interest + ' 金币'); }
     }
     ev.length = 0;
@@ -239,7 +273,9 @@
         break;
       case 'revive': if (gl3) D.overlay3D(g); else D.world(g); D.hud(g, UI, false); UI.btns.length = 0; UI.revive(g, P.hasAds ? P.adLabel('revive') : ''); break;
       case 'shop': UI.shop(g, P.hasAds ? P.adLabel('reroll') : ''); break;
+      case 'bless': UI.bless(g); break;
       case 'result': UI.result(g); break;
+      case 'records': UI.records(g); break;
     }
     UI.pressed = pressed;
     UI.drawToast();
