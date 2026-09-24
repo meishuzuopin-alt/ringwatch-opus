@@ -18,7 +18,7 @@ fs.mkdirSync(out, { recursive: true });
   const tap = async (x, y) => { const [a, b] = await toS(x, y); await page.mouse.click(a, b); await page.waitForTimeout(150); };
   const shot = n => page.screenshot({ path: path.join(out, n + '.png') });
   // 软件渲染很慢：等界面真正画出某个按钮 / 进入某个状态再操作，不靠固定延时
-  const until = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 30000, polling: 50 });
+  const until = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 60000, polling: 50 });
   const btn = id => until(id => RW.UI.btns.some(b => b.id === id), id);
   // 按按钮 id 点击：等它画出来，再点它的中心（界面改版不用改测试坐标）
   const press = async id => {
@@ -47,8 +47,9 @@ fs.mkdirSync(out, { recursive: true });
   await press('next');             // 下一波（Boss 波）
   await page.waitForTimeout(8000);
   await shot('f4_boss');
-  await page.evaluate(() => { const g = RW.game; g.core.hp = 1; });
-  for (let i = 0; i < 60; i++) { const m = await page.evaluate(() => RW.game.mode); if (m === 'revive') break; await page.evaluate(() => { const g = RW.game; const e = g.enemies.find(e => e.on && e.spawnT <= 0 && !e.elite); if (e) { e.goalCore = true; e.x = g.core.x + 40; e.y = g.core.y; e.chewT = 0; } }); await page.waitForTimeout(100); }
+  // 直接让主角倒下（不靠怪物慢慢打，CI 机器慢时也稳定），等复活页出现
+  await page.evaluate(() => { const g = RW.game; g.player.hp = 0; g.lastHits.push({ src: '测试', dmg: 1, wave: g.wave }); g.die(); });
+  await until(() => RW.game.mode === 'revive', undefined);
   await page.waitForTimeout(300);
   await shot('f5_revive');
   await press('revive');
