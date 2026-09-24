@@ -1,0 +1,25 @@
+{
+  "description": "环带值守 · 竖屏波次清场",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": "preview.html" },
+      { "type": "file", "value": "README.md" },
+      { "type": "file", "value": "DESIGN.md" },
+      { "type": "folder", "value": "tools" }
+    ]
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": false,
+    "minified": true,
+    "coverView": false,
+    "showShadowRootInWxmlPanel": false
+  },
+  "compileType": "game",
+  "libVersion": "3.0.0",
+  "appid": "touristappid",
+  "projectname": "ringwatch-opus",
+  "condition": {}
+}
