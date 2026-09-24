@@ -382,14 +382,21 @@
 
   // ================= 昼夜 =================
   function envPreset(kind) {
+    // grade = [饱和度, 对比度, 边缘光, 亮度偏移]；shadowDark = 阴影里保留多少直射光；line = 描边颜色；
+    // bloom = 泛光强度，thr = 泛光阈值（越低越多东西发光）
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0 },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9 }
+      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
+        grade: [1.12, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9 },
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6,
+        grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
+        grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62 },
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9,
+        grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66 }
     };
     var e = P[kind], l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
-    return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp, time: 0 };
+    return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp,
+      grade: e.grade.slice(), shadowDark: e.shadowDark, line: e.line.slice(), bloom: e.bloom, thr: e.thr, time: 0 };
   }
   W3.envFor = function (g) {
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
@@ -397,8 +404,9 @@
     return g.wave <= 3 ? 'day' : (g.wave <= 6 ? 'dusk' : 'night');
   };
   function lerpEnv(a, b, k) {
-    ['light', 'sun', 'sky', 'ground', 'fog', 'clear'].forEach(function (key) { for (var i = 0; i < 3; i++) a[key][i] += (b[key][i] - a[key][i]) * k; });
-    a.fogNear += (b.fogNear - a.fogNear) * k; a.fogFar += (b.fogFar - a.fogFar) * k; a.em += (b.em - a.em) * k; a.lamp += (b.lamp - a.lamp) * k;
+    ['light', 'sun', 'sky', 'ground', 'fog', 'clear', 'line'].forEach(function (key) { for (var i = 0; i < 3; i++) a[key][i] += (b[key][i] - a[key][i]) * k; });
+    for (var j = 0; j < 4; j++) a.grade[j] += (b.grade[j] - a.grade[j]) * k;
+    ['fogNear', 'fogFar', 'em', 'lamp', 'shadowDark', 'bloom', 'thr'].forEach(function (key) { a[key] += (b[key] - a[key]) * k; });
   }
 
   // ================= 初始化 =================
@@ -409,6 +417,16 @@
     W3.water = GL.upload(t.water);
     W3.lamps = t.lamps;
     buildModels();
+    W3.water.outline = false; W3.water.shadow = false;
+    // 发光小物件不描边、不投影，保持干净的光点
+    ['coin', 'crystal'].forEach(function (k) { if (W3.meshes[k]) { W3.meshes[k].outline = false; W3.meshes[k].shadow = false; } });
+    // 浏览器调试参数：?lowfx 关掉全部画质效果；?hifx 锁定画质、不自动降级（截图用）
+    try {
+      if (typeof location !== 'undefined') {
+        if (/[?&]lowfx\b/.test(location.search)) GL.fx.shadow = GL.fx.outline = GL.fx.bloom = false;
+        if (/[?&]hifx\b/.test(location.search)) perf.locked = true;
+      }
+    } catch (e) { /* 微信里没有 location */ }
     W3.env = envPreset('dusk');
     W3.ready = true;
     return true;
@@ -448,17 +466,28 @@
 
   // ================= 每帧绘制 =================
   var WHITE = [1, 1, 1], BLACK = [0, 0, 0];
+  // 帧率自适应：平均帧时间持续超过 30ms，按 泛光 -> 描边 -> 阴影 的顺序逐个关掉
+  var perf = { avg: 1 / 60, slowT: 0, locked: false };
+  function adaptQuality(dt) {
+    if (perf.locked || !(dt > 0) || dt > 0.25) return;
+    perf.avg += (dt - perf.avg) * 0.05;
+    perf.slowT = perf.avg > 0.03 ? perf.slowT + dt : 0;
+    if (perf.slowT < 3) return;
+    perf.slowT = 0; perf.avg = 1 / 60;
+    var fx = GL.fx;
+    if (fx.bloom) fx.bloom = false; else if (fx.outline) fx.outline = false; else if (fx.shadow) fx.shadow = false;
+    console.warn('帧率偏低，自动降低画质', JSON.stringify(fx));
+  }
+  W3.blobShadow = function () { return GL.fx.shadow ? 0.45 : 1; };   // 有真阴影时，脚下的圆影只做接触阴影
+
   W3.draw = function (g, viewport, dt, orbit) {
     W3.t += dt;
+    adaptQuality(dt);
     var target = envPreset(W3.envFor(g));
     lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
     var env = W3.env; env.time = W3.t;
     W3.updateCamera(g, dt, orbit, viewport[2] / viewport[3]);
-    GL.beginFrame(viewport[0], viewport[1], viewport[2], viewport[3], env.clear);
-    GL.useMesh(env);
-    GL.drawStatic(W3.land, false);
-    GL.drawStatic(W3.water, true);
-    var M = W3.meshes, t = W3.t;
+    var M = W3.meshes, k;
     drawCore(g, M);
     drawTowers(g, M);
     drawSoldiers(g, M);
@@ -466,10 +495,37 @@
     drawCorpses(g, M);
     if (!orbit) drawHero(g, M);
     drawPickups(g, M);
-    for (var k in M) GL.drawInstances(M[k]);
+    // 1. 阴影贴图：覆盖当前可见范围
+    if (GL.fx.shadow && GL.shadowRT) {
+      var b = W3.bounds, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
+      var r = Math.sqrt((b.x1 - b.x0) * (b.x1 - b.x0) + (b.z1 - b.z0) * (b.z1 - b.z0)) / 2 + 40;
+      GL.setLight(env.light, cx, cz, r);
+      GL.beginShadow();
+      GL.drawStatic(W3.land, false);
+      for (k in M) if (M[k].shadow) GL.drawInstances(M[k]);
+      GL.endShadow();
+    }
+    // 2. 正常着色
+    GL.beginFrame(viewport[0], viewport[1], viewport[2], viewport[3], env.clear);
+    GL.useMesh(env);
+    GL.drawStatic(W3.land, false);
+    GL.drawStatic(W3.water, true);
+    for (k in M) GL.drawInstances(M[k]);
+    // 3. 描边
+    if (GL.fx.outline && GL.lineProg) {
+      GL.useLine(env, 1.05);
+      GL.drawStatic(W3.land, false);
+      GL.useLine(env, 1.25);
+      for (k in M) if (M[k].outline) GL.drawInstances(M[k]);
+      GL.endLine();
+    }
+    GL.resetInstances(M);
+    // 4. 特效
     drawFx(g, env);
     GL.flushAlpha();
     GL.flushAdd();
+    // 5. 泛光
+    GL.bloom(viewport[0], viewport[1], viewport[2], viewport[3], env.bloom, env.thr);
   };
 
   function flashOf(e) { return e.flash > 0 ? 0.85 : 0; }
@@ -496,7 +552,7 @@
     GL.put(cls === 'ranger' ? M.capeRanger : M.capeMage, cx, bob, cz, face, sc, sc, sc, -capeLift * 0.6 + lean);
     GL.put(cls === 'ranger' ? M.crossbow : M.staff, cx, bob, cz, face, sc, sc, sc, lean);
     // 影子 + 脚下光圈（位阶颜色）
-    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, 0.35);
+    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, (0.35) * W3.blobShadow());
     var ec = hex(RW.EVO[p.stage].color);
     GL.ground(true, cx, 1, cz, 16 * sc, 1, 0.15, ec, 0.45);
     if (g.momTier > 0) GL.ground(true, cx, 1.2, cz, (22 + g.momTier * 5) * sc, 0, 0, g.momTier >= 3 ? hex('#ff5a2e') : hex('#ffc861'), 0.25 + 0.1 * Math.sin(W3.t * 10));
@@ -558,7 +614,7 @@
       if (e.type === 'spore') GL.put(M.batWing, e.x, y + 1 * s, e.y, yaw, s, s * Math.sin(t * 22 + e.seq) * 1.2, s, 0, 1, 1, 1, fl);
       if (e.type === 'brood') GL.put(M.broodWing, e.x, 26 * s, e.y, yaw, s, s * (0.6 + 0.5 * Math.sin(t * 5 + e.seq)), s, 0, 1, 1, 1, fl);
       // 影子
-      GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.3, BLACK, em.fly ? 0.18 : 0.3);
+      GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.3, BLACK, (em.fly ? 0.18 : 0.3) * W3.blobShadow());
       if (!em.fly) GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#ff3b5c') : C('#ff6a4a'), e.elite ? 0.55 : 0.22);
       // 特殊光效
       if (e.type === 'bomber') GL.glow(e.x - Math.cos(yaw) * 5 * s, 16 * s, e.y - Math.sin(yaw) * 5 * s, e.state === 1 ? 14 : 6, hex('#ffb040'), 0.9);
@@ -590,7 +646,7 @@
       var d = tw.d, s = d.r / 12 * 0.9, bk = tw.build > 0 ? 1 - tw.build / T.build.time : 1;
       var yaw = d.kind === 'sentry' ? tw.ang : -Math.PI / 2;
       GL.put(M[TMODEL[tw.id]], tw.x, (bk - 1) * 30, tw.y, d.kind === 'barracks' ? 0 : yaw, s, s * bk, s, 0, 1, 1, 1, tw.flash > 0 ? 0.7 : 0);
-      GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.2, BLACK, 0.3);
+      GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.2, BLACK, (0.3) * W3.blobShadow());
       var range = (d.range || 0) * RW.TOWER_TIER.range[g.tech[tw.id] - 1];
       if (d.kind === 'barracks') range = d.leash;
       if (range) GL.ground(true, tw.x, 0.8, tw.y, range, 1, 0.012, hex(d.color), 0.25);
@@ -604,7 +660,7 @@
       if (!s.on || !W3.inView(s.x, s.y, 30)) continue;
       var sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
       GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, 1.1, 1.1, 1.1, 0, 1, 1, 1, s.flash > 0 ? 0.7 : 0);
-      GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, 0.3);
+      GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, (0.3) * W3.blobShadow());
     }
   }
   function drawCore(g, M) {

@@ -1,6 +1,8 @@
 // 环带值守 · 自制轻量 WebGL 低多边形渲染器（无第三方依赖）
 // 提供：矩阵工具、几何构建器（平面着色的方块/棱柱/圆柱/低模球）、实例化网格绘制、
+// 实时阴影（阴影贴图）、卡通描边（反向外壳）、泛光、调色，
 // 发光/贴地特效四边形（加法或透明混合）、HUD 贴图合成。
+// 全部只用 WebGL1 + ANGLE_instanced_arrays，微信小游戏与浏览器通用。
 (function (root) {
   var RW = root.RW;
 
@@ -40,6 +42,12 @@
       out[13] = -(yx * e[0] + yy * e[1] + yz * e[2]);
       out[14] = -(zx * e[0] + zy * e[1] + zz * e[2]);
       out[15] = 1;
+      return out;
+    },
+    ortho: function (out, l, r, b, t, n, f) {
+      out.fill(0);
+      out[0] = 2 / (r - l); out[5] = 2 / (t - b); out[10] = -2 / (f - n);
+      out[12] = -(r + l) / (r - l); out[13] = -(t + b) / (t - b); out[14] = -(f + n) / (f - n); out[15] = 1;
       return out;
     },
     mul: function (out, a, b) {
@@ -137,44 +145,136 @@
   GB.prototype.count = function () { return this.v.length / 10; };
 
   // ---------- 着色器 ----------
-  var MESH_VS = [
-    'attribute vec3 aPos; attribute vec3 aNorm; attribute vec4 aCol;',
+  // 顶点上传格式：位置 3 + 法线 3 + 颜色 4 + 平滑法线 3（描边外壳用），共 13 个 float
+  // 实例属性：iA = 位置 xyz + 偏航；iB = 缩放 xyz + 前倾；iC = 着色 rgb + 闪白
+  var INST_CHUNK = [
     'attribute vec4 iA; attribute vec4 iB; attribute vec4 iC;',
-    'uniform mat4 uVP; uniform vec3 uCam; uniform float uFogNear; uniform float uFogFar; uniform float uTime; uniform float uWater;',
-    'varying vec3 vCol; varying float vEm; varying vec3 vN; varying float vFog; varying float vFlash; varying vec3 vW;',
+    'vec3 rotI(vec3 p){',
+    '  float ct = cos(iB.w), st = sin(iB.w); p = vec3(p.x*ct - p.y*st, p.x*st + p.y*ct, p.z);',
+    '  float c = cos(iA.w), s = sin(iA.w); return vec3(p.x*c - p.z*s, p.y, p.x*s + p.z*c);',
+    '}'
+  ].join('\n');
+  var FS_HEAD = ['#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif'].join('\n');
+  // 深度打包进 RGBA8：不依赖 WEBGL_depth_texture，低端机也能用
+  var UNPACK = 'float unpackD(vec4 c){ return dot(c, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/16581375.0)); }';
+
+  var MESH_VS = [
+    'attribute vec3 aPos; attribute vec3 aNorm; attribute vec4 aCol;', INST_CHUNK,
+    'uniform mat4 uVP; uniform mat4 uLightVP; uniform vec3 uCam; uniform float uFogNear; uniform float uFogFar; uniform float uTime; uniform float uWater;',
+    'varying vec3 vCol; varying float vEm; varying vec3 vN; varying float vFog; varying float vFlash; varying vec3 vW; varying vec4 vLS; varying vec3 vV;',
     'void main(){',
-    '  vec3 p = aPos * iB.xyz; vec3 n = aNorm;',
-    '  float ct = cos(iB.w), st = sin(iB.w);',
-    '  p = vec3(p.x*ct - p.y*st, p.x*st + p.y*ct, p.z); n = vec3(n.x*ct - n.y*st, n.x*st + n.y*ct, n.z);',
-    '  float c = cos(iA.w), s = sin(iA.w);',
-    '  p = vec3(p.x*c - p.z*s, p.y, p.x*s + p.z*c); n = vec3(n.x*c - n.z*s, n.y, n.x*s + n.z*c);',
-    '  vec3 w = p + iA.xyz;',
+    '  vec3 w = rotI(aPos * iB.xyz) + iA.xyz; vec3 n = rotI(aNorm);',
     '  if (uWater > 0.5) { w.y += sin(w.x*0.05 + uTime*2.0)*2.0 + cos(w.z*0.06 + uTime*1.6)*2.0; }',
     '  vW = w;',
     '  gl_Position = uVP * vec4(w, 1.0);',
     '  vN = normalize(n); vCol = aCol.rgb * iC.rgb; vEm = aCol.a; vFlash = iC.a;',
+    '  vLS = uLightVP * vec4(w + vN * 1.5, 1.0); vV = uCam - w;',   // 沿法线偏移一点再查阴影，消除自阴影条纹
     '  float d = length(w - uCam); vFog = clamp((d - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);',
     '}'
   ].join('\n');
   var MESH_FS = [
-    '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
-    'uniform vec3 uLight; uniform vec3 uSun; uniform vec3 uSky; uniform vec3 uGround; uniform vec3 uFog; uniform float uTime; uniform float uWater; uniform float uEmBoost;',
-    'varying vec3 vCol; varying float vEm; varying vec3 vN; varying float vFog; varying float vFlash; varying vec3 vW;',
+    FS_HEAD,
+    'uniform vec3 uLight; uniform vec3 uSun; uniform vec3 uSky; uniform vec3 uGround; uniform vec3 uFog;',
+    'uniform float uTime; uniform float uWater; uniform float uEmBoost;',
+    'uniform sampler2D uShadow; uniform float uShadowOn; uniform float uShadowTexel; uniform float uShadowDark;',   // 阴影里保留多少直射光（0 = 全黑，1 = 没有阴影）
+    'uniform vec4 uGrade;',   // x 饱和度 y 对比度 z 边缘光 w 亮度
+    'varying vec3 vCol; varying float vEm; varying vec3 vN; varying float vFog; varying float vFlash; varying vec3 vW; varying vec4 vLS; varying vec3 vV;',
+    UNPACK,
+    'float shadowAt(){',
+    '  vec3 p = vLS.xyz / vLS.w * 0.5 + 0.5;',
+    '  if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 || p.z > 1.0) return 1.0;',
+    '  float z = p.z - 0.0012, t = uShadowTexel, s = 0.0;',
+    '  s += step(z, unpackD(texture2D(uShadow, p.xy)));',
+    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2( t, 0.0))));',
+    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2(-t, 0.0))));',
+    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2(0.0,  t))));',
+    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2(0.0, -t))));',
+    '  return s * 0.2;',
+    '}',
     'void main(){',
     '  vec3 n = normalize(vN);',
-    '  float dif = max(dot(n, uLight), 0.0);',
+    '  float ndl = dot(n, uLight);',
+    '  float dif = smoothstep(-0.05, 0.35, ndl) * 0.55 + max(ndl, 0.0) * 0.45;',   // 轻微卡通分层：受光面更整齐
+    '  float sh = 1.0;',
+    '  if (uShadowOn > 0.5 && ndl > 0.0) sh = shadowAt();',
     '  vec3 amb = mix(uGround, uSky, n.y * 0.5 + 0.5);',
     '  vec3 col = vCol;',
     '  if (uWater > 0.5) {',
     '    float s1 = sin(vW.x*0.09 + uTime*1.7) * cos(vW.z*0.07 - uTime*1.3);',
     '    float sp = smoothstep(0.82, 0.98, s1);',
-    '    col = col * (0.85 + 0.25*s1) + vec3(0.6,0.85,1.0)*sp*0.8;',
+    '    col = col * (0.85 + 0.25*s1) + vec3(0.6,0.85,1.0)*sp*0.8*sh;',
     '  }',
-    '  vec3 c = col * (amb + uSun * dif) + col * vEm * uEmBoost;',
+    '  vec3 V = normalize(vV);',
+    '  float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * uGrade.z * step(0.2, n.y + 0.6);',
+    '  vec3 lit = amb + uSun * dif * mix(uShadowDark, 1.0, sh);',
+    '  vec3 c = col * lit + col * vEm * uEmBoost + uSky * rim;',
     '  c = mix(c, vec3(1.0), vFlash);',
     '  c = mix(c, uFog, vFog);',
+    '  float l = dot(c, vec3(0.299, 0.587, 0.114));',
+    '  c = mix(vec3(l), c, uGrade.x);',
+    '  c = (c - 0.5) * uGrade.y + 0.5 + uGrade.w;',
+    '  gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);',
+    '}'
+  ].join('\n');
+  // 阴影贴图：从光源方向渲染深度
+  var DEPTH_VS = [
+    'attribute vec3 aPos;', INST_CHUNK,
+    'uniform mat4 uLightVP;',
+    'void main(){ gl_Position = uLightVP * vec4(rotI(aPos * iB.xyz) + iA.xyz, 1.0); }'
+  ].join('\n');
+  var DEPTH_FS = [
+    FS_HEAD,
+    'void main(){',
+    '  vec4 e = fract(vec4(1.0, 255.0, 65025.0, 16581375.0) * gl_FragCoord.z);',
+    '  e -= e.yzww * vec4(1.0/255.0, 1.0/255.0, 1.0/255.0, 0.0);',
+    '  gl_FragColor = e;',
+    '}'
+  ].join('\n');
+  // 卡通描边：只画背面，沿平滑法线外扩；外扩量随离镜头距离变化，屏幕上粗细基本一致
+  var LINE_VS = [
+    'attribute vec3 aPos; attribute vec3 aSmooth;', INST_CHUNK,
+    'uniform mat4 uVP; uniform vec3 uCam; uniform float uWidth; uniform float uFogNear; uniform float uFogFar;',
+    'varying float vFog;',
+    'void main(){',
+    '  vec3 w = rotI(aPos * iB.xyz) + iA.xyz;',
+    '  float d = length(w - uCam);',
+    '  w += normalize(rotI(aSmooth) + vec3(0.0, 0.0001, 0.0)) * uWidth * d * 0.001;',
+    '  gl_Position = uVP * vec4(w, 1.0);',
+    '  vFog = clamp((d - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);',
+    '}'
+  ].join('\n');
+  var LINE_FS = [
+    FS_HEAD,
+    'uniform vec3 uLineCol; uniform vec3 uFog; varying float vFog;',
+    'void main(){ gl_FragColor = vec4(mix(uLineCol, uFog, vFog), 1.0); }'
+  ].join('\n');
+  // 后处理：泛光（亮部提取 -> 两次模糊 -> 叠加回画面）
+  var POST_VS = 'attribute vec2 aCorner; varying vec2 vUv; void main(){ vUv = aCorner * 0.5 + 0.5; gl_Position = vec4(aCorner, 0.0, 1.0); }';
+  var BRIGHT_FS = [
+    FS_HEAD,
+    'uniform sampler2D uTex; uniform vec2 uTexel; uniform float uThr; varying vec2 vUv;',
+    'void main(){',
+    '  vec3 c = texture2D(uTex, vUv + uTexel * vec2(-1.0, -1.0)).rgb + texture2D(uTex, vUv + uTexel * vec2(1.0, -1.0)).rgb',
+    '         + texture2D(uTex, vUv + uTexel * vec2(-1.0, 1.0)).rgb + texture2D(uTex, vUv + uTexel * vec2(1.0, 1.0)).rgb;',
+    '  c *= 0.25;',
+    '  float m = max(c.r, max(c.g, c.b));',
+    '  gl_FragColor = vec4(c * smoothstep(uThr, uThr + 0.2, m), 1.0);',
+    '}'
+  ].join('\n');
+  var BLUR_FS = [
+    FS_HEAD,
+    'uniform sampler2D uTex; uniform vec2 uDir; varying vec2 vUv;',
+    'void main(){',
+    '  vec3 c = texture2D(uTex, vUv).rgb * 0.227027;',
+    '  c += (texture2D(uTex, vUv + uDir * 1.384615).rgb + texture2D(uTex, vUv - uDir * 1.384615).rgb) * 0.316216;',
+    '  c += (texture2D(uTex, vUv + uDir * 3.230769).rgb + texture2D(uTex, vUv - uDir * 3.230769).rgb) * 0.070270;',
     '  gl_FragColor = vec4(c, 1.0);',
     '}'
+  ].join('\n');
+  var COMP_FS = [
+    FS_HEAD,
+    'uniform sampler2D uTex; uniform float uAmt; uniform vec3 uTint; varying vec2 vUv;',
+    'void main(){ gl_FragColor = vec4(texture2D(uTex, vUv).rgb * uTint * uAmt, 1.0); }'
   ].join('\n');
   // 特效四边形：中心 + 两个半轴向量；kind: 0 柔光圆 1 圆环 2 实心圆（阴影/填充） 3 光条
   var FX_VS = [
@@ -188,7 +288,7 @@
     '}'
   ].join('\n');
   var FX_FS = [
-    '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
+    FS_HEAD,
     'varying vec2 vUv; varying vec4 vCol; varying float vKind; varying float vParam;',
     'void main(){',
     '  float r = length(vUv); float a = 0.0;',
@@ -229,8 +329,43 @@
   var GL = {
     ok: false, hex: hex, shade: shade, mix: mixc, M4: M4, GB: GB,
     view: new Float32Array(16), proj: new Float32Array(16), vp: new Float32Array(16),
-    cam: [0, 0, 0]
+    lightView: new Float32Array(16), lightProj: new Float32Array(16), lightVP: new Float32Array(16),
+    cam: [0, 0, 0],
+    // 画质开关：阴影 / 描边 / 泛光。浏览器地址加 ?lowfx 全关；帧率持续偏低时 world3d 会逐级自动关闭
+    fx: { shadow: true, outline: true, bloom: true },
+    shadowSize: 2048
   };
+
+  function makeTex(gl, w, h, filter) {
+    var t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+  // 渲染目标：颜色贴图（+ 可选深度缓冲）；不完整时返回 null
+  function makeTarget(gl, w, h, depth, filter) {
+    var t = { w: w, h: h, tex: makeTex(gl, w, h, filter), fb: gl.createFramebuffer(), rb: null };
+    gl.bindFramebuffer(gl.FRAMEBUFFER, t.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.tex, 0);
+    if (depth) {
+      t.rb = gl.createRenderbuffer();
+      gl.bindRenderbuffer(gl.RENDERBUFFER, t.rb);
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, t.rb);
+    }
+    var ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!ok) { freeTarget(gl, t); return null; }
+    return t;
+  }
+  function freeTarget(gl, t) {
+    if (!t) return;
+    gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fb); if (t.rb) gl.deleteRenderbuffer(t.rb);
+  }
 
   GL.init = function (canvas) {
     var gl = null;
@@ -241,7 +376,7 @@
     if (!inst) return false;
     GL.gl = gl; GL.inst = inst;
     GL.mesh = compile(gl, MESH_VS, MESH_FS);
-    GL.fx = compile(gl, FX_VS, FX_FS);
+    GL.fxProg = compile(gl, FX_VS, FX_FS);
     GL.hud = compile(gl, HUD_VS, HUD_FS);
     GL.quadBuf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, GL.quadBuf);
@@ -256,16 +391,45 @@
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     GL.fxAdd = new Batch(3000, 16);
     GL.fxAlpha = new Batch(2000, 16);
+    // 空白阴影贴图：阴影关闭时绑它，避免采样未绑定的纹理
+    GL.blankTex = makeTex(gl, 1, 1, gl.NEAREST);
     GL.ok = true;
+    // 画质效果：任何一项初始化失败只关掉那一项，不影响基础画面
+    try {
+      GL.depthProg = compile(gl, DEPTH_VS, DEPTH_FS);
+      GL.shadowSize = Math.min(GL.shadowSize, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 1024, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || 1024);
+      GL.shadowRT = makeTarget(gl, GL.shadowSize, GL.shadowSize, true, gl.NEAREST);
+      if (!GL.shadowRT) GL.fx.shadow = false;
+    } catch (e3) { console.warn('阴影不可用：' + e3.message); GL.fx.shadow = false; }
+    try { GL.lineProg = compile(gl, LINE_VS, LINE_FS); } catch (e4) { console.warn('描边不可用：' + e4.message); GL.fx.outline = false; }
+    try {
+      GL.bright = compile(gl, POST_VS, BRIGHT_FS); GL.blur = compile(gl, POST_VS, BLUR_FS); GL.comp = compile(gl, POST_VS, COMP_FS);
+      GL.sceneTex = makeTex(gl, 1, 1, gl.LINEAR); GL.sceneW = 0; GL.sceneH = 0;
+    } catch (e5) { console.warn('泛光不可用：' + e5.message); GL.fx.bloom = false; }
     return true;
   };
 
-  // 把 GB 上传成静态网格
+  // 把 GB 上传成静态网格；顺带算出每个顶点的平滑法线（同一位置的面法线取平均），给描边外壳用，拐角不会裂口
   GL.upload = function (gb) {
-    var gl = GL.gl, buf = gl.createBuffer();
+    var gl = GL.gl, buf = gl.createBuffer(), src = gb.v, n = src.length / 10, out = new Float32Array(n * 13);
+    var acc = {}, keys = new Array(n), i, o, k;
+    for (i = 0; i < n; i++) {
+      o = i * 10;
+      k = Math.round(src[o] * 20) + ',' + Math.round(src[o + 1] * 20) + ',' + Math.round(src[o + 2] * 20);
+      keys[i] = k;
+      var a = acc[k] || (acc[k] = [0, 0, 0]);
+      a[0] += src[o + 3]; a[1] += src[o + 4]; a[2] += src[o + 5];
+    }
+    for (i = 0; i < n; i++) {
+      o = i * 10;
+      var d = i * 13, sm = acc[keys[i]], l = Math.sqrt(sm[0] * sm[0] + sm[1] * sm[1] + sm[2] * sm[2]);
+      for (var j = 0; j < 10; j++) out[d + j] = src[o + j];
+      if (l < 1e-4) { out[d + 10] = src[o + 3]; out[d + 11] = src[o + 4]; out[d + 12] = src[o + 5]; }
+      else { out[d + 10] = sm[0] / l; out[d + 11] = sm[1] / l; out[d + 12] = sm[2] / l; }
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(gb.v), gl.STATIC_DRAW);
-    return { buf: buf, n: gb.count(), inst: new Batch(160, 12) };
+    gl.bufferData(gl.ARRAY_BUFFER, out, gl.STATIC_DRAW);
+    return { buf: buf, n: n, inst: new Batch(160, 12), outline: true, shadow: true };
   };
 
   GL.setCamera = function (eye, target, fovy, aspect) {
@@ -297,33 +461,91 @@
     gl.disable(gl.BLEND);
   };
 
-  // env: { light:[x,y,z], sun, sky, ground, fog, fogNear, fogFar, time, em }
+  // ---------- 三种网格着色程序：main 正常着色 / depth 阴影贴图 / line 描边外壳 ----------
+  // env: { light:[x,y,z], sun, sky, ground, fog, fogNear, fogFar, time, em, grade:[饱和,对比,边缘光,亮度], shadowDark, line }
   GL.useMesh = function (env) {
-    var gl = GL.gl, P = GL.mesh;
-    gl.useProgram(P.prog);
+    var gl = GL.gl, P = GL.mesh, sh = GL.fx.shadow && GL.shadowRT;
+    gl.useProgram(P.prog); GL.cur = P;
     gl.uniformMatrix4fv(P.u.uVP, false, GL.vp);
+    gl.uniformMatrix4fv(P.u.uLightVP, false, GL.lightVP);
     gl.uniform3fv(P.u.uCam, GL.cam);
     gl.uniform3fv(P.u.uLight, env.light); gl.uniform3fv(P.u.uSun, env.sun); gl.uniform3fv(P.u.uSky, env.sky);
     gl.uniform3fv(P.u.uGround, env.ground); gl.uniform3fv(P.u.uFog, env.fog);
     gl.uniform1f(P.u.uFogNear, env.fogNear); gl.uniform1f(P.u.uFogFar, env.fogFar);
     gl.uniform1f(P.u.uTime, env.time); gl.uniform1f(P.u.uWater, 0); gl.uniform1f(P.u.uEmBoost, env.em);
+    var gr = env.grade || [1, 1, 0, 0];
+    gl.uniform4f(P.u.uGrade, gr[0], gr[1], gr[2], gr[3]);
+    gl.uniform1f(P.u.uShadowOn, sh ? 1 : 0);
+    gl.uniform1f(P.u.uShadowTexel, 1 / GL.shadowSize);
+    gl.uniform1f(P.u.uShadowDark, env.shadowDark == null ? 0.45 : env.shadowDark);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, sh ? GL.shadowRT.tex : GL.blankTex);
+    gl.uniform1i(P.u.uShadow, 1);
+    gl.activeTexture(gl.TEXTURE0);
   };
-  function bindMeshAttribs(mesh) {
-    var gl = GL.gl, P = GL.mesh;
+  GL.useLine = function (env, width) {
+    var gl = GL.gl, P = GL.lineProg;
+    gl.useProgram(P.prog); GL.cur = P;
+    gl.uniformMatrix4fv(P.u.uVP, false, GL.vp);
+    gl.uniform3fv(P.u.uCam, GL.cam);
+    gl.uniform1f(P.u.uWidth, width);
+    gl.uniform1f(P.u.uFogNear, env.fogNear); gl.uniform1f(P.u.uFogFar, env.fogFar);
+    gl.uniform3fv(P.u.uLineCol, env.line || [0.08, 0.06, 0.1]); gl.uniform3fv(P.u.uFog, env.fog);
+    gl.cullFace(gl.FRONT);   // 只画背面：正面挡住的部分自然消失，只在轮廓外露出一圈
+  };
+  GL.endLine = function () { GL.gl.cullFace(GL.gl.BACK); };
+
+  // 光源相机：正交投影，覆盖以 (cx, cz) 为中心、半径 r 的地面范围；按阴影贴图像素对齐，镜头移动时阴影边缘不闪
+  GL.setLight = function (dir, cx, cz, r) {
+    var D = 2400, V = GL.lightView;
+    M4.lookAt(V, [dir[0] * D, dir[1] * D, dir[2] * D], [0, 0, 0], [0, 1, 0]);
+    var lx = V[0] * cx + V[4] * 0 + V[8] * cz + V[12], ly = V[1] * cx + V[5] * 0 + V[9] * cz + V[13];
+    var tx = 2 * r / GL.shadowSize;
+    lx = Math.round(lx / tx) * tx; ly = Math.round(ly / tx) * tx;
+    M4.ortho(GL.lightProj, lx - r, lx + r, ly - r, ly + r, D - 1400, D + 1400);
+    M4.mul(GL.lightVP, GL.lightProj, V);
+  };
+  // 阴影贴图：开始 / 结束（结束后恢复到屏幕的帧缓冲）
+  GL.beginShadow = function () {
+    var gl = GL.gl, P = GL.depthProg, T = GL.shadowRT;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
+    gl.viewport(0, 0, T.w, T.h);
+    gl.clearColor(1, 1, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true);
+    gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+    gl.disable(gl.BLEND);
+    gl.useProgram(P.prog); GL.cur = P;
+    gl.uniformMatrix4fv(P.u.uLightVP, false, GL.lightVP);
+  };
+  GL.endShadow = function () { GL.gl.bindFramebuffer(GL.gl.FRAMEBUFFER, null); };
+
+  function bindMeshAttribs(mesh, P) {
+    var gl = GL.gl, a = P.a;
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buf);
-    gl.enableVertexAttribArray(P.a.aPos); gl.vertexAttribPointer(P.a.aPos, 3, gl.FLOAT, false, 40, 0);
-    gl.enableVertexAttribArray(P.a.aNorm); gl.vertexAttribPointer(P.a.aNorm, 3, gl.FLOAT, false, 40, 12);
-    gl.enableVertexAttribArray(P.a.aCol); gl.vertexAttribPointer(P.a.aCol, 4, gl.FLOAT, false, 40, 24);
+    gl.enableVertexAttribArray(a.aPos); gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 52, 0);
+    if (a.aNorm != null) { gl.enableVertexAttribArray(a.aNorm); gl.vertexAttribPointer(a.aNorm, 3, gl.FLOAT, false, 52, 12); }
+    if (a.aCol != null) { gl.enableVertexAttribArray(a.aCol); gl.vertexAttribPointer(a.aCol, 4, gl.FLOAT, false, 52, 24); }
+    if (a.aSmooth != null) { gl.enableVertexAttribArray(a.aSmooth); gl.vertexAttribPointer(a.aSmooth, 3, gl.FLOAT, false, 52, 40); }
   }
-  // 静态网格：用常量实例属性画一次
+  function unbindMeshAttribs(P) {
+    var gl = GL.gl, a = P.a;
+    gl.disableVertexAttribArray(a.aPos);
+    if (a.aNorm != null) gl.disableVertexAttribArray(a.aNorm);
+    if (a.aCol != null) gl.disableVertexAttribArray(a.aCol);
+    if (a.aSmooth != null) gl.disableVertexAttribArray(a.aSmooth);
+  }
+  // 静态网格：用常量实例属性画一次（用当前程序）
   GL.drawStatic = function (mesh, water) {
-    var gl = GL.gl, P = GL.mesh;
-    bindMeshAttribs(mesh);
-    gl.disableVertexAttribArray(P.a.iA); gl.disableVertexAttribArray(P.a.iB); gl.disableVertexAttribArray(P.a.iC);
-    gl.vertexAttrib4f(P.a.iA, 0, 0, 0, 0); gl.vertexAttrib4f(P.a.iB, 1, 1, 1, 0); gl.vertexAttrib4f(P.a.iC, 1, 1, 1, 0);
-    gl.uniform1f(P.u.uWater, water ? 1 : 0);
+    var gl = GL.gl, P = GL.cur;
+    bindMeshAttribs(mesh, P);
+    gl.disableVertexAttribArray(P.a.iA); gl.disableVertexAttribArray(P.a.iB);
+    gl.vertexAttrib4f(P.a.iA, 0, 0, 0, 0); gl.vertexAttrib4f(P.a.iB, 1, 1, 1, 0);
+    if (P.a.iC != null) { gl.disableVertexAttribArray(P.a.iC); gl.vertexAttrib4f(P.a.iC, 1, 1, 1, 0); }
+    if (P.u.uWater) gl.uniform1f(P.u.uWater, water ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, mesh.n);
-    gl.uniform1f(P.u.uWater, 0);
+    if (P.u.uWater) gl.uniform1f(P.u.uWater, 0);
+    unbindMeshAttribs(P);
   };
   // 往网格的实例批次里加一个：位置 (x, y 高度, z)、朝向、缩放 (sx, sy, sz)、前倾、着色 rgb、闪白
   GL.put = function (mesh, x, y, z, yaw, sx, sy, sz, tilt, r, g, b, flash) {
@@ -335,21 +557,28 @@
     d[o + 8] = r == null ? 1 : r; d[o + 9] = g == null ? 1 : g; d[o + 10] = b == null ? 1 : b; d[o + 11] = flash || 0;
     B.n++;
   };
+  // 画一个网格的全部实例（用当前程序）。一帧里阴影、正常、描边三遍共用同一批实例，画完统一 resetInstances
   GL.drawInstances = function (mesh) {
     var B = mesh.inst;
     if (!B.n) return;
-    var gl = GL.gl, P = GL.mesh, I = GL.inst;
-    bindMeshAttribs(mesh);
+    var gl = GL.gl, P = GL.cur, I = GL.inst, a = P.a, names = ['iA', 'iB', 'iC'];
+    bindMeshAttribs(mesh, P);
     gl.bindBuffer(gl.ARRAY_BUFFER, GL.instBuf);
     gl.bufferData(gl.ARRAY_BUFFER, B.data.subarray(0, B.n * 12), gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(P.a.iA); gl.vertexAttribPointer(P.a.iA, 4, gl.FLOAT, false, 48, 0); I.vertexAttribDivisorANGLE(P.a.iA, 1);
-    gl.enableVertexAttribArray(P.a.iB); gl.vertexAttribPointer(P.a.iB, 4, gl.FLOAT, false, 48, 16); I.vertexAttribDivisorANGLE(P.a.iB, 1);
-    gl.enableVertexAttribArray(P.a.iC); gl.vertexAttribPointer(P.a.iC, 4, gl.FLOAT, false, 48, 32); I.vertexAttribDivisorANGLE(P.a.iC, 1);
+    for (var i = 0; i < 3; i++) {
+      var loc = a[names[i]];
+      if (loc == null) continue;
+      gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 48, i * 16); I.vertexAttribDivisorANGLE(loc, 1);
+    }
     I.drawArraysInstancedANGLE(gl.TRIANGLES, 0, mesh.n, B.n);
-    I.vertexAttribDivisorANGLE(P.a.iA, 0); I.vertexAttribDivisorANGLE(P.a.iB, 0); I.vertexAttribDivisorANGLE(P.a.iC, 0);
-    gl.disableVertexAttribArray(P.a.iA); gl.disableVertexAttribArray(P.a.iB); gl.disableVertexAttribArray(P.a.iC);
-    B.reset();
+    for (var j = 0; j < 3; j++) {
+      var l2 = a[names[j]];
+      if (l2 == null) continue;
+      I.vertexAttribDivisorANGLE(l2, 0); gl.disableVertexAttribArray(l2);
+    }
+    unbindMeshAttribs(P);
   };
+  GL.resetInstances = function (meshes) { for (var k in meshes) meshes[k].inst.reset(); };
 
   // ---------- 特效 ----------
   // 通用：中心 c、半轴 u v（世界向量）、kind、param、颜色 rgba
@@ -394,7 +623,7 @@
 
   function drawFxBatch(B, additive) {
     if (!B.n) return;
-    var gl = GL.gl, P = GL.fx, I = GL.inst;
+    var gl = GL.gl, P = GL.fxProg, I = GL.inst;
     gl.useProgram(P.prog);
     gl.uniformMatrix4fv(P.u.uVP, false, GL.vp);
     gl.enable(gl.BLEND);
@@ -439,6 +668,59 @@
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disableVertexAttribArray(P.a.aCorner);
     gl.disable(gl.BLEND);
+  };
+
+  // ---------- 泛光：把刚画好的 3D 视口拷成贴图 -> 1/4 分辨率提取亮部 -> 横竖模糊 -> 加法叠回画面 ----------
+  // 直接从屏幕拷贝（copyTexSubImage2D），保留默认帧缓冲的多重采样抗锯齿
+  function drawQuad(P) {
+    var gl = GL.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, GL.quadBuf);
+    gl.enableVertexAttribArray(P.a.aCorner); gl.vertexAttribPointer(P.a.aCorner, 2, gl.FLOAT, false, 8, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.disableVertexAttribArray(P.a.aCorner);
+  }
+  function passTo(target, P, tex) {
+    var gl = GL.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fb : null);
+    if (target) gl.viewport(0, 0, target.w, target.h);
+    gl.useProgram(P.prog);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(P.u.uTex, 0);
+  }
+  GL.bloom = function (vx, vy, vw, vh, amt, thr, tint) {
+    if (!GL.fx.bloom || amt <= 0.001 || vw < 8 || vh < 8) return;
+    var gl = GL.gl;
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND); gl.depthMask(false);
+    // 1. 拷贝视口
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, GL.sceneTex);
+    if (GL.sceneW !== vw || GL.sceneH !== vh) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, vw, vh, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      GL.sceneW = vw; GL.sceneH = vh;
+      var bw = Math.max(4, Math.ceil(vw / 4)), bh = Math.max(4, Math.ceil(vh / 4));
+      freeTarget(gl, GL.bloomA); freeTarget(gl, GL.bloomB);
+      GL.bloomA = makeTarget(gl, bw, bh, false, gl.LINEAR); GL.bloomB = makeTarget(gl, bw, bh, false, gl.LINEAR);
+      if (!GL.bloomA || !GL.bloomB) { GL.fx.bloom = false; gl.depthMask(true); return; }
+    }
+    gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, vx, vy, vw, vh);
+    var A = GL.bloomA, B = GL.bloomB, P;
+    // 2. 亮部提取 + 降采样
+    P = GL.bright; passTo(A, P, GL.sceneTex);
+    gl.uniform2f(P.u.uTexel, 1 / vw, 1 / vh); gl.uniform1f(P.u.uThr, thr);
+    drawQuad(P);
+    // 3. 两轮横竖模糊，光晕更柔更宽
+    P = GL.blur;
+    for (var it = 0; it < 2; it++) {
+      var sp = 1 + it;
+      passTo(B, P, A.tex); gl.uniform2f(P.u.uDir, sp / A.w, 0); drawQuad(P);
+      passTo(A, P, B.tex); gl.uniform2f(P.u.uDir, 0, sp / A.h); drawQuad(P);
+    }
+    // 4. 叠回屏幕
+    P = GL.comp; passTo(null, P, A.tex);
+    gl.viewport(vx, vy, vw, vh);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+    gl.uniform1f(P.u.uAmt, amt); gl.uniform3fv(P.u.uTint, tint || [1, 1, 1]);
+    drawQuad(P);
+    gl.disable(gl.BLEND); gl.depthMask(true);
   };
 
   RW.GL = GL;
