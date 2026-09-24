@@ -1,0 +1,11 @@
+---
+description: 环带值守项目规则
+alwaysApply: true
+---
+
+先读根目录 `AGENTS.md`，遵守其中的硬规则和分工。
+
+微调时的要点：
+- 数值只改 `js/data.js`；改完跑 `npm run check`，影响难度的改动再跑 `npm run balance`。
+- 保持 ES5 风格（`var`、IIFE、挂在全局 `RW` 上），不要引入 import/export、npm 运行时依赖或构建步骤。
+- 文案用简体中文。

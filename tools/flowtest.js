@@ -1,14 +1,13 @@
 // 界面流程测试（v2）：整备（维修/加固/买卡）→ 战斗中造塔 → 复活页 → 结算页。node tools/flowtest.js <输出目录>
 const { chromium } = require('playwright');
-const path = require('path'), http = require('http'), fs = require('fs');
+const path = require('path'), fs = require('fs');
+const { serve, CHROMIUM_ARGS } = require('./lib/serve');
 const root = path.resolve(__dirname, '..'), out = path.resolve(process.argv[2] || 'flow');
 fs.mkdirSync(out, { recursive: true });
-const server = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  fs.readFile(path.join(root, u === '/' ? 'preview.html' : u), (e, d) => { if (e) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'Content-Type': u.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript; charset=utf-8' }); res.end(d); });
-}).listen(0);
+
 (async () => {
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const server = await serve();
+  const browser = await chromium.launch({ args: CHROMIUM_ARGS });
   const page = await browser.newPage({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -47,4 +46,5 @@ const server = http.createServer((req, res) => {
   await shot('f6_result');
   console.log('towers after build', towers1, 'core after repair/armor', coreAfter, 'errors', errors.length ? errors : 'none');
   await browser.close(); server.close();
+  if (errors.length) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exit(1); });

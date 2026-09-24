@@ -19,6 +19,21 @@ python -m http.server 8080
 
 直接双击 `preview.html` 一般也能运行；如果浏览器拦截了本地脚本，就用上面的方式。
 
+## 开发
+
+需要 Node 18+。协作分工与规则见 `AGENTS.md`，美术方向见 `docs/ART.md`。
+
+```
+npm install          # 只装测试用的 Playwright，游戏本身零依赖
+npm run dev          # 本地预览 http://localhost:8080/
+npm run check        # 提交前必跑：语法 / 入口一致 / 模拟冒烟 / 包体
+npm run test:flow    # 浏览器流程测试
+npm run shots        # 美术评审截图，输出到 shots/art/
+npm run balance      # 数值测试
+```
+
+每个 PR 会自动跑以上检查，截图在 Actions 运行页面的 `screenshots` 产物里下载。
+
 ## 怎么操作
 
 - **移动**：按住屏幕任意位置拖动（浮动摇杆）。电脑上用 WASD 或方向键。

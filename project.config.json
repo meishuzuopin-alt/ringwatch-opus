@@ -2,10 +2,66 @@
   "description": "环带值守 · 竖屏波次清场",
   "packOptions": {
     "ignore": [
-      { "type": "file", "value": "preview.html" },
-      { "type": "file", "value": "README.md" },
-      { "type": "file", "value": "DESIGN.md" },
-      { "type": "folder", "value": "tools" }
+      {
+        "type": "file",
+        "value": "preview.html"
+      },
+      {
+        "type": "file",
+        "value": "README.md"
+      },
+      {
+        "type": "file",
+        "value": "DESIGN.md"
+      },
+      {
+        "type": "file",
+        "value": "AGENTS.md"
+      },
+      {
+        "type": "file",
+        "value": "CLAUDE.md"
+      },
+      {
+        "type": "file",
+        "value": "package.json"
+      },
+      {
+        "type": "file",
+        "value": "package-lock.json"
+      },
+      {
+        "type": "file",
+        "value": ".gitignore"
+      },
+      {
+        "type": "file",
+        "value": ".editorconfig"
+      },
+      {
+        "type": "folder",
+        "value": "tools"
+      },
+      {
+        "type": "folder",
+        "value": "docs"
+      },
+      {
+        "type": "folder",
+        "value": ".github"
+      },
+      {
+        "type": "folder",
+        "value": ".cursor"
+      },
+      {
+        "type": "folder",
+        "value": "shots"
+      },
+      {
+        "type": "folder",
+        "value": "node_modules"
+      }
     ]
   },
   "setting": {

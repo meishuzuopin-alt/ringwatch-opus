@@ -2,7 +2,7 @@
 // 用鼠标拖动（走真实的浮动摇杆输入链路）来操作，按阶段截图，收集控制台报错与帧时间。
 const { chromium } = require('playwright');
 const path = require('path');
-const http = require('http');
+const { serve, CHROMIUM_ARGS } = require('./lib/serve');
 const fs = require('fs');
 
 const root = path.resolve(__dirname, '..');
@@ -10,19 +10,11 @@ const out = path.resolve(process.argv[2] || 'shots');
 const waves = +process.argv[3] || 2;
 fs.mkdirSync(out, { recursive: true });
 
-const server = http.createServer((req, res) => {
-  const f = path.join(root, decodeURIComponent(req.url.split('?')[0]) === '/' ? 'preview.html' : decodeURIComponent(req.url.split('?')[0]));
-  fs.readFile(f, (err, data) => {
-    if (err) { res.writeHead(404); res.end(); return; }
-    const ext = path.extname(f);
-    res.writeHead(200, { 'Content-Type': ext === '.html' ? 'text/html; charset=utf-8' : 'application/javascript; charset=utf-8' });
-    res.end(data);
-  });
-}).listen(0);
 
 (async () => {
+  const server = await serve();
   const port = server.address().port;
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const browser = await chromium.launch({ args: CHROMIUM_ARGS });
   const page = await browser.newPage({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 });
   const errors = [];
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
@@ -103,4 +95,6 @@ const server = http.createServer((req, res) => {
   console.log('errors:', errors.length ? errors.join('\n') : 'none');
   await browser.close();
   server.close();
+  // 只有页面报错才算失败；swiftshader 的性能 warning 只记录不拦截
+  if (errors.some(e => !e.startsWith('warning:'))) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exit(1); });

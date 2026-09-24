@@ -1,0 +1,20 @@
+{
+  "name": "ringwatch-opus",
+  "private": true,
+  "description": "环带值守 · 微信小游戏（低多边形 3D 守村）",
+  "scripts": {
+    "dev": "node tools/lib/serve.js 8080",
+    "check": "node tools/check.js",
+    "balance": "node tools/balance.js",
+    "test:flow": "node tools/flowtest.js shots/flow",
+    "test:play": "node tools/playtest.js shots/play 2",
+    "shots": "node tools/shots.js shots/art",
+    "test": "npm run check && npm run test:flow"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
