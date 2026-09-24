@@ -65,7 +65,10 @@ fs.mkdirSync(out, { recursive: true });
     g.startWave(1);
     p.r = 14;
     p.face = -Math.PI / 2; // 镜头在 +Z 一侧，朝 -Z 即展示后脑。
+    p.x = g.core.x + 160; p.y = g.core.y - 120;
+    p.vx = p.vy = 0;
     p.hp = p.maxHp = 9999;
+    g.cls = RW.CLASSES.rogue; g.clsId = 'rogue'; g.mode = 'battle';
     g.update = function () {};
     RW.W3.envFor = () => 'day';
     RW.W3.updateCamera = (game, dt, orbit, aspect) => {
