@@ -1,8 +1,6 @@
-// 环带值守 · 自制轻量 WebGL 低多边形渲染器（无第三方依赖）
-// 提供：矩阵工具、几何构建器（平面着色的方块/棱柱/圆柱/低模球）、实例化网格绘制、
-// 实时阴影（阴影贴图）、卡通描边（反向外壳）、泛光、调色，
-// 发光/贴地特效四边形（加法或透明混合）、HUD 贴图合成。
-// 全部只用 WebGL1 + ANGLE_instanced_arrays，微信小游戏与浏览器通用。
+// 环带值守 · 3D 渲染层（基于 Three.js，见 vendor/three.min.js）
+// 提供：矩阵工具、几何构建器 GB（平面着色的方块/棱柱/圆柱/低模球，模型全部在代码里生成）、
+// 实例化网格、实时阴影、卡通描边（反向外壳）、泛光、调色、贴地/发光特效四边形。
 (function (root) {
   var RW = root.RW;
 
@@ -144,152 +142,83 @@
   };
   GB.prototype.count = function () { return this.v.length / 10; };
 
-  // ---------- 着色器 ----------
-  // 顶点上传格式：位置 3 + 法线 3 + 颜色 4 + 平滑法线 3（描边外壳用），共 13 个 float
-  // 实例属性：iA = 位置 xyz + 偏航；iB = 缩放 xyz + 前倾；iC = 着色 rgb + 闪白
-  var INST_CHUNK = [
-    'attribute vec4 iA; attribute vec4 iB; attribute vec4 iC;',
-    'vec3 rotI(vec3 p){',
-    '  float ct = cos(iB.w), st = sin(iB.w); p = vec3(p.x*ct - p.y*st, p.x*st + p.y*ct, p.z);',
-    '  float c = cos(iA.w), s = sin(iA.w); return vec3(p.x*c - p.z*s, p.y, p.x*s + p.z*c);',
-    '}'
-  ].join('\n');
-  var FS_HEAD = ['#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif'].join('\n');
-  // 深度打包进 RGBA8：不依赖 WEBGL_depth_texture，低端机也能用
-  var UNPACK = 'float unpackD(vec4 c){ return dot(c, vec4(1.0, 1.0/255.0, 1.0/65025.0, 1.0/16581375.0)); }';
+  // ======================================================================
+  // 以下为 Three.js 实现。对 world3d.js 暴露的接口保持不变：
+  // upload / put / ground / streak / beam3 / glow / setCamera / project / frame
+  // ======================================================================
+  var THREE = root.THREE;
 
-  var MESH_VS = [
-    'attribute vec3 aPos; attribute vec3 aNorm; attribute vec4 aCol;', INST_CHUNK,
-    'uniform mat4 uVP; uniform mat4 uLightVP; uniform vec3 uCam; uniform float uFogNear; uniform float uFogFar; uniform float uTime; uniform float uWater;',
-    'varying vec3 vCol; varying float vEm; varying vec3 vN; varying float vFog; varying float vFlash; varying vec3 vW; varying vec4 vLS; varying vec3 vV;',
-    'void main(){',
-    '  vec3 w = rotI(aPos * iB.xyz) + iA.xyz; vec3 n = rotI(aNorm);',
-    '  if (uWater > 0.5) { w.y += sin(w.x*0.05 + uTime*2.0)*2.0 + cos(w.z*0.06 + uTime*1.6)*2.0; }',
-    '  vW = w;',
-    '  gl_Position = uVP * vec4(w, 1.0);',
-    '  vN = normalize(n); vCol = aCol.rgb * iC.rgb; vEm = aCol.a; vFlash = iC.a;',
-    '  vLS = uLightVP * vec4(w + vN * 1.5, 1.0); vV = uCam - w;',   // 沿法线偏移一点再查阴影，消除自阴影条纹
-    '  float d = length(w - uCam); vFog = clamp((d - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);',
-    '}'
-  ].join('\n');
-  var MESH_FS = [
-    FS_HEAD,
-    'uniform vec3 uLight; uniform vec3 uSun; uniform vec3 uSky; uniform vec3 uGround; uniform vec3 uFog;',
-    'uniform float uTime; uniform float uWater; uniform float uEmBoost;',
-    'uniform sampler2D uShadow; uniform float uShadowOn; uniform float uShadowTexel; uniform float uShadowDark;',   // 阴影里保留多少直射光（0 = 全黑，1 = 没有阴影）
-    'uniform vec4 uGrade;',   // x 饱和度 y 对比度 z 边缘光 w 亮度
-    'varying vec3 vCol; varying float vEm; varying vec3 vN; varying float vFog; varying float vFlash; varying vec3 vW; varying vec4 vLS; varying vec3 vV;',
-    UNPACK,
-    'float shadowAt(){',
-    '  vec3 p = vLS.xyz / vLS.w * 0.5 + 0.5;',
-    '  if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 || p.z > 1.0) return 1.0;',
-    '  float z = p.z - 0.0012, t = uShadowTexel, s = 0.0;',
-    '  s += step(z, unpackD(texture2D(uShadow, p.xy)));',
-    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2( t, 0.0))));',
-    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2(-t, 0.0))));',
-    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2(0.0,  t))));',
-    '  s += step(z, unpackD(texture2D(uShadow, p.xy + vec2(0.0, -t))));',
-    '  return s * 0.2;',
-    '}',
-    'void main(){',
-    '  vec3 n = normalize(vN);',
-    '  float ndl = dot(n, uLight);',
-    '  float dif = smoothstep(-0.05, 0.35, ndl) * 0.55 + max(ndl, 0.0) * 0.45;',   // 轻微卡通分层：受光面更整齐
-    '  float sh = 1.0;',
-    '  if (uShadowOn > 0.5 && ndl > 0.0) sh = shadowAt();',
-    '  vec3 amb = mix(uGround, uSky, n.y * 0.5 + 0.5);',
-    '  vec3 col = vCol;',
-    '  if (uWater > 0.5) {',
-    '    float s1 = sin(vW.x*0.09 + uTime*1.7) * cos(vW.z*0.07 - uTime*1.3);',
-    '    float sp = smoothstep(0.82, 0.98, s1);',
-    '    col = col * (0.85 + 0.25*s1) + vec3(0.6,0.85,1.0)*sp*0.8*sh;',
-    '  }',
-    '  vec3 V = normalize(vV);',
-    '  float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * uGrade.z * step(0.2, n.y + 0.6);',
-    '  vec3 lit = amb + uSun * dif * mix(uShadowDark, 1.0, sh);',
-    '  vec3 c = col * lit + col * vEm * uEmBoost + uSky * rim;',
-    '  c = mix(c, vec3(1.0), vFlash);',
-    '  c = mix(c, uFog, vFog);',
-    '  float l = dot(c, vec3(0.299, 0.587, 0.114));',
-    '  c = mix(vec3(l), c, uGrade.x);',
-    '  c = (c - 0.5) * uGrade.y + 0.5 + uGrade.w;',
-    '  gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);',
-    '}'
-  ].join('\n');
-  // 阴影贴图：从光源方向渲染深度
-  var DEPTH_VS = [
-    'attribute vec3 aPos;', INST_CHUNK,
-    'uniform mat4 uLightVP;',
-    'void main(){ gl_Position = uLightVP * vec4(rotI(aPos * iB.xyz) + iA.xyz, 1.0); }'
-  ].join('\n');
-  var DEPTH_FS = [
-    FS_HEAD,
-    'void main(){',
-    '  vec4 e = fract(vec4(1.0, 255.0, 65025.0, 16581375.0) * gl_FragCoord.z);',
-    '  e -= e.yzww * vec4(1.0/255.0, 1.0/255.0, 1.0/255.0, 0.0);',
-    '  gl_FragColor = e;',
-    '}'
-  ].join('\n');
-  // 卡通描边：只画背面，沿平滑法线外扩；外扩量随离镜头距离变化，屏幕上粗细基本一致
-  var LINE_VS = [
-    'attribute vec3 aPos; attribute vec3 aSmooth;', INST_CHUNK,
-    'uniform mat4 uVP; uniform vec3 uCam; uniform float uWidth; uniform float uFogNear; uniform float uFogFar;',
-    'varying float vFog;',
-    'void main(){',
-    '  vec3 w = rotI(aPos * iB.xyz) + iA.xyz;',
-    '  float d = length(w - uCam);',
-    '  w += normalize(rotI(aSmooth) + vec3(0.0, 0.0001, 0.0)) * uWidth * d * 0.001;',
-    '  gl_Position = uVP * vec4(w, 1.0);',
-    '  vFog = clamp((d - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);',
-    '}'
-  ].join('\n');
-  var LINE_FS = [
-    FS_HEAD,
-    'uniform vec3 uLineCol; uniform vec3 uFog; varying float vFog;',
-    'void main(){ gl_FragColor = vec4(mix(uLineCol, uFog, vFog), 1.0); }'
-  ].join('\n');
-  // 后处理：泛光（亮部提取 -> 两次模糊 -> 叠加回画面）
-  var POST_VS = 'attribute vec2 aCorner; varying vec2 vUv; void main(){ vUv = aCorner * 0.5 + 0.5; gl_Position = vec4(aCorner, 0.0, 1.0); }';
-  var BRIGHT_FS = [
-    FS_HEAD,
-    'uniform sampler2D uTex; uniform vec2 uTexel; uniform float uThr; varying vec2 vUv;',
-    'void main(){',
-    '  vec3 c = texture2D(uTex, vUv + uTexel * vec2(-1.0, -1.0)).rgb + texture2D(uTex, vUv + uTexel * vec2(1.0, -1.0)).rgb',
-    '         + texture2D(uTex, vUv + uTexel * vec2(-1.0, 1.0)).rgb + texture2D(uTex, vUv + uTexel * vec2(1.0, 1.0)).rgb;',
-    '  c *= 0.25;',
-    '  float m = max(c.r, max(c.g, c.b));',
-    '  gl_FragColor = vec4(c * smoothstep(uThr, uThr + 0.2, m), 1.0);',
-    '}'
-  ].join('\n');
-  var BLUR_FS = [
-    FS_HEAD,
-    'uniform sampler2D uTex; uniform vec2 uDir; varying vec2 vUv;',
-    'void main(){',
-    '  vec3 c = texture2D(uTex, vUv).rgb * 0.227027;',
-    '  c += (texture2D(uTex, vUv + uDir * 1.384615).rgb + texture2D(uTex, vUv - uDir * 1.384615).rgb) * 0.316216;',
-    '  c += (texture2D(uTex, vUv + uDir * 3.230769).rgb + texture2D(uTex, vUv - uDir * 3.230769).rgb) * 0.070270;',
-    '  gl_FragColor = vec4(c, 1.0);',
-    '}'
-  ].join('\n');
-  var COMP_FS = [
-    FS_HEAD,
-    'uniform sampler2D uTex; uniform float uAmt; uniform vec3 uTint; varying vec2 vUv;',
-    'void main(){ gl_FragColor = vec4(texture2D(uTex, vUv).rgb * uTint * uAmt, 1.0); }'
-  ].join('\n');
-  // 特效四边形：中心 + 两个半轴向量；kind: 0 柔光圆 1 圆环 2 实心圆（阴影/填充） 3 光条
+  // sRGB -> 线性（顶点色、实例色、特效色都按 sRGB 书写，Three.js 在线性空间里计算光照）
+  function lin(c) { return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+  var tmpC = null;
+  function srgb(col) { return tmpC.setRGB(col[0], col[1], col[2], THREE.SRGBColorSpace); }
+
+  // ---------- 实例批次（特效四边形用） ----------
+  function Batch(cap, floats) { this.cap = cap; this.fl = floats; this.data = new Float32Array(cap * floats); this.n = 0; }
+  Batch.prototype.reset = function () { this.n = 0; };
+
+  var GL = {
+    ok: false, hex: hex, shade: shade, mix: mixc, M4: M4, GB: GB,
+    view: new Float32Array(16), proj: new Float32Array(16), vp: new Float32Array(16),
+    cam: [0, 0, 0], camRight: [1, 0, 0], camUp: [0, 1, 0],
+    // 画质开关：阴影 / 描边 / 泛光。地址加 ?lowfx 全关；帧率持续偏低时 world3d 会逐级自动关闭
+    fx: { shadow: true, outline: true, bloom: true },
+    meshes: []
+  };
+
+  // ---------- 材质 ----------
+  // 网格材质：顶点色 + 每顶点自发光强度（aEm）+ 每实例闪白（iFlash）
+  var U = { uTime: { value: 0 }, uEmBoost: { value: 1 }, uGrade: { value: null }, uLineW: { value: 1.2 } };
+  function meshMaterial(water) {
+    var m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.92, metalness: 0 });
+    m.onBeforeCompile = function (sh) {
+      sh.uniforms.uTime = U.uTime; sh.uniforms.uEmBoost = U.uEmBoost;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aEm;\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nuniform float uTime;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEm = aEm;\n#ifdef USE_INSTANCING\nvFlash = iFlash;\n#else\nvFlash = 0.0;\n#endif' +
+          (water ? '\ntransformed.y += sin(transformed.x*0.05 + uTime*2.0)*2.0 + cos(transformed.z*0.06 + uTime*1.6)*2.0;' : ''))
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nuniform float uTime;\nuniform float uEmBoost;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost;' +
+          (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.85 + 0.25*s1;\ntotalEmissiveRadiance += vec3(0.35,0.6,0.9) * smoothstep(0.82, 0.98, s1) * 0.8;' : ''))
+        .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0), vFlash);');
+    };
+    return m;
+  }
+  // 描边：背面外壳，沿平滑法线外扩（外扩量随离镜头距离变化，屏幕上粗细基本一致）
+  function lineMaterial() {
+    var m = new THREE.MeshBasicMaterial({ color: 0x1a1420, side: THREE.BackSide, fog: true });
+    m.onBeforeCompile = function (sh) {
+      sh.uniforms.uLineW = U.uLineW;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute vec3 aSmooth;\nuniform float uLineW;')
+        .replace('#include <project_vertex>', [
+          'vec4 wp0 = vec4(transformed, 1.0);',
+          '#ifdef USE_INSTANCING', 'wp0 = instanceMatrix * wp0;', '#endif',
+          'wp0 = modelMatrix * wp0;',
+          'vec3 sn = aSmooth;',
+          '#ifdef USE_INSTANCING', 'sn = mat3(instanceMatrix) * sn;', '#endif',
+          'wp0.xyz += normalize(sn + vec3(0.0, 0.0001, 0.0)) * uLineW * length(cameraPosition - wp0.xyz) * 0.001;',
+          'vec4 mvPosition = viewMatrix * wp0;',
+          'gl_Position = projectionMatrix * mvPosition;'
+        ].join('\n'));
+    };
+    return m;
+  }
+  // 特效四边形：中心 + 两个半轴；kind: 0 柔光圆 1 圆环 2 实心圆（阴影/填充） 3 光条
   var FX_VS = [
-    'attribute vec2 aCorner; attribute vec4 iC; attribute vec4 iU; attribute vec4 iV; attribute vec4 iCol;',
-    'uniform mat4 uVP;',
+    'attribute vec4 iC; attribute vec4 iU; attribute vec4 iV; attribute vec4 iCol;',
     'varying vec2 vUv; varying vec4 vCol; varying float vKind; varying float vParam;',
     'void main(){',
-    '  vec3 w = iC.xyz + iU.xyz * aCorner.x + iV.xyz * aCorner.y;',
-    '  gl_Position = uVP * vec4(w, 1.0);',
-    '  vUv = aCorner; vCol = iCol; vKind = iC.w; vParam = iU.w;',
+    '  vec3 w = iC.xyz + iU.xyz * position.x + iV.xyz * position.y;',
+    '  gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);',
+    '  vUv = position.xy; vCol = vec4(pow(iCol.rgb, vec3(2.2)), iCol.a); vKind = iC.w; vParam = iU.w;',
     '}'
   ].join('\n');
   var FX_FS = [
-    FS_HEAD,
     'varying vec2 vUv; varying vec4 vCol; varying float vKind; varying float vParam;',
+    'uniform float uGain;',
     'void main(){',
     '  float r = length(vUv); float a = 0.0;',
     '  if (vKind < 0.5) { a = pow(max(0.0, 1.0 - r), 1.6); }',
@@ -297,291 +226,183 @@
     '  else if (vKind < 2.5) { a = smoothstep(1.0, 0.9 - vParam*0.5, r); }',
     '  else { float y = abs(vUv.y); float x = abs(vUv.x); a = pow(max(0.0, 1.0 - y), 1.5) * smoothstep(1.0, 0.7, x); }',
     '  if (a < 0.004) discard;',
-    '  gl_FragColor = vec4(vCol.rgb, vCol.a * a);',
+    '  gl_FragColor = vec4(vCol.rgb * uGain, vCol.a * a);',
     '}'
   ].join('\n');
-  var HUD_VS = 'attribute vec2 aCorner; varying vec2 vUv; void main(){ vUv = vec2(aCorner.x*0.5+0.5, 0.5-aCorner.y*0.5); gl_Position = vec4(aCorner, 0.0, 1.0); }';
-  var HUD_FS = 'precision mediump float; uniform sampler2D uTex; varying vec2 vUv; void main(){ gl_FragColor = texture2D(uTex, vUv); }';
-
-  function compile(gl, vs, fs) {
-    function sh(type, src) {
-      var s = gl.createShader(type);
-      gl.shaderSource(s, src); gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error('shader: ' + gl.getShaderInfoLog(s));
-      return s;
-    }
-    var p = gl.createProgram();
-    gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
-    gl.linkProgram(p);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('link: ' + gl.getProgramInfoLog(p));
-    var info = { prog: p, a: {}, u: {} };
-    var na = gl.getProgramParameter(p, gl.ACTIVE_ATTRIBUTES);
-    for (var i = 0; i < na; i++) { var at = gl.getActiveAttrib(p, i); info.a[at.name] = gl.getAttribLocation(p, at.name); }
-    var nu = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
-    for (var j = 0; j < nu; j++) { var un = gl.getActiveUniform(p, j); info.u[un.name] = gl.getUniformLocation(p, un.name); }
-    return info;
-  }
-
-  // ---------- 实例批次：每帧往里塞实例，然后一次画完 ----------
-  function Batch(cap, floats) { this.cap = cap; this.fl = floats; this.data = new Float32Array(cap * floats); this.n = 0; }
-  Batch.prototype.reset = function () { this.n = 0; };
-
-  var GL = {
-    ok: false, hex: hex, shade: shade, mix: mixc, M4: M4, GB: GB,
-    view: new Float32Array(16), proj: new Float32Array(16), vp: new Float32Array(16),
-    lightView: new Float32Array(16), lightProj: new Float32Array(16), lightVP: new Float32Array(16),
-    cam: [0, 0, 0],
-    // 画质开关：阴影 / 描边 / 泛光。浏览器地址加 ?lowfx 全关；帧率持续偏低时 world3d 会逐级自动关闭
-    fx: { shadow: true, outline: true, bloom: true },
-    shadowSize: 2048
-  };
-
-  function makeTex(gl, w, h, filter) {
-    var t = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    return t;
-  }
-  // 渲染目标：颜色贴图（+ 可选深度缓冲）；不完整时返回 null
-  function makeTarget(gl, w, h, depth, filter) {
-    var t = { w: w, h: h, tex: makeTex(gl, w, h, filter), fb: gl.createFramebuffer(), rb: null };
-    gl.bindFramebuffer(gl.FRAMEBUFFER, t.fb);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.tex, 0);
-    if (depth) {
-      t.rb = gl.createRenderbuffer();
-      gl.bindRenderbuffer(gl.RENDERBUFFER, t.rb);
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, t.rb);
-    }
-    var ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    if (!ok) { freeTarget(gl, t); return null; }
-    return t;
-  }
-  function freeTarget(gl, t) {
-    if (!t) return;
-    gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fb); if (t.rb) gl.deleteRenderbuffer(t.rb);
+  function fxMesh(B, additive) {
+    var g = new THREE.InstancedBufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
+    var ib = new THREE.InstancedInterleavedBuffer(B.data, 16, 1);
+    ib.setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('iC', new THREE.InterleavedBufferAttribute(ib, 4, 0));
+    g.setAttribute('iU', new THREE.InterleavedBufferAttribute(ib, 4, 4));
+    g.setAttribute('iV', new THREE.InterleavedBufferAttribute(ib, 4, 8));
+    g.setAttribute('iCol', new THREE.InterleavedBufferAttribute(ib, 4, 12));
+    g.instanceCount = 0;
+    var m = new THREE.ShaderMaterial({
+      vertexShader: FX_VS, fragmentShader: FX_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+      uniforms: { uGain: { value: additive ? 1.6 : 1.0 } }   // 加法光效在 HDR 里提一点亮度，让泛光能抓到
+    });
+    var mesh = new THREE.Mesh(g, m);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = additive ? 20 : 10;
+    mesh.userData = { B: B, ib: ib };
+    return mesh;
   }
 
   GL.init = function (canvas) {
-    var gl = null;
-    try { gl = canvas.getContext('webgl', { antialias: true, alpha: false, depth: true, premultipliedAlpha: false, preserveDrawingBuffer: false }); } catch (e) { gl = null; }
-    if (!gl) try { gl = canvas.getContext('experimental-webgl'); } catch (e2) { gl = null; }
-    if (!gl) return false;
-    var inst = gl.getExtension('ANGLE_instanced_arrays');
-    if (!inst) return false;
-    GL.gl = gl; GL.inst = inst;
-    GL.mesh = compile(gl, MESH_VS, MESH_FS);
-    GL.fxProg = compile(gl, FX_VS, FX_FS);
-    GL.hud = compile(gl, HUD_VS, HUD_FS);
-    GL.quadBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.quadBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]), gl.STATIC_DRAW);
-    GL.instBuf = gl.createBuffer();
-    GL.fxBuf = gl.createBuffer();
-    GL.hudTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, GL.hudTex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (!THREE) return false;
+    var r;
+    try { r = new THREE.WebGLRenderer({ canvas: canvas, antialias: false, powerPreference: 'high-performance' }); } catch (e) { return false; }
+    if (!r.capabilities.isWebGL2) return false;
+    GL.renderer = r; GL.gl = r.getContext();
+    tmpC = new THREE.Color();
+    r.setPixelRatio(1);   // 画布尺寸由 platform.js 按设备像素比设置好了
+    r.outputColorSpace = THREE.SRGBColorSpace;
+    r.toneMapping = THREE.NeutralToneMapping; r.toneMappingExposure = 1.0;
+    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+    var sc = GL.scene = new THREE.Scene();
+    sc.fog = new THREE.Fog(0x7a5f80, 1300, 3000);
+    sc.background = new THREE.Color(0x5e4a70);
+    GL.camera = new THREE.PerspectiveCamera(30, 1, 30, 5000);
+    GL.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    sc.add(GL.hemi);
+    var sun = GL.sun = new THREE.DirectionalLight(0xffffff, 3);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.bias = -0.0006; sun.shadow.normalBias = 1.2;
+    sun.shadow.camera.near = 100; sun.shadow.camera.far = 5000;
+    sc.add(sun); sc.add(sun.target);
+    GL.matStd = meshMaterial(false);
+    GL.matWater = meshMaterial(true);
+    GL.matLine = lineMaterial();
     GL.fxAdd = new Batch(3000, 16);
     GL.fxAlpha = new Batch(2000, 16);
-    // 空白阴影贴图：阴影关闭时绑它，避免采样未绑定的纹理
-    GL.blankTex = makeTex(gl, 1, 1, gl.NEAREST);
+    GL.fxAddMesh = fxMesh(GL.fxAdd, true); GL.fxAlphaMesh = fxMesh(GL.fxAlpha, false);
+    sc.add(GL.fxAlphaMesh); sc.add(GL.fxAddMesh);
+    // 后处理：多重采样 HDR 渲染 -> 泛光 -> 调色 -> 色调映射 + sRGB
+    var rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+    var comp = GL.composer = new THREE.EffectComposer(r, rt);
+    comp.addPass(new THREE.RenderPass(sc, GL.camera));
+    GL.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.55, 0.85);
+    comp.addPass(GL.bloomPass);
+    U.uGrade.value = new THREE.Vector4(1, 1, 0, 0);
+    GL.gradePass = new THREE.ShaderPass({
+      uniforms: { tDiffuse: { value: null }, uGrade: U.uGrade },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: [
+        'uniform sampler2D tDiffuse; uniform vec4 uGrade; varying vec2 vUv;',
+        'void main(){',
+        '  vec4 c = texture2D(tDiffuse, vUv);',
+        '  float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));',
+        '  c.rgb = mix(vec3(l), c.rgb, uGrade.x);',
+        '  c.rgb = max(vec3(0.0), (c.rgb - 0.18) * uGrade.y + 0.18 + uGrade.w);',   // 以中灰为支点做对比度
+        '  gl_FragColor = c;',
+        '}'
+      ].join('\n')
+    });
+    comp.addPass(GL.gradePass);
+    comp.addPass(new THREE.OutputPass());
     GL.ok = true;
-    // 画质效果：任何一项初始化失败只关掉那一项，不影响基础画面
-    try {
-      GL.depthProg = compile(gl, DEPTH_VS, DEPTH_FS);
-      GL.shadowSize = Math.min(GL.shadowSize, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 1024, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || 1024);
-      GL.shadowRT = makeTarget(gl, GL.shadowSize, GL.shadowSize, true, gl.NEAREST);
-      if (!GL.shadowRT) GL.fx.shadow = false;
-    } catch (e3) { console.warn('阴影不可用：' + e3.message); GL.fx.shadow = false; }
-    try { GL.lineProg = compile(gl, LINE_VS, LINE_FS); } catch (e4) { console.warn('描边不可用：' + e4.message); GL.fx.outline = false; }
-    try {
-      GL.bright = compile(gl, POST_VS, BRIGHT_FS); GL.blur = compile(gl, POST_VS, BLUR_FS); GL.comp = compile(gl, POST_VS, COMP_FS);
-      GL.sceneTex = makeTex(gl, 1, 1, gl.LINEAR); GL.sceneW = 0; GL.sceneH = 0;
-    } catch (e5) { console.warn('泛光不可用：' + e5.message); GL.fx.bloom = false; }
     return true;
   };
 
-  // 把 GB 上传成静态网格；顺带算出每个顶点的平滑法线（同一位置的面法线取平均），给描边外壳用，拐角不会裂口
-  GL.upload = function (gb) {
-    var gl = GL.gl, buf = gl.createBuffer(), src = gb.v, n = src.length / 10, out = new Float32Array(n * 13);
+  GL.resize = function (w, h) {
+    if (!GL.renderer || (GL.rw === w && GL.rh === h)) return;
+    GL.rw = w; GL.rh = h;
+    GL.renderer.setSize(w, h, false);
+    GL.composer.setSize(w, h);
+    GL.bloomPass.resolution.set(w, h);
+  };
+
+  // ---------- 网格上传：GB -> BufferGeometry + InstancedMesh（+ 描边外壳） ----------
+  var INST_CAP = 160;
+  GL.upload = function (gb, opts) {
+    opts = opts || {};
+    var src = gb.v, n = src.length / 10;
+    var pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), em = new Float32Array(n), smo = new Float32Array(n * 3);
     var acc = {}, keys = new Array(n), i, o, k;
     for (i = 0; i < n; i++) {
       o = i * 10;
+      pos[i * 3] = src[o]; pos[i * 3 + 1] = src[o + 1]; pos[i * 3 + 2] = src[o + 2];
+      nor[i * 3] = src[o + 3]; nor[i * 3 + 1] = src[o + 4]; nor[i * 3 + 2] = src[o + 5];
+      col[i * 3] = lin(src[o + 6]); col[i * 3 + 1] = lin(src[o + 7]); col[i * 3 + 2] = lin(src[o + 8]);
+      em[i] = src[o + 9];
       k = Math.round(src[o] * 20) + ',' + Math.round(src[o + 1] * 20) + ',' + Math.round(src[o + 2] * 20);
       keys[i] = k;
       var a = acc[k] || (acc[k] = [0, 0, 0]);
       a[0] += src[o + 3]; a[1] += src[o + 4]; a[2] += src[o + 5];
     }
     for (i = 0; i < n; i++) {
-      o = i * 10;
-      var d = i * 13, sm = acc[keys[i]], l = Math.sqrt(sm[0] * sm[0] + sm[1] * sm[1] + sm[2] * sm[2]);
-      for (var j = 0; j < 10; j++) out[d + j] = src[o + j];
-      if (l < 1e-4) { out[d + 10] = src[o + 3]; out[d + 11] = src[o + 4]; out[d + 12] = src[o + 5]; }
-      else { out[d + 10] = sm[0] / l; out[d + 11] = sm[1] / l; out[d + 12] = sm[2] / l; }
+      var sm = acc[keys[i]], l = Math.sqrt(sm[0] * sm[0] + sm[1] * sm[1] + sm[2] * sm[2]);
+      if (l < 1e-4) { smo[i * 3] = nor[i * 3]; smo[i * 3 + 1] = nor[i * 3 + 1]; smo[i * 3 + 2] = nor[i * 3 + 2]; }
+      else { smo[i * 3] = sm[0] / l; smo[i * 3 + 1] = sm[1] / l; smo[i * 3 + 2] = sm[2] / l; }
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, out, gl.STATIC_DRAW);
-    return { buf: buf, n: n, inst: new Batch(160, 12), outline: true, shadow: true };
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('aEm', new THREE.BufferAttribute(em, 1));
+    geo.setAttribute('aSmooth', new THREE.BufferAttribute(smo, 3));
+    var mesh = { geo: geo, n: n, outline: true, shadow: true, count: 0 };
+    if (opts.static) {
+      mesh.obj = new THREE.Mesh(geo, opts.water ? GL.matWater : GL.matStd);
+      mesh.obj.receiveShadow = true; mesh.obj.castShadow = !opts.water;
+      GL.scene.add(mesh.obj);
+      if (!opts.water) { mesh.line = new THREE.Mesh(geo, GL.matLine); GL.scene.add(mesh.line); }
+      else mesh.outline = mesh.shadow = false;
+      mesh.isStatic = true;
+      return mesh;
+    }
+    var im = new THREE.InstancedMesh(geo, GL.matStd, INST_CAP);
+    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(INST_CAP * 3), 3);
+    im.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    var fl = new THREE.InstancedBufferAttribute(new Float32Array(INST_CAP), 1);
+    fl.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('iFlash', fl);
+    im.count = 0; im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true;
+    GL.scene.add(im);
+    var ln = new THREE.InstancedMesh(geo, GL.matLine, INST_CAP);
+    ln.instanceMatrix = im.instanceMatrix;   // 与本体共用实例矩阵
+    ln.count = 0; ln.frustumCulled = false;
+    GL.scene.add(ln);
+    mesh.obj = im; mesh.line = ln; mesh.flash = fl;
+    GL.meshes.push(mesh);
+    return mesh;
   };
 
-  GL.setCamera = function (eye, target, fovy, aspect) {
-    M4.lookAt(GL.view, eye, target, [0, 1, 0]);
-    M4.perspective(GL.proj, fovy, aspect, 30, 5000);
-    M4.mul(GL.vp, GL.proj, GL.view);
-    GL.cam[0] = eye[0]; GL.cam[1] = eye[1]; GL.cam[2] = eye[2];
-    GL.eye = eye; GL.target = target;
-  };
-  // 世界坐标 -> NDC（返回 null 表示在相机后面）
-  var PT = [0, 0, 0];
-  GL.project = function (x, y, z) {
-    var m = GL.vp;
-    var cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
-    if (cw <= 0.001) return null;
-    PT[0] = cx / cw; PT[1] = cy / cw;
-    return PT;
-  };
-
-  GL.beginFrame = function (vx, vy, vw, vh, clear) {
-    var gl = GL.gl;
-    gl.viewport(vx, vy, vw, vh);
-    gl.enable(gl.SCISSOR_TEST); gl.scissor(vx, vy, vw, vh);
-    gl.clearColor(clear[0], clear[1], clear[2], 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.disable(gl.SCISSOR_TEST);
-    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true);
-    gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
-    gl.disable(gl.BLEND);
-  };
-
-  // ---------- 三种网格着色程序：main 正常着色 / depth 阴影贴图 / line 描边外壳 ----------
-  // env: { light:[x,y,z], sun, sky, ground, fog, fogNear, fogFar, time, em, grade:[饱和,对比,边缘光,亮度], shadowDark, line }
-  GL.useMesh = function (env) {
-    var gl = GL.gl, P = GL.mesh, sh = GL.fx.shadow && GL.shadowRT;
-    gl.useProgram(P.prog); GL.cur = P;
-    gl.uniformMatrix4fv(P.u.uVP, false, GL.vp);
-    gl.uniformMatrix4fv(P.u.uLightVP, false, GL.lightVP);
-    gl.uniform3fv(P.u.uCam, GL.cam);
-    gl.uniform3fv(P.u.uLight, env.light); gl.uniform3fv(P.u.uSun, env.sun); gl.uniform3fv(P.u.uSky, env.sky);
-    gl.uniform3fv(P.u.uGround, env.ground); gl.uniform3fv(P.u.uFog, env.fog);
-    gl.uniform1f(P.u.uFogNear, env.fogNear); gl.uniform1f(P.u.uFogFar, env.fogFar);
-    gl.uniform1f(P.u.uTime, env.time); gl.uniform1f(P.u.uWater, 0); gl.uniform1f(P.u.uEmBoost, env.em);
-    var gr = env.grade || [1, 1, 0, 0];
-    gl.uniform4f(P.u.uGrade, gr[0], gr[1], gr[2], gr[3]);
-    gl.uniform1f(P.u.uShadowOn, sh ? 1 : 0);
-    gl.uniform1f(P.u.uShadowTexel, 1 / GL.shadowSize);
-    gl.uniform1f(P.u.uShadowDark, env.shadowDark == null ? 0.45 : env.shadowDark);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, sh ? GL.shadowRT.tex : GL.blankTex);
-    gl.uniform1i(P.u.uShadow, 1);
-    gl.activeTexture(gl.TEXTURE0);
-  };
-  GL.useLine = function (env, width) {
-    var gl = GL.gl, P = GL.lineProg;
-    gl.useProgram(P.prog); GL.cur = P;
-    gl.uniformMatrix4fv(P.u.uVP, false, GL.vp);
-    gl.uniform3fv(P.u.uCam, GL.cam);
-    gl.uniform1f(P.u.uWidth, width);
-    gl.uniform1f(P.u.uFogNear, env.fogNear); gl.uniform1f(P.u.uFogFar, env.fogFar);
-    gl.uniform3fv(P.u.uLineCol, env.line || [0.08, 0.06, 0.1]); gl.uniform3fv(P.u.uFog, env.fog);
-    gl.cullFace(gl.FRONT);   // 只画背面：正面挡住的部分自然消失，只在轮廓外露出一圈
-  };
-  GL.endLine = function () { GL.gl.cullFace(GL.gl.BACK); };
-
-  // 光源相机：正交投影，覆盖以 (cx, cz) 为中心、半径 r 的地面范围；按阴影贴图像素对齐，镜头移动时阴影边缘不闪
-  GL.setLight = function (dir, cx, cz, r) {
-    var D = 2400, V = GL.lightView;
-    M4.lookAt(V, [dir[0] * D, dir[1] * D, dir[2] * D], [0, 0, 0], [0, 1, 0]);
-    var lx = V[0] * cx + V[4] * 0 + V[8] * cz + V[12], ly = V[1] * cx + V[5] * 0 + V[9] * cz + V[13];
-    var tx = 2 * r / GL.shadowSize;
-    lx = Math.round(lx / tx) * tx; ly = Math.round(ly / tx) * tx;
-    M4.ortho(GL.lightProj, lx - r, lx + r, ly - r, ly + r, D - 1400, D + 1400);
-    M4.mul(GL.lightVP, GL.lightProj, V);
-  };
-  // 阴影贴图：开始 / 结束（结束后恢复到屏幕的帧缓冲）
-  GL.beginShadow = function () {
-    var gl = GL.gl, P = GL.depthProg, T = GL.shadowRT;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
-    gl.viewport(0, 0, T.w, T.h);
-    gl.clearColor(1, 1, 1, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true);
-    gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
-    gl.disable(gl.BLEND);
-    gl.useProgram(P.prog); GL.cur = P;
-    gl.uniformMatrix4fv(P.u.uLightVP, false, GL.lightVP);
-  };
-  GL.endShadow = function () { GL.gl.bindFramebuffer(GL.gl.FRAMEBUFFER, null); };
-
-  function bindMeshAttribs(mesh, P) {
-    var gl = GL.gl, a = P.a;
-    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buf);
-    gl.enableVertexAttribArray(a.aPos); gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 52, 0);
-    if (a.aNorm != null) { gl.enableVertexAttribArray(a.aNorm); gl.vertexAttribPointer(a.aNorm, 3, gl.FLOAT, false, 52, 12); }
-    if (a.aCol != null) { gl.enableVertexAttribArray(a.aCol); gl.vertexAttribPointer(a.aCol, 4, gl.FLOAT, false, 52, 24); }
-    if (a.aSmooth != null) { gl.enableVertexAttribArray(a.aSmooth); gl.vertexAttribPointer(a.aSmooth, 3, gl.FLOAT, false, 52, 40); }
-  }
-  function unbindMeshAttribs(P) {
-    var gl = GL.gl, a = P.a;
-    gl.disableVertexAttribArray(a.aPos);
-    if (a.aNorm != null) gl.disableVertexAttribArray(a.aNorm);
-    if (a.aCol != null) gl.disableVertexAttribArray(a.aCol);
-    if (a.aSmooth != null) gl.disableVertexAttribArray(a.aSmooth);
-  }
-  // 静态网格：用常量实例属性画一次（用当前程序）
-  GL.drawStatic = function (mesh, water) {
-    var gl = GL.gl, P = GL.cur;
-    bindMeshAttribs(mesh, P);
-    gl.disableVertexAttribArray(P.a.iA); gl.disableVertexAttribArray(P.a.iB);
-    gl.vertexAttrib4f(P.a.iA, 0, 0, 0, 0); gl.vertexAttrib4f(P.a.iB, 1, 1, 1, 0);
-    if (P.a.iC != null) { gl.disableVertexAttribArray(P.a.iC); gl.vertexAttrib4f(P.a.iC, 1, 1, 1, 0); }
-    if (P.u.uWater) gl.uniform1f(P.u.uWater, water ? 1 : 0);
-    gl.drawArrays(gl.TRIANGLES, 0, mesh.n);
-    if (P.u.uWater) gl.uniform1f(P.u.uWater, 0);
-    unbindMeshAttribs(P);
-  };
-  // 往网格的实例批次里加一个：位置 (x, y 高度, z)、朝向、缩放 (sx, sy, sz)、前倾、着色 rgb、闪白
+  // 往网格里加一个实例：位置 (x, y 高度, z)、朝向、缩放 (sx, sy, sz)、前倾、着色 rgb、闪白
+  // 变换 = 平移 · 绕 Y 转 -yaw · 绕 Z 转 tilt · 缩放（与旧着色器完全一致）
   GL.put = function (mesh, x, y, z, yaw, sx, sy, sz, tilt, r, g, b, flash) {
-    var B = mesh.inst;
-    if (B.n >= B.cap) return;
-    var o = B.n * 12, d = B.data;
-    d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = yaw;
-    d[o + 4] = sx; d[o + 5] = sy; d[o + 6] = sz; d[o + 7] = tilt || 0;
-    d[o + 8] = r == null ? 1 : r; d[o + 9] = g == null ? 1 : g; d[o + 10] = b == null ? 1 : b; d[o + 11] = flash || 0;
-    B.n++;
+    if (mesh.count >= INST_CAP) return;
+    var i = mesh.count++, e = mesh.obj.instanceMatrix.array, o = i * 16;
+    var c = Math.cos(yaw), s = Math.sin(yaw), ct = Math.cos(tilt || 0), st = Math.sin(tilt || 0);
+    e[o] = c * ct * sx; e[o + 1] = st * sx; e[o + 2] = s * ct * sx; e[o + 3] = 0;
+    e[o + 4] = -c * st * sy; e[o + 5] = ct * sy; e[o + 6] = -s * st * sy; e[o + 7] = 0;
+    e[o + 8] = -s * sz; e[o + 9] = 0; e[o + 10] = c * sz; e[o + 11] = 0;
+    e[o + 12] = x; e[o + 13] = y; e[o + 14] = z; e[o + 15] = 1;
+    var ca = mesh.obj.instanceColor.array;
+    ca[i * 3] = r == null ? 1 : lin(r); ca[i * 3 + 1] = g == null ? 1 : lin(g); ca[i * 3 + 2] = b == null ? 1 : lin(b);
+    mesh.flash.array[i] = flash || 0;
   };
-  // 画一个网格的全部实例（用当前程序）。一帧里阴影、正常、描边三遍共用同一批实例，画完统一 resetInstances
-  GL.drawInstances = function (mesh) {
-    var B = mesh.inst;
-    if (!B.n) return;
-    var gl = GL.gl, P = GL.cur, I = GL.inst, a = P.a, names = ['iA', 'iB', 'iC'];
-    bindMeshAttribs(mesh, P);
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.instBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, B.data.subarray(0, B.n * 12), gl.DYNAMIC_DRAW);
-    for (var i = 0; i < 3; i++) {
-      var loc = a[names[i]];
-      if (loc == null) continue;
-      gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 48, i * 16); I.vertexAttribDivisorANGLE(loc, 1);
+  function commitInstances() {
+    for (var i = 0; i < GL.meshes.length; i++) {
+      var m = GL.meshes[i], im = m.obj, n = m.count;
+      im.count = n;
+      im.castShadow = m.shadow && GL.fx.shadow;
+      m.line.count = m.outline && GL.fx.outline ? n : 0;
+      if (n) {
+        im.instanceMatrix.clearUpdateRanges(); im.instanceMatrix.addUpdateRange(0, n * 16); im.instanceMatrix.needsUpdate = true;
+        im.instanceColor.clearUpdateRanges(); im.instanceColor.addUpdateRange(0, n * 3); im.instanceColor.needsUpdate = true;
+        m.flash.clearUpdateRanges(); m.flash.addUpdateRange(0, n); m.flash.needsUpdate = true;
+      }
     }
-    I.drawArraysInstancedANGLE(gl.TRIANGLES, 0, mesh.n, B.n);
-    for (var j = 0; j < 3; j++) {
-      var l2 = a[names[j]];
-      if (l2 == null) continue;
-      I.vertexAttribDivisorANGLE(l2, 0); gl.disableVertexAttribArray(l2);
-    }
-    unbindMeshAttribs(P);
-  };
-  GL.resetInstances = function (meshes) { for (var k in meshes) meshes[k].inst.reset(); };
+  }
+  function resetInstances() { for (var i = 0; i < GL.meshes.length; i++) GL.meshes[i].count = 0; }
 
   // ---------- 特效 ----------
-  // 通用：中心 c、半轴 u v（世界向量）、kind、param、颜色 rgba
   function fxPush(B, cx, cy, cz, kind, ux, uy, uz, param, vx, vy, vz, r, g, b, a) {
     if (B.n >= B.cap) return;
     var o = B.n * 16, d = B.data;
@@ -611,116 +432,64 @@
   };
   // 面向相机的发光点
   GL.glow = function (x, y, z, rad, col, a, kind) {
-    var R = GL.camRight, U = GL.camUp;
-    fxPush(GL.fxAdd, x, y, z, kind || 0, R[0] * rad, R[1] * rad, R[2] * rad, 0.3, U[0] * rad, U[1] * rad, U[2] * rad, col[0], col[1], col[2], a);
+    var R = GL.camRight, Up = GL.camUp;
+    fxPush(GL.fxAdd, x, y, z, kind || 0, R[0] * rad, R[1] * rad, R[2] * rad, 0.3, Up[0] * rad, Up[1] * rad, Up[2] * rad, col[0], col[1], col[2], a);
   };
-  GL.camRight = [1, 0, 0]; GL.camUp = [0, 1, 0];
-  GL.updateBillboardAxes = function () {
+  function commitFx(mesh) {
+    var B = mesh.userData.B, ib = mesh.userData.ib;
+    mesh.geometry.instanceCount = B.n;
+    if (B.n) { ib.clearUpdateRanges(); ib.addUpdateRange(0, B.n * 16); ib.needsUpdate = true; }
+  }
+
+  // ---------- 镜头 ----------
+  GL.setCamera = function (eye, target, fovy, aspect) {
+    var c = GL.camera;
+    c.fov = fovy * 180 / Math.PI; c.aspect = aspect; c.updateProjectionMatrix();
+    c.position.set(eye[0], eye[1], eye[2]); c.lookAt(target[0], target[1], target[2]);
+    c.updateMatrixWorld();
+    GL.view.set(c.matrixWorldInverse.elements); GL.proj.set(c.projectionMatrix.elements);
+    M4.mul(GL.vp, GL.proj, GL.view);
+    GL.cam[0] = eye[0]; GL.cam[1] = eye[1]; GL.cam[2] = eye[2];
     var v = GL.view;
-    GL.camRight = [v[0], v[4], v[8]];
-    GL.camUp = [v[1], v[5], v[9]];
+    GL.camRight = [v[0], v[4], v[8]]; GL.camUp = [v[1], v[5], v[9]];
+  };
+  GL.updateBillboardAxes = function () {};
+  // 世界坐标 -> NDC（返回 null 表示在相机后面）
+  var PT = [0, 0, 0];
+  GL.project = function (x, y, z) {
+    var m = GL.vp;
+    var cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+    if (cw <= 0.001) return null;
+    PT[0] = cx / cw; PT[1] = cy / cw;
+    return PT;
   };
 
-  function drawFxBatch(B, additive) {
-    if (!B.n) return;
-    var gl = GL.gl, P = GL.fxProg, I = GL.inst;
-    gl.useProgram(P.prog);
-    gl.uniformMatrix4fv(P.u.uVP, false, GL.vp);
-    gl.enable(gl.BLEND);
-    if (additive) gl.blendFunc(gl.SRC_ALPHA, gl.ONE); else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthMask(false);
-    gl.disable(gl.CULL_FACE);
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.quadBuf);
-    gl.enableVertexAttribArray(P.a.aCorner); gl.vertexAttribPointer(P.a.aCorner, 2, gl.FLOAT, false, 8, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.fxBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, B.data.subarray(0, B.n * 16), gl.DYNAMIC_DRAW);
-    var names = ['iC', 'iU', 'iV', 'iCol'];
-    for (var i = 0; i < 4; i++) {
-      var loc = P.a[names[i]];
-      gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 64, i * 16); I.vertexAttribDivisorANGLE(loc, 1);
-    }
-    I.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, B.n);
-    for (var j = 0; j < 4; j++) { var l2 = P.a[names[j]]; I.vertexAttribDivisorANGLE(l2, 0); gl.disableVertexAttribArray(l2); }
-    gl.disableVertexAttribArray(P.a.aCorner);
-    gl.depthMask(true);
-    gl.enable(gl.CULL_FACE);
-    gl.disable(gl.BLEND);
-    B.reset();
-  }
-  GL.flushFx = function () { drawFxBatch(GL.fxAlpha, false); drawFxBatch(GL.fxAdd, true); };
-  GL.flushAlpha = function () { drawFxBatch(GL.fxAlpha, false); };
-  GL.flushAdd = function () { drawFxBatch(GL.fxAdd, true); };
-
-  // ---------- HUD：把 2D 画布整张贴到屏幕上 ----------
-  GL.drawHud = function (canvas, w, h) {
-    var gl = GL.gl, P = GL.hud;
-    gl.viewport(0, 0, w, h);
-    gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.useProgram(P.prog);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, GL.hudTex);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-    gl.uniform1i(P.u.uTex, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.quadBuf);
-    gl.enableVertexAttribArray(P.a.aCorner); gl.vertexAttribPointer(P.a.aCorner, 2, gl.FLOAT, false, 8, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    gl.disableVertexAttribArray(P.a.aCorner);
-    gl.disable(gl.BLEND);
-  };
-
-  // ---------- 泛光：把刚画好的 3D 视口拷成贴图 -> 1/4 分辨率提取亮部 -> 横竖模糊 -> 加法叠回画面 ----------
-  // 直接从屏幕拷贝（copyTexSubImage2D），保留默认帧缓冲的多重采样抗锯齿
-  function drawQuad(P) {
-    var gl = GL.gl;
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.quadBuf);
-    gl.enableVertexAttribArray(P.a.aCorner); gl.vertexAttribPointer(P.a.aCorner, 2, gl.FLOAT, false, 8, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    gl.disableVertexAttribArray(P.a.aCorner);
-  }
-  function passTo(target, P, tex) {
-    var gl = GL.gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fb : null);
-    if (target) gl.viewport(0, 0, target.w, target.h);
-    gl.useProgram(P.prog);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.uniform1i(P.u.uTex, 0);
-  }
-  GL.bloom = function (vx, vy, vw, vh, amt, thr, tint) {
-    if (!GL.fx.bloom || amt <= 0.001 || vw < 8 || vh < 8) return;
-    var gl = GL.gl;
-    gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND); gl.depthMask(false);
-    // 1. 拷贝视口
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, GL.sceneTex);
-    if (GL.sceneW !== vw || GL.sceneH !== vh) {
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, vw, vh, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-      GL.sceneW = vw; GL.sceneH = vh;
-      var bw = Math.max(4, Math.ceil(vw / 4)), bh = Math.max(4, Math.ceil(vh / 4));
-      freeTarget(gl, GL.bloomA); freeTarget(gl, GL.bloomB);
-      GL.bloomA = makeTarget(gl, bw, bh, false, gl.LINEAR); GL.bloomB = makeTarget(gl, bw, bh, false, gl.LINEAR);
-      if (!GL.bloomA || !GL.bloomB) { GL.fx.bloom = false; gl.depthMask(true); return; }
-    }
-    gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, vx, vy, vw, vh);
-    var A = GL.bloomA, B = GL.bloomB, P;
-    // 2. 亮部提取 + 降采样
-    P = GL.bright; passTo(A, P, GL.sceneTex);
-    gl.uniform2f(P.u.uTexel, 1 / vw, 1 / vh); gl.uniform1f(P.u.uThr, thr);
-    drawQuad(P);
-    // 3. 两轮横竖模糊，光晕更柔更宽
-    P = GL.blur;
-    for (var it = 0; it < 2; it++) {
-      var sp = 1 + it;
-      passTo(B, P, A.tex); gl.uniform2f(P.u.uDir, sp / A.w, 0); drawQuad(P);
-      passTo(A, P, B.tex); gl.uniform2f(P.u.uDir, 0, sp / A.h); drawQuad(P);
-    }
-    // 4. 叠回屏幕
-    P = GL.comp; passTo(null, P, A.tex);
-    gl.viewport(vx, vy, vw, vh);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-    gl.uniform1f(P.u.uAmt, amt); gl.uniform3fv(P.u.uTint, tint || [1, 1, 1]);
-    drawQuad(P);
-    gl.disable(gl.BLEND); gl.depthMask(true);
+  // ---------- 一帧：光照 / 雾 / 阴影范围 / 后处理，然后渲染 ----------
+  // env: { light, sun, sky, ground, fog, clear, fogNear, fogFar, time, em, grade, shadowDark, line, bloom, thr }
+  // shadowBox: { cx, cz, r } 阴影需要覆盖的地面范围
+  GL.frame = function (env, shadowBox) {
+    var sc = GL.scene, PI = Math.PI;
+    U.uTime.value = env.time; U.uEmBoost.value = env.em;
+    sc.background.copy(srgb(env.clear));
+    sc.fog.color.copy(srgb(env.fog)); sc.fog.near = env.fogNear; sc.fog.far = env.fogFar;
+    GL.hemi.color.copy(srgb(env.sky)); GL.hemi.groundColor.copy(srgb(env.ground)); GL.hemi.intensity = PI * 1.25;
+    GL.sun.color.copy(srgb(env.sun)); GL.sun.intensity = PI * 1.05;
+    var L = env.light, D = 2000, sb = shadowBox;
+    GL.sun.position.set(sb.cx + L[0] * D, L[1] * D, sb.cz + L[2] * D);
+    GL.sun.target.position.set(sb.cx, 0, sb.cz); GL.sun.target.updateMatrixWorld();
+    var cam = GL.sun.shadow.camera;
+    cam.left = -sb.r; cam.right = sb.r; cam.top = sb.r; cam.bottom = -sb.r; cam.far = D + 1500; cam.updateProjectionMatrix();
+    GL.sun.castShadow = GL.fx.shadow;
+    GL.sun.shadow.intensity = 1 - (env.shadowDark == null ? 0.45 : env.shadowDark);
+    GL.matLine.color.copy(srgb(env.line || [0.08, 0.06, 0.1]));
+    var gr = env.grade || [1, 1, 0, 0];
+    U.uGrade.value.set(gr[0], gr[1], gr[2], gr[3]);
+    GL.bloomPass.enabled = GL.fx.bloom;
+    GL.bloomPass.strength = (env.bloom || 0) * 0.9; GL.bloomPass.threshold = 0.55 + (env.thr || 0.8) * 0.45; GL.bloomPass.radius = 0.5;
+    commitInstances();
+    commitFx(GL.fxAlphaMesh); commitFx(GL.fxAddMesh);
+    GL.composer.render();
+    resetInstances(); GL.fxAdd.reset(); GL.fxAlpha.reset();
   };
 
   RW.GL = GL;

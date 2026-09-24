@@ -21,7 +21,10 @@
         v.dpr = Math.min(2, window.devicePixelRatio || 1);
         Plat.canvas.style.width = v.cssW + 'px'; Plat.canvas.style.height = v.cssH + 'px';
         Plat.canvas.width = Math.round(v.cssW * v.dpr); Plat.canvas.height = Math.round(v.cssH * v.dpr);
-        if (Plat.hud) { Plat.hud.width = Plat.canvas.width; Plat.hud.height = Plat.canvas.height; }
+        if (Plat.hud) {
+          Plat.hud.width = Plat.canvas.width; Plat.hud.height = Plat.canvas.height;
+          if (Plat.hud.style) { Plat.hud.style.width = v.cssW + 'px'; Plat.hud.style.height = v.cssH + 'px'; }
+        }
         Plat.computeView();
         if (Plat.onResize) Plat.onResize();
       };
@@ -32,7 +35,15 @@
     var force2d = !isWx && typeof location !== 'undefined' && /[?&]2d\b/.test(location.search);
     try { Plat.gl3d = !force2d && !!(RW.GL && RW.GL.init(Plat.canvas)); } catch (err) { console.error(err); Plat.gl3d = false; }
     if (Plat.gl3d) {
-      Plat.hud = Plat.createOffscreen(Plat.canvas.width, Plat.canvas.height);
+      if (isWx) Plat.hud = Plat.createOffscreen(Plat.canvas.width, Plat.canvas.height);
+      else {
+        // HUD：叠在 3D 画布上的透明画布，不接收鼠标（输入统一由底下的游戏画布处理）
+        var h = Plat.hud = document.createElement('canvas');
+        h.id = 'hud';
+        h.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;width:' + Plat.view.cssW + 'px;height:' + Plat.view.cssH + 'px';
+        h.width = Plat.canvas.width; h.height = Plat.canvas.height;
+        Plat.canvas.parentNode.appendChild(h);
+      }
       Plat.ctx = Plat.hud.getContext('2d');
     } else Plat.ctx = Plat.canvas.getContext('2d');
     Plat.computeView();

@@ -6,11 +6,12 @@
 <title>环带值守 · 浏览器预览</title>
 <style>
   html, body { margin: 0; height: 100%; background: #04060d; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
-  canvas { display: block; touch-action: none; }
+  canvas { display: block; touch-action: none; position: absolute; left: 0; top: 0; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<script src="vendor/three.min.js"></script>
 <script src="js/data.js"></script>
 <script src="js/map.js"></script>
 <script src="js/sim.js"></script>

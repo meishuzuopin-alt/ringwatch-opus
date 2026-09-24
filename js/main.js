@@ -206,21 +206,13 @@
     render(paused ? 0 : dt);
     P.raf(frame);
   }
-  function viewportPx(x, y, w, h) {
-    var v = P.view, cw = P.canvas.height;
-    var px = Math.round((v.ox + x * v.s) * v.dpr), pw = Math.round(w * v.s * v.dpr), ph = Math.round(h * v.s * v.dpr);
-    var py = Math.round(cw - (v.oy + (y + h) * v.s) * v.dpr);
-    return [px, py, pw, ph];
-  }
   function render(dt) {
     var gl3 = P.gl3d && RW.W3 && RW.W3.ready;
     if (gl3) {
-      var gl = RW.GL.gl;
-      gl.viewport(0, 0, P.canvas.width, P.canvas.height);
-      gl.clearColor(0.02, 0.02, 0.04, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      var battle = inBattle() || g.mode === 'revive';
-      var V = T.VIEW, vp = battle ? viewportPx(V.x, V.y, V.w, V.h) : viewportPx(0, 0, T.W, T.H);
-      RW.W3.draw(g, vp, dt || 0, !battle);
+      // 3D 铺满整个画布，HUD 画在上层的透明画布上
+      var cw = P.canvas.width, ch = P.canvas.height, battle = inBattle() || g.mode === 'revive';
+      RW.GL.resize(cw, ch);
+      RW.W3.draw(g, [0, 0, cw, ch], dt || 0, !battle);
     }
     D.begin();
     var pressed = UI.pressed;
@@ -238,7 +230,6 @@
     }
     UI.pressed = pressed;
     UI.drawToast();
-    if (gl3) RW.GL.drawHud(P.hud, P.canvas.width, P.canvas.height);
   }
 
   RW.Main = { start: start, action: function (id) { action(id); }, battle: function (id) { battleButton(id); }, isPaused: function () { return paused; } };
