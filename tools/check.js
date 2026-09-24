@@ -47,6 +47,33 @@ try {
   if (/NaN|undefined/.test(out)) bad('数值输出异常\n' + out); else ok('两种职业各跑 3 波无异常');
 } catch (e) { bad('模拟抛异常\n' + (e.stderr || e.message)); }
 
+console.log('UI 图标清单');
+try {
+  require('../js/data.js');
+  require('../js/ui-icons.js');
+  const RW = globalThis.RW;
+  const gameplay = RW.WEAPON_ORDER.concat(RW.SKILL_ORDER, RW.MOD_ORDER, RW.TOWER_ORDER);
+  const groups = [gameplay, Object.keys(RW.YARD_UPGRADES).map(id => RW.YARD_UPGRADES[id].icon)];
+  const missing = groups.reduce((out, ids) => out.concat(ids.filter(id => !RW.UIIcons.has(id))), []);
+  const shapes = new Set(gameplay.map(id => RW.UIIcons.icons[id] && RW.UIIcons.icons[id].shape));
+  if (shapes.has(undefined)) missing.push('shape definition');
+  if (shapes.size !== gameplay.length) missing.push('duplicate gameplay silhouette');
+  if (missing.length) bad('没有专属图标：' + missing.join(', '));
+  else ok(`${RW.WEAPON_ORDER.length} 个武器、${RW.SKILL_ORDER.length} 个技能、${RW.MOD_ORDER.length} 件装备、${RW.TOWER_ORDER.length} 座塔均有独立轮廓图标`);
+} catch (e) { bad('图标目录检查失败：' + e.message); }
+
+console.log('建筑玩法');
+try {
+  const out = execFileSync(process.execPath, [path.join(__dirname, 'tower-smoke.js')], { encoding: 'utf8' });
+  ok(out.trim());
+} catch (e) { bad('建筑职能测试失败\n' + (e.stderr || e.message)); }
+
+console.log('庭院成长');
+try {
+  const out = execFileSync(process.execPath, [path.join(__dirname, 'yard-smoke.js')], { encoding: 'utf8' });
+  ok(out.trim());
+} catch (e) { bad('庭院成长测试失败\n' + (e.stderr || e.message)); }
+
 // 桌面（Steam）版会打进安装包的游戏文件：preview.html + js/ + vendor/ + desktop/（不含 Electron 运行时本身）
 console.log('包体');
 let bytes = 0;

@@ -1144,7 +1144,8 @@
     // ---- 左上：生命 / 位阶 / 武器 ----
     D.hudPanel(10, 10, 250, 96);
     var hpk = Math.max(0, p.hp / p.maxHp), bx = 22, bw = 226, bh = 18, by = 30;
-    D.text('生命', bx, 21, 10, C.dim, 'left');
+    ui.icon('ui-health', bx + 8, 19, 20);
+    D.text('生命', bx + 20, 21, 10, C.dim, 'left');
     if (g.cls) D.text(g.cls.name, bx + bw, 21, 10, g.cls.color, 'right', true);
     c.fillStyle = '#1a0b12'; D.rr(bx, by, bw, bh, 4); c.fill();
     c.fillStyle = hpk < 0.3 ? C.red : (hpk < 0.6 ? '#ff9f43' : '#3ee08f');
@@ -1163,7 +1164,7 @@
       c.strokeStyle = w.d.color; c.lineWidth = 1.5; D.rr(x, y, 34, 28, 5); c.stroke();
       var cd = w.d.kind === 'blades' ? 0 : Math.max(0, Math.min(1, w.cd / (w.d.cd[w.tier - 1] / g.st.rate)));
       if (cd > 0) { c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(x + 1, y + 1 + 26 * (1 - cd), 32, 26 * cd); }
-      D.text(w.d.name[0], x + 13, y + 14, 13, w.d.color, 'center', true);
+      ui.icon(w.id || w.d.kind, x + 13, y + 14, 22, { frame: false, color: w.d.color });
       D.text(['I', 'II', 'III'][w.tier - 1], x + 27, y + 21, 8, C.text, 'center', true);
       x += 38;
     }
@@ -1174,19 +1175,20 @@
     var urgent = g.mode === 'battle' && left <= 5;
     D.text(g.mode === 'clear' ? '清场' : String(left), cx, 46, 28, urgent ? C.gold : C.text, 'center', true);
     var co = g.core, ck = Math.max(0, co.hp / co.maxHp), cbx = cx - 62, cby = 64;
-    D.text('火', cbx - 10, cby + 3, 10, co.alert > 0 && Math.sin(g.clock * 14) > 0 ? C.red : '#ffd27a', 'center', true);
+    ui.icon('ui-core', cbx - 10, cby + 3, 20, { frame: false, color: co.alert > 0 && Math.sin(g.clock * 14) > 0 ? C.red : '#ffd27a' });
     c.fillStyle = '#1e1712'; c.fillRect(cbx, cby, 132, 7);
     c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(cbx, cby, 132 * ck, 7);
     if (co.flash > 0) { c.fillStyle = '#ffffff'; c.fillRect(cbx, cby, 132 * ck, 7); }
     // ---- 右上：金币 / 击杀 / 暂停 ----
     D.hudPanel(W - 222, 10, 168, 50);
-    D.shardIcon(W - 204, 30, 9);
+    ui.icon('ui-shard', W - 204, 30, 22, { frame: false });
     D.text(String(g.shardCount), W - 190, 31, 22, C.shard, 'left', true);
-    D.text('击杀 ' + g.kills + ' · 建筑 ' + g.towerCount() + '/' + T.build.max, W - 62, 50, 10, C.dim, 'right');
+    ui.icon('ui-kill', W - 160, 49, 16, { frame: false });
+    D.text('击杀 ' + g.kills + ' · 建筑 ' + g.towerCount() + '/' + T.build.max, W - 54, 50, 10, C.dim, 'right');
     ui.button('pause', W - 46, 10, 36, 36, '', { draw: function (bx2, by2, bw2, bh2) {
       c.fillStyle = 'rgba(20,15,11,0.85)'; D.rr(bx2, by2, bw2, bh2, 6); c.fill();
       c.strokeStyle = C.line; D.rr(bx2, by2, bw2, bh2, 6); c.stroke();
-      c.fillStyle = C.text; c.fillRect(bx2 + 12, by2 + 10, 4, 14); c.fillRect(bx2 + 20, by2 + 10, 4, 14);
+      ui.icon('ui-pause', bx2 + bw2 / 2, by2 + bh2 / 2, 22, { frame: false, color: C.text });
       D.text('Esc', bx2 + bw2 / 2, by2 + bh2 + 8, 8, C.faint, 'center');
     } });
     // 低血警示
@@ -1209,7 +1211,7 @@
       c.globalAlpha = 1;
       if (g.wave === 1) {
         D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q 放技能 · 冲进怪堆里打会攒战意', W / 2, 292, 13, C.text, 'center', false, 3);
-        D.text('B 造塔（1–4 选种类），花金币建塔，守住中央的圣火', W / 2, 314, 13, C.shard, 'center', false, 3);
+        D.text('B 造塔（1–8 选种类），花金币建塔，守住中央的圣火', W / 2, 314, 13, C.shard, 'center', false, 3);
       }
     }
     if (g.evolveT > 0) {
@@ -1249,7 +1251,7 @@
   var KEYCAP = { dash: '空格', skill: 'Q', build: 'B' };
   D.battleButtons = function (g, ui, menu) {
     var c = D.ctx, B = D.BTN, p = g.player, sk = g.skill;
-    function round(id, b, label, color, k, sub) {
+    function round(id, b, label, color, k, sub, iconId) {
       ui.button(id, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, '', { draw: function (x, y, w, h, pressed) {
         c.globalAlpha = 0.9;
         c.fillStyle = pressed ? 'rgba(80,60,30,0.9)' : 'rgba(24,18,12,0.78)';
@@ -1260,8 +1262,9 @@
           c.beginPath(); c.moveTo(b.x, b.y); c.arc(b.x, b.y, b.r - 2, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.closePath(); c.fill();
         }
         c.globalAlpha = 1;
-        D.text(label, b.x, b.y - (sub ? 5 : 0), b.r > 30 ? 14 : 12, k > 0 ? C.dim : color, 'center', true, 3);
-        if (sub) D.text(sub, b.x, b.y + 11, 9, C.dim, 'center', false, 3);
+        if (iconId) ui.icon(iconId, b.x, b.y - (sub ? 5 : 0), b.r > 30 ? 34 : 27, { frame: false, color: k > 0 ? C.dim : color, cooldown: k });
+        else D.text(label, b.x, b.y - (sub ? 5 : 0), b.r > 30 ? 14 : 12, k > 0 ? C.dim : color, 'center', true, 3);
+        if (sub) D.text(sub, b.x, b.y + (iconId ? 20 : 11), 9, C.dim, 'center', false, 3);
         if (KEYCAP[id]) {   // 桌面：按键提示
           var kw = KEYCAP[id].length > 1 ? 30 : 18;
           c.fillStyle = 'rgba(10,8,14,0.85)'; D.rr(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.fill();
@@ -1271,27 +1274,29 @@
       } });
     }
     var dk = p.dashCd > 0 ? p.dashCd / (T.dash.cd * g.st.cdr) : 0;
-    round('dash', B.dash, '冲刺', C.cyan, dk, dk > 0 ? p.dashCd.toFixed(1) : '');
+    round('dash', B.dash, '冲刺', C.cyan, dk, dk > 0 ? p.dashCd.toFixed(1) : '空格', 'ui-dash');
     if (sk) {
       var sk2 = sk.cd > 0 ? sk.cd / (sk.d.cd * g.st.cdr) : 0;
-      round('skill', B.skill, sk.d.name, sk.d.color, sk2, sk.cd > 0 ? sk.cd.toFixed(1) + 's' : ['I', 'II', 'III'][sk.tier - 1]);
+      round('skill', B.skill, sk.d.name, sk.d.color, sk2, sk.cd > 0 ? sk.cd.toFixed(1) + 's' : 'Q · ' + ['I', 'II', 'III'][sk.tier - 1], sk.id);
     }
-    round('build', B.build, menu ? '收起' : '造塔', C.gold, 0, menu ? '' : g.towerCount() + '/' + T.build.max);
+    round('build', B.build, menu ? '收起' : '造塔', C.gold, 0, menu ? '' : g.towerCount() + '/' + T.build.max, 'ui-build');
     if (menu) {
       var ids = RW.TOWER_ORDER;
       for (var i = 0; i < ids.length; i++) {
         (function (id, i) {
           var d = RW.TOWERS[id], price = g.buildPrice(id), ok = g.shardCount >= price && g.towerCount() < T.build.max;
-          var y = H - 70;
-          ui.button('bt:' + id, 96 + i * 124, y, 118, 58, '', { disabled: !ok, why: g.towerCount() >= T.build.max ? '建筑已达上限' : '金币不足，需要 ' + price, draw: function (x, yy, w, h, pressed) {
+          var y = H - 70, step = 94, cardW = 90;
+          ui.button('bt:' + id, 96 + i * step, y, cardW, 58, '', { disabled: !ok, why: g.towerCount() >= T.build.max ? '建筑已达上限' : '金币不足，需要 ' + price, draw: function (x, yy, w, h, pressed) {
             c.globalAlpha = ok ? 0.95 : 0.5;
             c.fillStyle = pressed ? '#3a2a18' : 'rgba(24,18,12,0.92)'; D.rr(x, yy, w, h, 8); c.fill();
             c.strokeStyle = d.color; c.lineWidth = 1.5; D.rr(x, yy, w, h, 8); c.stroke();
-            D.text(d.name + ' ' + ['I', 'II', 'III'][g.tech[id] - 1], x + 8, yy + 14, 12, d.color, 'left', true);
-            D.text(D.towerBlurb(id), x + 8, yy + 30, 9, C.dim, 'left');
-            D.shardIcon(x + 14, yy + 44, 5);
-            D.text(String(price), x + 23, yy + 45, 12, ok ? C.shard : C.bad, 'left', true);
-            D.text(String(i + 1), x + w - 9, yy + 45, 9, C.faint, 'center');
+            ui.icon(id, x + 16, yy + 28, 29, { frame: false, color: d.color });
+            D.text(d.name, x + 34, yy + 14, 9, d.color, 'left', true);
+            D.text(['I', 'II', 'III'][g.tech[id] - 1], x + w - 7, yy + 14, 8, C.text, 'right', true);
+            D.text(D.towerBlurb(id), x + 34, yy + 30, 8, C.dim, 'left');
+            ui.icon('ui-shard', x + 41, yy + 47, 14, { frame: false });
+            D.text(String(price), x + 51, yy + 47, 9, ok ? C.shard : C.bad, 'left', true);
+            D.text(String(i + 1), x + w - 7, yy + 48, 8, C.faint, 'right');
             c.globalAlpha = 1;
           } });
         })(ids[i], i);
@@ -1299,7 +1304,7 @@
     }
   };
   D.towerBlurb = function (id) {
-    return { sentry: '自动射击', pylon: '范围减速', siphon: '自动收金币', barracks: '出兵拦截' }[id];
+    return { sentry: '远程点杀', pylon: '群体减速', siphon: '吸金成长', barracks: '士兵拦截', mortar: '范围轰击', ward: '修复守护', snare: '定身陷阱', beacon: '灵火增益' }[id] || '';
   };
 
   D.joystick = function (js) {

@@ -1,5 +1,5 @@
 // 美术评审截图：固定几个场景各拍一张，方便对比改动前后的画面。node tools/shots.js [输出目录]
-// 场景：标题、选职业、白天/黄昏/夜晚/Boss 光照下的战斗、整备页、2D 退路画面。
+// 场景：标题、英雄、战斗造塔、四种光照、整备、暂停、复活、结算、2D 退路。
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
@@ -25,13 +25,22 @@ fs.mkdirSync(out, { recursive: true });
 
   const page = await open('?hifx');   // 锁定画质：无头浏览器是软件渲染，很慢，不锁会自动降级
   await shot(page, '01_title');
+  await page.evaluate(() => RW.Main.action('courtyard'));
+  await page.waitForTimeout(250);
+  await shot(page, '02_courtyard');
+  await page.evaluate(() => RW.Main.action('yardClose'));
   await page.evaluate(() => RW.Main.action('start'));
   await page.waitForTimeout(400);
-  await shot(page, '02_pick');
+  await shot(page, '03_pick');
 
   // 战斗：玩家无敌，固定光照预设后等颜色过渡完再拍
   await page.evaluate(() => { RW.Main.action('pick:' + RW.game.offers[0]); });
-  const scenes = [['03_day', 'day', 1], ['04_dusk', 'dusk', 4], ['05_night', 'night', 7], ['06_boss', 'boss', 5]];
+  await page.evaluate(() => RW.Main.battle('build'));
+  await page.waitForTimeout(200);
+  await shot(page, '04_buildmenu');
+  await page.evaluate(() => RW.Main.battle('build'));
+  await page.waitForTimeout(200);
+  const scenes = [['05_day', 'day', 1], ['06_dusk', 'dusk', 4], ['07_night', 'night', 7], ['08_boss', 'boss', 5]];
   for (const [name, env, wave] of scenes) {
     await page.evaluate(([env, wave]) => {
       const g = RW.game;
@@ -45,13 +54,27 @@ fs.mkdirSync(out, { recursive: true });
   await page.evaluate(() => { RW.game.clearWave(); });
   await page.waitForFunction(() => RW.game.mode === 'shop', null, { timeout: 60000 });
   await page.waitForTimeout(500);
-  await shot(page, '07_shop');
+  await shot(page, '09_shop');
+  await page.evaluate(() => { RW.game.mode = 'battle'; RW.Main.battle('pause'); });
+  await page.waitForTimeout(150);
+  await shot(page, '10_pause');
+  await page.evaluate(() => RW.Main.action('resume'));
+  await page.evaluate(() => { var g = RW.game; g.mode = 'revive'; g.wave = 4; g.dur = 50; g.wt = 17; g.lastHits = [{ src: '熔火巨像', dmg: 22, wave: 4 }]; });
+  await page.waitForTimeout(150);
+  await shot(page, '11_revive');
+  await page.evaluate(() => { RW.game.finishRun(); });
+  await page.waitForTimeout(150);
+  await shot(page, '12_result');
+  await page.evaluate(() => { RW.game.prog.marks = 20; });
+  await page.evaluate(() => RW.Main.action('courtyard'));
+  await page.waitForTimeout(200);
+  await shot(page, '13_courtyard_upgrades');
   await page.close();
 
   const p2 = await open('?2d');
   await p2.evaluate(() => { RW.Main.action('start'); RW.Main.action('pick:' + RW.game.offers[0]); });
   await p2.waitForTimeout(3000);
-  await shot(p2, '08_fallback2d');
+  await shot(p2, '14_fallback2d');
 
   await browser.close();
   server.close();

@@ -4,7 +4,7 @@
   var P = RW.Plat, D = RW.Draw, UI = RW.UI, S = RW.Sfx, T = RW.TUNE, DT = T.DT;
   var SAVE_KEY = 'ringwatch_save_v1';
 
-  var g = null, paused = false, showHow = false, muted = false, musicOff = false, buildMenu = false, buildMenuT = 0;
+  var g = null, paused = false, showHow = false, showCourtyard = false, muted = false, musicOff = false, buildMenu = false, buildMenuT = 0;
   var js = { active: false, id: null, ox: 0, oy: 0, kx: 0, ky: 0, mx: 0, my: 0 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: false };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
@@ -20,7 +20,8 @@
     g = new RW.Game();
     g.best = save.best || 0;
     // 局外进度（解锁、各英雄最高波数、累计数据）；老存档没有这一项
-    g.prog = save.prog || { unlocked: {}, heroBest: {}, kills: 0, coins: 0, built: 0, runs: 0 };
+    g.prog = save.prog || { unlocked: {}, heroBest: {}, kills: 0, coins: 0, built: 0, runs: 0, marks: 0, yard: {} };
+    g.prog.marks = g.prog.marks || 0; g.prog.yard = g.prog.yard || {};
     UI.heroSel = save.hero && RW.CLASSES[save.hero] ? save.hero : 'mage';
     muted = !!save.muted;
     S.setMuted(muted);
@@ -60,7 +61,7 @@
           if (b.disabled) { if (b.why) UI.toast(b.why, 1.2); S.play({ type: 'deny' }); return; }
           UI.pressed = b.id; battleButton(b.id); return;
         }
-        if (buildMenu && y > T.H - 74 && x < 600) return;   // 点在造塔菜单条上，不启动摇杆
+        if (buildMenu && y > T.H - 74 && x >= 88 && x <= 944) return;   // 点在造塔菜单条上，不启动摇杆
         if (!js.active) { js.active = true; js.id = id; js.ox = x; js.oy = y; js.kx = js.ky = js.mx = js.my = 0; }
       } else if (type === 'move') {
         if (js.active && id === js.id) updateStick(x, y);
@@ -98,6 +99,7 @@
   }
   function onKey(code) {
     S.unlock();
+    if (showCourtyard && (code === 'Escape' || code === 'Enter')) { showCourtyard = false; return; }
     if (code === 'Escape' || code === 'KeyP') {
       if (inBattle()) { paused = !paused; resetStick(); }
       return;
@@ -106,7 +108,7 @@
       if (code === 'Space' || code === 'ShiftLeft' || code === 'ShiftRight') { battleButton('dash'); return; }
       if (code === 'KeyQ' || code === 'KeyE' || code === 'KeyJ') { battleButton('skill'); return; }
       if (code === 'KeyB') { battleButton('build'); return; }
-      if (/^Digit[1-4]$/.test(code)) { battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
+      if (/^Digit[1-8]$/.test(code)) { battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
     }
     if (code === 'Enter' || code === 'Space') {
       if (showHow) { showHow = false; return; }
@@ -133,12 +135,20 @@
     if (cmd !== 'wslot') UI.sel = null;
     S.play({ type: 'ui' });
     switch (cmd) {
-      case 'start': case 'again': g.rollStartOffers(); break;
+      case 'start': case 'again': showCourtyard = false; g.rollStartOffers(); break;
       case 'howto': showHow = true; break;
       case 'howtoClose': showHow = false; break;
+      case 'courtyard': g.mode = 'title'; showCourtyard = true; break;
+      case 'yardClose': showCourtyard = false; break;
+      case 'yard':
+        var ud = RW.YARD_UPGRADES[arg], lv = g.prog.yard[arg] || 0, cost = ud && ud.costs[lv];
+        if (!ud || lv >= ud.max) UI.toast('这项庭院祝福已满级');
+        else if (g.prog.marks < cost) UI.toast('余烬印记不足，还需要 ' + (cost - g.prog.marks));
+        else { g.prog.marks -= cost; g.prog.yard[arg] = lv + 1; persist(); UI.toast(ud.name + ' 升至 ' + (lv + 1) + ' 阶'); }
+        break;
       case 'mute': muted = !muted; S.setMuted(muted); persist(); break;
       case 'music': musicOff = !musicOff; UI.musicOff = musicOff; S.setMusicOff(musicOff); persist(); break;
-      case 'back': case 'home': g.mode = 'title'; break;
+      case 'back': case 'home': g.mode = 'title'; showCourtyard = false; break;
       case 'hero': UI.heroSel = arg; break;
       case 'pick':
         if (!RW.isUnlocked(arg, g.prog)) { UI.toast('还没解锁：' + RW.CLASSES[arg].unlock.text); S.play({ type: 'deny' }); break; }
@@ -225,7 +235,7 @@
     D.begin();
     var pressed = UI.pressed;
     switch (g.mode) {
-      case 'title': UI.title(g, muted); if (showHow) UI.howto(); break;
+      case 'title': UI.title(g, muted); if (showHow) UI.howto(); else if (showCourtyard) UI.courtyard(g); break;
       case 'pick': UI.pick(g); break;
       case 'battle': case 'clear': case 'down':
         if (gl3) D.overlay3D(g); else D.world(g);

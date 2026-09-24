@@ -100,7 +100,7 @@ function shopPolicy(g, policy) {
     }
   }
 }
-var TOWER_PICK = ['sentry', 'barracks', 'sentry', 'pylon', 'siphon'];
+var TOWER_PICK = ['sentry', 'mortar', 'pylon', 'snare', 'barracks', 'ward', 'siphon', 'beacon'];
 function buildPolicy(g, policy, state) {
   if (policy === 'none' || g.mode !== 'battle') return;
   var co = g.core, near = Math.hypot(g.player.x - co.x, g.player.y - co.y) < 170;

@@ -262,11 +262,41 @@
       soldier: { hp: 14, dmg: 4, speed: 118, r: 6, atkCd: 0.55 },
       pros: '自动出兵，士兵会去拦截兵营附近的敌人，替你挡刀',
       cons: '贵；士兵会被小怪围死，兵营离你远了就帮不上'
+    },
+    mortar: {
+      name: '熔岩炮', kind: 'mortar', color: '#ff735f', cost: 26, techCost: 26, hp: 38, r: 15,
+      dmg: 14, cd: 2.4, range: 225, blast: 68, speed: 380, knock: 190,
+      pros: '抛射熔火弹，在密集怪群中炸开并强力击退',
+      cons: '装填慢；敌人分散时会浪费范围伤害'
+    },
+    ward: {
+      name: '守誓碑', kind: 'ward', color: '#78dfb3', cost: 22, techCost: 24, hp: 48, r: 14,
+      range: 185, cd: 5.5, healCore: [7, 10, 14], healTower: [10, 14, 19],
+      pros: '周期修复范围内受损的圣火或建筑，让防线撑得更久',
+      cons: '没有攻击力；最好放在圣火与前线建筑之间'
+    },
+    snare: {
+      name: '缚灵柱', kind: 'snare', color: '#dc8cff', cost: 18, techCost: 22, hp: 34, r: 13,
+      dmg: 3, cd: 3.2, range: 150, slow: [0.62, 0.72, 0.8], slowTime: 1.8, knock: 16,
+      pros: '以灵网困住一片敌人，大幅减速并打断冲锋节奏',
+      cons: '伤害有限；需配合输出塔把控住的敌人清掉'
+    },
+    beacon: {
+      name: '引火灯塔', kind: 'beacon', color: '#ffc65c', cost: 28, techCost: 28, hp: 44, r: 13,
+      range: 190, cd: 9, buffDur: [3, 4, 5], rate: [0.22, 0.32, 0.42],
+      pros: '周期点亮战线，使范围内建筑短时间加快攻击与出兵',
+      cons: '自身不攻击；要放在多座防御塔覆盖的位置'
     }
   };
-  RW.TOWER_ORDER = ['sentry', 'pylon', 'siphon', 'barracks'];
+  RW.TOWER_ORDER = ['sentry', 'pylon', 'siphon', 'barracks', 'mortar', 'ward', 'snare', 'beacon'];
   RW.TOWER_TIER = { dmg: [1, 1.7, 2.6], hp: [1, 1.5, 2.2], range: [1, 1.12, 1.25] };
   RW.TECH_COST = [0, 1, 1.7];         // 科技 II / III 的价格倍率（乘 techCost）
+  RW.YARD_UPGRADES = {
+    ward: { name: '圣火庇佑', icon: 'ui-core', color: '#ffd27a', max: 5, costs: [2, 4, 6, 8, 10], effect: '圣火起始生命 +12', value: 12 },
+    supplies: { name: '远征补给', icon: 'ui-shard', color: '#80edff', max: 5, costs: [2, 4, 6, 8, 10], effect: '每局起始晶屑 +3', value: 3 },
+    mason: { name: '工匠行会', icon: 'blueprint', color: '#93d9ff', max: 5, costs: [2, 4, 6, 8, 10], effect: '所有建塔费用 -4%', value: 0.04 },
+    banner: { name: '守夜旌旗', icon: 'beacon', color: '#ffc65c', max: 5, costs: [2, 4, 6, 8, 10], effect: '所有防御塔伤害 +5%', value: 0.05 }
+  };
 
   // ---------- 敌人表（10）：轮廓、速度、行为都要一眼能分开 ----------
   RW.ENEMIES = {

@@ -399,6 +399,40 @@
       g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
       banner(g, -15, 13, 72);
     });
+    M.mortar = model(function (g) {
+      g.box(0, 0, 0, 30, 10, 30, PAL.rock2, 0, PAL.stone);
+      g.box(0, 31, 0, 18, 54, 18, PAL.wallWood, 0, PAL.rockDark);
+      g.box(0, 61, 0, 32, 9, 32, PAL.rockDark, 0, PAL.gold);
+      g.box(16, 72, 0, 38, 13, 13, hex('#aeb8c4'), 0.25, PAL.stone);
+      g.box(34, 72, 0, 6, 15, 15, PAL.gold);
+      g.box(-11, 35, 0, 5, 27, 23, PAL.roofRed);
+    });
+    M.ward = model(function (g) {
+      g.box(0, 0, 0, 30, 8, 30, PAL.stone2, 0, PAL.gold);
+      g.box(0, 8, 0, 16, 66, 16, PAL.rock2);
+      g.box(0, 42, 8.5, 5, 26, 1, hex('#315c50'));
+      g.blob(0, 50, 11, 6, 10, 4, hex('#78dfb3'), 1, 3, 0.1);
+      g.cyl(0, 79, 0, 15, 9, 5, 6, PAL.stone);
+      g.blob(0, 94, 0, 7, 12, 7, hex('#9fffd5'), 1.2, 5, 0.1);
+    });
+    M.snare = model(function (g) {
+      g.box(0, 0, 0, 24, 8, 24, PAL.rockDark, 0, PAL.stone);
+      g.box(0, 8, 0, 10, 62, 10, PAL.wallWood);
+      g.cyl(0, 66, 0, 15, 8, 6, 6, PAL.rock2);
+      for (var si = 0; si < 4; si++) {
+        var sa = si * Math.PI / 2 + Math.PI / 4;
+        g.box(Math.cos(sa) * 12, 79, Math.sin(sa) * 12, 3, 27, 3, hex('#dc8cff'), 0.2);
+      }
+      g.blob(0, 92, 0, 7, 8, 7, hex('#c07bff'), 1.3, 4, 0.08);
+    });
+    M.beacon = model(function (g) {
+      g.box(0, 0, 0, 24, 8, 24, PAL.stone2, 0, PAL.gold);
+      g.box(0, 8, 0, 10, 78, 10, PAL.wood);
+      g.cyl(0, 88, 0, 18, 6, 5, 6, PAL.gold, 0.5);
+      g.box(0, 99, 0, 3, 26, 3, hex('#ff9a3c'), 0.8);
+      g.blob(0, 111, 0, 8, 12, 8, hex('#ffc65c'), 1.25, 6, 0.1);
+      g.blob(0, 125, 0, 4, 9, 4, hex('#fff0b0'), 1.5, 8, 0.1);
+    });
     M.soldier = model(function (g) {
       g.box(0, 0, 1.6, 1.8, 4, 1.8, hex('#5a5f6a')); g.box(0, 0, -1.6, 1.8, 4, 1.8, hex('#5a5f6a'));
       g.box(0, 4, 0, 4, 6, 5, hex('#c9ccd6'));
@@ -426,7 +460,7 @@
     splitter: { m: 'sack', base: 12 }, bomber: { m: 'goblin', base: 10 }, spitter: { m: 'archer', base: 9 }, shielder: { m: 'shaman', base: 11 },
     warden: { m: 'warlock', base: 22 }, brood: { m: 'brood', base: 26 }, boss: { m: 'golem', base: 38 }
   };
-  var TMODEL = { sentry: 'sentry', pylon: 'pylon', siphon: 'siphon', barracks: 'barracks' };
+  var TMODEL = { sentry: 'sentry', pylon: 'pylon', siphon: 'siphon', barracks: 'barracks', mortar: 'mortar', ward: 'ward', snare: 'snare', beacon: 'beacon' };
 
   // ================= 昼夜 =================
   function envPreset(kind) {
@@ -692,7 +726,7 @@
       var tw = g.towers[i];
       if (!tw.on || !W3.inView(tw.x, tw.y, 80)) continue;
       var d = tw.d, s = d.r / 12 * 0.9, bk = tw.build > 0 ? 1 - tw.build / T.build.time : 1;
-      var yaw = d.kind === 'sentry' ? tw.ang : -Math.PI / 2;
+      var yaw = d.kind === 'sentry' || d.kind === 'mortar' ? tw.ang : -Math.PI / 2;
       GL.put(M[TMODEL[tw.id]], tw.x, (bk - 1) * 90, tw.y, d.kind === 'barracks' ? 0 : yaw, s, s * bk, s, 0, 1, 1, 1, tw.flash > 0 ? 0.7 : 0);
       GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.2, BLACK, (0.3) * W3.blobShadow());
       var range = (d.range || 0) * RW.TOWER_TIER.range[g.tech[tw.id] - 1];
@@ -700,6 +734,10 @@
       if (range) GL.ground(true, tw.x, 0.8, tw.y, range, 1, 0.012, hex(d.color), 0.25);
       if (d.kind === 'pylon') { GL.glow(tw.x, 84, tw.y, 18, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
       if (d.kind === 'siphon') GL.glow(tw.x, 78, tw.y, 14, hex('#ffe066'), 0.6);
+      if (d.kind === 'ward') GL.glow(tw.x, 92, tw.y, 14, hex('#78dfb3'), 0.45 + 0.25 * Math.sin(W3.t * 2.5));
+      if (d.kind === 'snare' && tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#dc8cff'), tw.pulse);
+      if (d.kind === 'beacon') GL.glow(tw.x, 124, tw.y, 22, hex('#ffc65c'), 0.65 + 0.2 * Math.sin(W3.t * 4));
+      if (tw.buffT > 0) GL.glow(tw.x, 48, tw.y, d.r * 1.25, hex('#ffc65c'), Math.min(0.65, tw.buffT / 5));
     }
   }
   function drawSoldiers(g, M) {

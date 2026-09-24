@@ -7,6 +7,7 @@ require('./js/audio.js');
 require('./js/gl3d.js');
 require('./js/world3d.js');
 require('./js/render.js');
+require('./js/ui-icons.js');
 require('./js/ui.js');
 require('./js/main.js');
 GameGlobal.RW.Main.start();
