@@ -93,8 +93,9 @@
     D.text('夜色压境，守住村子的圣火。撑过倒计时，整备，再迎下一波。', W / 2, 214, 14, C.text, 'center', true, 3);
     if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波', W / 2, 244, 13, C.gold, 'center', true, 3);
     UI.button('start', W / 2 - 150, 280, 300, 62, '开始值守', { style: 'primary', size: 22 });
-    UI.button('mute', W / 2 - 150, 356, 145, 42, muted ? '音效：关' : '音效：开', { size: 13 });
-    UI.button('howto', W / 2 + 5, 356, 145, 42, '玩法说明', { size: 13 });
+    UI.button('mute', W / 2 - 150, 356, 96, 42, muted ? '声音：关' : '声音：开', { size: 13 });
+    UI.button('music', W / 2 - 48, 356, 96, 42, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
+    UI.button('howto', W / 2 + 54, 356, 96, 42, '玩法说明', { size: 13 });
     D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q 技能 · B 造塔 · Enter 开始', W / 2, 430, 12, C.dim, 'center', false, 3);
     D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
   };
@@ -677,7 +678,8 @@
     D.text('暂停', cx, 150, 26, C.text, 'center', true);
     D.text('第 ' + g.wave + ' 波 · Esc 继续', cx, 180, 12, C.dim, 'center');
     UI.button('resume', cx - 140, 206, 280, 52, '继续', { style: 'primary', size: 18 });
-    UI.button('mute', cx - 140, 270, 280, 44, muted ? '音效：关' : '音效：开', { size: 14 });
+    UI.button('mute', cx - 140, 270, 136, 44, muted ? '声音：关' : '声音：开', { size: 14 });
+    UI.button('music', cx + 4, 270, 136, 44, UI.musicOff ? '音乐：关' : '音乐：开', { size: 14 });
     UI.button('quit', cx - 140, 326, 280, 44, '放弃本局', { style: 'danger', size: 14 });
   };
 

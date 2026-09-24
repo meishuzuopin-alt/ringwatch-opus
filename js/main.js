@@ -4,12 +4,12 @@
   var P = RW.Plat, D = RW.Draw, UI = RW.UI, S = RW.Sfx, T = RW.TUNE, DT = T.DT;
   var SAVE_KEY = 'ringwatch_save_v1';
 
-  var g = null, paused = false, showHow = false, muted = false, buildMenu = false, buildMenuT = 0;
+  var g = null, paused = false, showHow = false, muted = false, musicOff = false, buildMenu = false, buildMenuT = 0;
   var js = { active: false, id: null, ox: 0, oy: 0, kx: 0, ky: 0, mx: 0, my: 0 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: false };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, prog: g.prog, hero: UI.heroSel }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel }); }
   function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
   function resetStick() { js.active = false; js.id = null; js.mx = js.my = js.kx = js.ky = 0; }
 
@@ -24,6 +24,7 @@
     UI.heroSel = save.hero && RW.CLASSES[save.hero] ? save.hero : 'mage';
     muted = !!save.muted;
     S.setMuted(muted);
+    musicOff = !!save.musicOff; S.setMusicOff(musicOff); UI.musicOff = musicOff;
     RW.game = g;
     P.onPointer(onPointer);
     P.onKey = onKey;
@@ -136,6 +137,7 @@
       case 'howto': showHow = true; break;
       case 'howtoClose': showHow = false; break;
       case 'mute': muted = !muted; S.setMuted(muted); persist(); break;
+      case 'music': musicOff = !musicOff; UI.musicOff = musicOff; S.setMusicOff(musicOff); persist(); break;
       case 'back': case 'home': g.mode = 'title'; break;
       case 'hero': UI.heroSel = arg; break;
       case 'pick':
@@ -200,8 +202,12 @@
       while (acc >= DT && steps < 5) { g.update(getInput()); drain(); acc -= DT; steps++; }
       if (steps >= 5) acc = 0;
     } else acc = 0;
-    var intensity = Math.min(1, g.wave / 10 + (g.player.hp / g.player.maxHp < 0.35 ? 0.3 : 0));
-    S.updateMusic(inBattle() && !paused && g.mode !== 'down', intensity);
+    var intensity = Math.min(1, g.wave / 10 + (g.player.hp / g.player.maxHp < 0.35 ? 0.3 : 0) + g.momTier * 0.12);   // 战意越高音乐越猛
+    // 音乐状态：菜单 / 整备放慢速重型段落；战斗按强度换段落；Boss 在场换 Boss 段落；暂停、倒地时停
+    var mstate = 'menu';
+    if (paused || g.mode === 'down' || g.mode === 'revive') mstate = 'off';
+    else if (inBattle()) mstate = (g.boss && g.boss.on) || g.bossAlert > 0 ? 'boss' : 'battle';
+    S.updateMusic(mstate, intensity);
     if (inBattle() || g.mode === 'revive') D.updateCamera(g, paused ? 0 : dt);
     render(paused ? 0 : dt);
     P.raf(frame);
