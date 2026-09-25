@@ -1,4 +1,4 @@
-// 光照验收（FG-ART-002 阶段 1）：node tools/lighttest.js [输出目录，默认 shots/light]
+// 光照验收（FG-ART-002 阶段 1）：node tools/lighttest.js [输出目录，默认 shots/light] [风格化光照开关，如 all]
 // 1. 白天 / 黄昏 / 夜晚 / Boss 四种光照下各拍一张不带 HUD 的纯 3D 画面
 // 2. 量亮度：圣火光圈里、光圈外分开算。圣经要求夜晚环境亮度约为白天的 35%（光圈另算）
 // 3. 缩成 231×87（Steam 小图尺寸）拼一张缩略图，供人工看剪影能不能分清英雄、圣火、塔、敌人
@@ -17,7 +17,7 @@ fs.mkdirSync(out, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`http://localhost:${server.address().port}/preview.html?hifx`);
+  await page.goto(`http://localhost:${server.address().port}/preview.html?hifx` + (process.argv[3] ? '&art=' + process.argv[3] : ''));   // 第 2 个参数：风格化光照开关，如 all
   await page.waitForFunction(() => window.RW && RW.game && RW.W3 && RW.W3.ready, null, { timeout: 60000 });
   await page.evaluate(() => {
     RW.Main.action('start'); RW.Main.action('pick:' + RW.game.offers[0]);

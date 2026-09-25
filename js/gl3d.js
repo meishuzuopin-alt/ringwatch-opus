@@ -163,7 +163,13 @@
     cam: [0, 0, 0], camRight: [1, 0, 0], camUp: [0, 1, 0],
     // 画质开关：阴影 / 描边 / 泛光 / 环境光遮蔽。地址加 ?lowfx 全关；帧率持续偏低时 world3d 会逐级自动关闭
     fx: { shadow: true, outline: true, bloom: true, ao: true },
-    meshes: []
+    // 风格化光照开关（FG-ART-002 阶段 1）。制作人要保留原版的光感，这些默认全关，只作对照 / 备选：
+    //   aces 色调映射 · toon 三段色阶 · noise 噪点斑驳 · ao 环境光遮蔽 · nightFog 光圈外夜雾（自发光穿雾）
+    //   rim 冷色边缘光 · grad 顶点下暗上亮 · coreLight 圣火暖光圈 · night35 夜晚提亮到白天 35% 的备选预设
+    // 默认开着的只有低风险三项：描边（本色压暗）、只给火焰 / 法术 / 敌眼的局部泛光、轻暗角。
+    // 浏览器里加 ?art=all 全开，?art=toon,ao 只开其中几项（截图对照用）
+    ART: { aces: false, toon: false, noise: false, ao: false, nightFog: false, rim: false, grad: false, coreLight: false, night35: false },
+    meshes: [], statics: []
   };
 
   // ---------- 材质 ----------
@@ -174,7 +180,7 @@
   var U = {
     uTime: { value: 0 }, uEmBoost: { value: 1 }, uGrade: { value: null }, uLineW: { value: 1.2 }, uLineWB: { value: 0.9 },
     uRim: { value: null }, uNoise: { value: 0.12 }, uCore: { value: null }, uCoreCol: { value: null },
-    uFogLow: { value: null }, uEmHDR: { value: 2.2 }
+    uFogLow: { value: null }, uEmHDR: { value: 2.2 }, uGradK: { value: 0 }, uFogPierce: { value: 0 }
   };
   // 3 格渐变：暗面 / 中间调 / 亮面（最近邻采样，形成清楚的色阶）
   function toonRamp() {
@@ -187,20 +193,22 @@
     'float fgNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);',
     '  return mix(mix(fgHash(i), fgHash(i+vec2(1,0)), f.x), mix(fgHash(i+vec2(0,1)), fgHash(i+vec2(1,1)), f.x), f.y); }'
   ].join('\n');
-  function meshMaterial(water) {
-    var m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GL.ramp });
+  // toon = true 用三段色阶，false 用原版的 MeshStandardMaterial（平直着色、粗糙 0.92）
+  function meshMaterial(water, toon) {
+    var m = toon ? new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GL.ramp })
+      : new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.92, metalness: 0 });
     m.onBeforeCompile = function (sh) {
-      ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR'].forEach(function (k) { sh.uniforms[k] = U[k]; });
+      ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce'].forEach(function (k) { sh.uniforms[k] = U[k]; });
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float aEm;\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
+        .replace('#include <common>', '#include <common>\nattribute float aEm;\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEm = aEm;\n' +
           // 顶点色渐变：模型底部偏暗、顶部偏亮（贴地的平地面不压暗）
-          'vGrad = (normal.y > 0.9 && position.y < 2.0) ? 1.0 : mix(0.74, 1.06, smoothstep(0.0, 42.0, position.y));\n' +
+          'vGrad = mix(1.0, (normal.y > 0.9 && position.y < 2.0) ? 1.0 : mix(0.74, 1.06, smoothstep(0.0, 42.0, position.y)), uGradK);\n' +
           '#ifdef USE_INSTANCING\nvFlash = iFlash;\n#else\nvFlash = 0.0;\n#endif' +
           (water ? '\ntransformed.y += sin(transformed.x*0.05 + uTime*2.0)*2.0 + cos(transformed.z*0.06 + uTime*1.6)*2.0;\nvGrad = 1.0;' : ''))
         .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\n' + NOISE_GLSL)
+        .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\n' + NOISE_GLSL)
         // 斑驳：两层世界坐标噪声，石头、木头、茅草、草地都带一点笔触感
         .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);')
         // 自发光进 HDR（乘 uEmHDR），只有它和法术光效能过泛光阈值
@@ -217,7 +225,7 @@
           '#ifdef USE_FOG',
           '  float fgF = smoothstep(fogNear, fogFar, vFogDepth);',
           '  float fgLow = uFogLow.x * (1.0 - smoothstep(0.0, uFogLow.y, vWp.y)) * smoothstep(uFogLow.z, uFogLow.w, length(vWp.xz - uCore.xy));',
-          '  fgF = clamp(fgF + fgLow, 0.0, 1.0) * (1.0 - clamp(vEm * 1.6, 0.0, 0.92));',
+          '  fgF = clamp(fgF + fgLow, 0.0, 1.0) * (1.0 - uFogPierce * clamp(vEm * 1.6, 0.0, 0.92));',
           '  gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fgF);',
           '#endif'
         ].join('\n'));
@@ -344,7 +352,7 @@
     tmpC = new THREE.Color();
     r.setPixelRatio(1);   // 画布尺寸由 platform.js 按设备像素比设置好了
     r.outputColorSpace = THREE.SRGBColorSpace;
-    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;   // 圣经第 5 节：ACES 色调映射
+    r.toneMapping = THREE.NeutralToneMapping; r.toneMappingExposure = 1.0;   // 默认沿用原版；ART.aces 打开时换 ACES
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;   // r18x 起 PCFSoftShadowMap 已移除（会报警告），PCFShadowMap 本身已是柔化过滤
     var sc = GL.scene = new THREE.Scene();
     sc.fog = new THREE.Fog(0x7a5f80, 1300, 3000);
@@ -362,8 +370,9 @@
     U.uRim.value = new THREE.Vector4(0.37, 0.66, 0.78, 0.2);
     U.uCore.value = new THREE.Vector4(0, 0, 0, 0); U.uCoreCol.value = new THREE.Color(1, 0.5, 0.16);   // 圣火金偏余烬橙（线性空间）
     U.uFogLow.value = new THREE.Vector4(0, 40, 900, 1400);
-    GL.matStd = meshMaterial(false);
-    GL.matWater = meshMaterial(true);
+    GL.mats = { std: [meshMaterial(false, false), meshMaterial(false, true)], water: [meshMaterial(true, false), meshMaterial(true, true)] };
+    GL.matStd = GL.mats.std[0];
+    GL.matWater = GL.mats.water[0];
     GL.matLine = lineMaterial(U.uLineW);     // 角色、敌人、道具
     GL.matLineB = lineMaterial(U.uLineWB);   // 建筑、塔、地形上的房屋和树
     GL.fxAdd = new Batch(3000, 16);
@@ -444,7 +453,8 @@
     if (opts.static) {
       mesh.obj = new THREE.Mesh(geo, opts.water ? GL.matWater : GL.matStd);
       mesh.obj.receiveShadow = true; mesh.obj.castShadow = !opts.water;
-      GL.scene.add(mesh.obj);
+      mesh.water = !!opts.water;
+      GL.scene.add(mesh.obj); GL.statics.push(mesh);
       if (!opts.water) { mesh.line = new THREE.Mesh(geo, GL.matLineB); GL.scene.add(mesh.line); }
       else mesh.outline = mesh.shadow = false;
       mesh.isStatic = true;
@@ -467,6 +477,22 @@
     mesh.obj = im; mesh.line = ln; mesh.flash = fl;
     GL.meshes.push(mesh);
     return mesh;
+  };
+
+  // 切换风格化光照开关：色阶要换材质，其余只改 uniform / 通道
+  GL.setArt = function (flags) {
+    var A = GL.ART, k;
+    for (k in flags) if (k in A) A[k] = !!flags[k];
+    if (!GL.renderer) return A;
+    var t = A.toon ? 1 : 0;
+    GL.matStd = GL.mats.std[t]; GL.matWater = GL.mats.water[t];
+    GL.meshes.forEach(function (m) { m.obj.material = GL.matStd; });
+    GL.statics.forEach(function (m) { m.obj.material = m.water ? GL.matWater : GL.matStd; });
+    GL.renderer.toneMapping = A.aces ? THREE.ACESFilmicToneMapping : THREE.NeutralToneMapping;
+    U.uNoise.value = A.noise ? 0.12 : 0;
+    U.uGradK.value = A.grad ? 1 : 0;
+    U.uFogPierce.value = A.nightFog ? 1 : 0;
+    return A;
   };
 
   // 建筑类网格（塔、兵营、圣火）用细一档的描边
@@ -505,6 +531,7 @@
   GL.removeStatic = function (mesh) {
     if (!mesh || !mesh.obj) return;
     GL.scene.remove(mesh.obj);
+    var si = GL.statics.indexOf(mesh); if (si >= 0) GL.statics.splice(si, 1);
     if (mesh.line) GL.scene.remove(mesh.line);
     mesh.geo.dispose();
   };
@@ -601,14 +628,15 @@
     U.uGrade.value.set(gr[0], gr[1], gr[2], gr[3]);
     // 冷色边缘光、斑驳、圣火暖光圈、低矮冷雾（world3d 的昼夜预设给参数）
     var rim = env.rim || [0.37, 0.66, 0.78, 0.2];
-    U.uRim.value.set(rim[0], rim[1], rim[2], rim[3]);
+    var A = GL.ART;
+    U.uRim.value.set(rim[0], rim[1], rim[2], A.rim ? rim[3] : 0);
     var cl = env.coreLight;
-    if (cl) U.uCore.value.set(cl.x, cl.z, cl.r, cl.k); else U.uCore.value.w = 0;
+    if (cl) U.uCore.value.set(cl.x, cl.z, cl.r, A.coreLight ? cl.k : 0); else U.uCore.value.w = 0;
     // 低矮冷雾从光圈边缘往外 fogLow[2] 距离内渐浓
     var fl = env.fogLow || [0, 40, 360], r0 = cl ? cl.r : 600;
-    U.uFogLow.value.set(fl[0], fl[1], r0, r0 + fl[2]);
+    U.uFogLow.value.set(A.nightFog ? fl[0] : 0, fl[1], r0, r0 + fl[2]);
     // 环境光遮蔽：画质开关 + 深度重建需要的投影矩阵
-    GL.aoPass.enabled = GL.fx.ao;
+    GL.aoPass.enabled = GL.fx.ao && A.ao;
     GL.aoPass.uniforms.uProj.value.copy(GL.camera.projectionMatrix); GL.aoPass.uniforms.uProjInv.value.copy(GL.camera.projectionMatrixInverse);
     GL.gradePass.uniforms.uVig.value = env.vig == null ? 0.22 : env.vig;
     // 泛光：阈值固定在 HDR 1.05，普通受光表面不发光，只有自发光和法术光效会晕开

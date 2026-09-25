@@ -23,7 +23,7 @@ fs.mkdirSync(out, { recursive: true });
   };
   const shot = (page, name) => page.screenshot({ path: path.join(out, name + '.png') });
 
-  const page = await open('?hifx');   // 锁定画质：无头浏览器是软件渲染，很慢，不锁会自动降级
+  const page = await open('?hifx' + (process.env.SHOTS_ART ? '&art=' + process.env.SHOTS_ART : ''));   // SHOTS_ART=all 拍风格化光照全开的对照   // 锁定画质：无头浏览器是软件渲染，很慢，不锁会自动降级
   await shot(page, '01_title');
   await page.evaluate(() => RW.Main.action('start'));
   await page.waitForTimeout(400);
