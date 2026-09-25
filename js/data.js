@@ -40,7 +40,7 @@
     // 圣火：村子中央的守护目标。它熄灭 = 值守失败（位置由地图里的 C 决定）。
     core: { x: 580, y: 900, r: 30, hp: 260, gunDmg: 6, gunCd: 0.5, gunRange: 170, waveHeal: 0.5, repairCost: 14, repairPart: 0.5, armorCost: 20, armorHp: 50, interceptDist: 110 },
     priceGrowth: 0.06,          // 每波物价 +6%，买数值要赶在曲线前面
-    rerollBase: 2, rerollPerWave: 1, rerollStep: 2,
+    rerollBase: 1, rerollPerWave: 0.8, rerollStep: 3,   // 刷新价：前期便宜，同一次整备连刷越来越贵（第 5 波 4/7/10，第 15 波 12/15/18）
     sellRate: 0.5,
     armorPerPoint: 12,          // 护甲减伤 = 护甲 / (护甲 + 12)，最高 75%
     armorNeg: 0.08,              // 负护甲：每点受伤 +8%
@@ -540,7 +540,7 @@
 
   // 全表只跟这一张走：血、怪伤、物价、开局金币、收成。改这里，战斗和商店一起变。
   RW.SHEET = {
-    // 血量 1 + 0.18k + 0.06k²：第 10 波 7.5 倍、第 20 波 26 倍（白皮书 6.1）
+    // 血量 1 + 0.18k + 0.06k²，第 9 波起再加 0.02(w−8)²：第 10 波约 7.6 倍、第 20 波约 29 倍（白皮书 6.1 的 26 倍是加 hpC9 之前的数）
     hpA: 0.18, hpB: 0.06, hpC9: 0.02, dmgC: 0.05, spdC: 0.012, spdCap: 0.22, priceC: 0.06,
     startGold: 14, harvestBase: 6, harvestPer: 30
   };
@@ -573,13 +573,30 @@
     { dur: 38, r0: 3.2, r1: 4.6, mix: { mite: 0.34, shell: 0.17, dasher: 0.13, splitter: 0.1, bomber: 0.1, spitter: 0.1, shielder: 0.06 }, elites: [[0.2, 'warden'], [0.5, 'brood'], [0.75, 'warden']] },
     { dur: 40, r0: 3.5, r1: 5.0, mix: { mite: 0.32, shell: 0.17, dasher: 0.13, splitter: 0.1, bomber: 0.1, spitter: 0.11, shielder: 0.07 }, elites: [[0.15, 'warden'], [0.4, 'brood'], [0.6, 'warden'], [0.8, 'brood']] }
   ];
+  // 第 11–20 波：每波一个主题（固定、可预告），只用现有怪种重新组合。
+  // rate 乘在原来的 r0/r1 上；squad = [[出现时间占比, 普通怪种, 只数]]，走精英通道逐只刷出并弹预警；extraElites 额外加精英。
+  // 时长按「后期靠密度、不靠更长」：第 11–20 波合计 498 秒（原来 510 秒）。
+  RW.WAVES_LATE = {
+    11: { name: '狼群', dur: 42, rate: 0.92, mix: { mite: 0.30, dasher: 0.30, shell: 0.10, splitter: 0.10, bomber: 0.08, spitter: 0.07, shielder: 0.05 }, squad: [[0.5, 'dasher', 3]] },
+    12: { name: '铁甲', dur: 46, rate: 1.00, mix: { mite: 0.28, shell: 0.24, shielder: 0.12, spitter: 0.10, dasher: 0.12, bomber: 0.10, splitter: 0.04 }, squad: [[0.45, 'shell', 2]] },
+    13: { name: '蝠潮', dur: 46, rate: 1.04, mix: { mite: 0.35, spore: 0.20, splitter: 0.18, dasher: 0.10, spitter: 0.10, shielder: 0.07 } },
+    14: { name: '爆破', dur: 50, rate: 1.08, mix: { mite: 0.30, bomber: 0.24, splitter: 0.16, shell: 0.12, dasher: 0.10, spitter: 0.08 }, squad: [[0.6, 'bomber', 4]] },
+    15: { name: 'Boss', dur: 52, rate: 1.00, mix: RW.WAVES[10].mix },
+    16: { name: '暗箭', dur: 44, rate: 0.90, mix: { mite: 0.30, spitter: 0.26, shielder: 0.14, shell: 0.12, dasher: 0.10, bomber: 0.08 } },
+    17: { name: '合围', dur: 52, rate: 1.08, mix: RW.WAVES[10].mix },
+    18: { name: '攻城', dur: 54, rate: 1.12, mix: { mite: 0.26, shell: 0.26, bomber: 0.18, splitter: 0.12, shielder: 0.10, spitter: 0.08 }, squad: [[0.35, 'shell', 2], [0.7, 'bomber', 3]] },
+    19: { name: '精英之夜', dur: 56, rate: 0.95, mix: RW.WAVES[10].mix, extraElites: 1 },
+    20: { name: '终局', dur: 56, rate: 1.00, mix: RW.WAVES[10].mix }
+  };
   RW.waveDef = function (w) {
     if (w < RW.WAVES.length) return RW.WAVES[w];
-    // 第 11–20 波：时长涨到 60 秒，刷怪更密，精英逐波增加；21 波起为无尽，沿用第 20 波节奏
-    var k = Math.min(w, 20) - 10, el = [];
-    var n = 3 + Math.floor(k / 2);
+    // 21 波起为无尽，沿用第 20 波节奏
+    var k = Math.min(w, 20) - 10, L = RW.WAVES_LATE[Math.min(w, 20)], el = [];
+    var n = 3 + Math.floor(k / 2) + (L.extraElites || 0);
     for (var i = 0; i < n; i++) el.push([0.1 + 0.8 * i / Math.max(1, n - 1), i % 2 ? 'brood' : 'warden']);
-    return { dur: Math.min(60, 40 + 2 * k), r0: 3.5 + 0.22 * k, r1: 5.0 + 0.3 * k, mix: RW.WAVES[10].mix, elites: el };
+    var sq = L.squad || [];
+    for (var s = 0; s < sq.length; s++) for (var j = 0; j < sq[s][2]; j++) el.push([sq[s][0] + 0.01 * j, sq[s][1]]);
+    return { dur: L.dur, r0: (3.5 + 0.22 * k) * L.rate, r1: (5.0 + 0.3 * k) * L.rate, mix: L.mix, elites: el, name: L.name };
   };
 
   // ---------- 改造 / 道具表 ----------
@@ -629,9 +646,13 @@
     { name: '传说', color: '#ffb13b' }
   ];
   // 返回各品质的权重（第 w 波、幸运 luck）
+  // 每档从某一波起才出现，之后线性上升到上限就不再涨（精良 45%、稀有 25%、传说 6%）；幸运只加快到顶，不提高上限
   RW.rarityWeights = function (w, luck) {
     var L = 1 + Math.max(0, luck || 0);
-    return [100, Math.max(0, (w - 1) * 7) * L, Math.max(0, (w - 3) * 3.5) * L, Math.max(0, (w - 6) * 1.4) * L];
+    var p3 = Math.min(0.06, 0.006 * Math.max(0, w - 8) * L);
+    var p2 = Math.min(0.25, 0.022 * Math.max(0, w - 4) * L);
+    var p1 = Math.min(0.45, 0.06 * Math.max(0, w - 2) * L);
+    return [Math.max(0, 1 - p1 - p2 - p3) * 100, p1 * 100, p2 * 100, p3 * 100];
   };
   RW.MODS = {
     // ---- 普通 ----
@@ -640,15 +661,18 @@
     hull:    { name: '疾风靴', r: 0, cost: 16, max: 3, fx: { speed: 0.16, armor: -1 } },
     nano:    { name: '再生护符', r: 0, cost: 20, max: 3, fx: { regen: 0.4, dmg: -0.06 } },
     magnet:  { name: '磁石', r: 0, cost: 14, max: 2, fx: { pickup: 0.7, rate: -0.05 } },
-    whet:    { name: '磨刀石', r: 0, cost: 10, max: 6, fx: { dmg: 0.1 } },
-    gauntlet: { name: '铁护手', r: 0, cost: 12, max: 4, fx: { melee: 0.25, ranged: -0.1 } },
-    quiver:  { name: '箭袋', r: 0, cost: 12, max: 4, fx: { ranged: 0.25, melee: -0.1 } },
-    tome:    { name: '残页', r: 0, cost: 12, max: 4, fx: { spell: 0.25, speed: -0.06 } },
-    bracer:  { name: '皮护腕', r: 0, cost: 10, max: 6, fx: { armor: 1 } },
-    apple:   { name: '红苹果', r: 0, cost: 8, max: 6, fx: { maxHp: 4 } },
+    whet:    { name: '磨刀石', r: 0, cost: 10, max: 10, fx: { dmg: 0.1 } },
+    gauntlet: { name: '铁护手', r: 0, cost: 12, max: 6, fx: { melee: 0.25, ranged: -0.1 } },
+    quiver:  { name: '箭袋', r: 0, cost: 12, max: 6, fx: { ranged: 0.25, melee: -0.1 } },
+    tome:    { name: '残页', r: 0, cost: 12, max: 6, fx: { spell: 0.25, speed: -0.06 } },
+    bracer:  { name: '皮护腕', r: 0, cost: 10, max: 8, fx: { armor: 1 } },
+    apple:   { name: '红苹果', r: 0, cost: 8, max: 10, fx: { maxHp: 4 } },
     feather: { name: '羽毛', r: 0, cost: 8, max: 4, fx: { speed: 0.08, pickup: 0.15 } },
     purse:   { name: '小钱袋', r: 0, cost: 12, max: 4, fx: { harvest: 0.25 } },
     herb:    { name: '草药', r: 0, cost: 10, max: 4, fx: { regen: 0.3 } },
+    wick:    { name: '夜火', r: 0, cost: 14, max: 4, fx: { coreRegen: 0.3, healCore: 1 } },
+    flint:   { name: '引火石', r: 0, cost: 14, max: 5, fx: { blastR: 0.10, dmg: 0.04 } },
+    lamp:    { name: '火把', r: 0, cost: 14, max: 4, fx: { range: 0.12, pickup: 0.2, speed: -0.03 } },
     // ---- 精良 ----
     coil:    { name: '狂暴药剂', r: 1, cost: 20, max: 3, fx: { dmg: 0.30, maxHp: -4 } },
     sight:   { name: '致命之眼', r: 1, cost: 18, max: 3, fx: { crit: 0.15, maxHp: -3 }, note: '暴击默认 ×2 伤害' },
@@ -662,6 +686,9 @@
     blueprint: { name: '建筑图纸', r: 1, cost: 18, max: 3, fx: { towerDmg: 0.25, dmg: -0.05 } },
     powder:  { name: '火药桶', r: 1, cost: 18, max: 3, fx: { blastR: 0.2, dmgTaken: 0.08 }, note: '符文陷阱、炎爆、黑洞内爆都算' },
     thornmail: { name: '荆棘甲', r: 1, cost: 20, max: 3, fx: { thorns: 5, speed: -0.05 }, note: '挨打时对身边 70 内的敌人造成伤害' },
+    bellows: { name: '风箱', r: 1, cost: 20, max: 3, fx: { rate: 0.14, blastR: 0.10, maxHp: -3 } },
+    mason:   { name: '石匠锤', r: 1, cost: 18, max: 3, fx: { buildCost: -0.12, towerDmg: 0.15, speed: -0.04 } },
+    keeper:  { name: '守火令', r: 1, cost: 20, max: 3, fx: { thorns: 3, healCore: 1, armor: 1, rate: -0.05 } },
     piggy:   { name: '存钱罐', r: 1, cost: 16, max: 2, fx: { interest: 0.05, harvest: -0.08 }, note: '每次整备按手上金币发利息（单次最多 40）' },
     // ---- 稀有 ----
     prism:   { name: '分裂符文', r: 2, cost: 26, max: 2, fx: { extra: 1, dmg: -0.18 }, note: '每把武器含义不同：见武器说明' },
@@ -670,11 +697,15 @@
     holy:    { name: '圣水', r: 2, cost: 24, max: 2, fx: { healOrb: 1, regen: 0.2 } },
     drum:    { name: '战鼓', r: 2, cost: 26, max: 2, fx: { rate: 0.2, dmg: 0.1, armor: -2 } },
     ember:   { name: '圣火护符', r: 2, cost: 24, max: 2, fx: { coreRegen: 1, healCore: 2, dmg: -0.05 } },
+    lens2:   { name: '聚光镜', r: 2, cost: 26, max: 2, fx: { crit: 0.08, critMul: 0.3, range: -0.10 } },
+    seed:    { name: '火种', r: 2, cost: 26, max: 2, fx: { towerDmg: 0.3, coreRegen: 1, dmg: -0.05 } },
+    plume:   { name: '流光羽', r: 2, cost: 24, max: 2, fx: { dodge: 0.06, speed: 0.08, maxHp: -4 } },
     // ---- 传说 ----
     heart:   { name: '龙之心', r: 3, cost: 40, max: 1, fx: { maxHp: 12, regen: 0.6, speed: -0.1 } },
     crown:   { name: '时之王冠', r: 3, cost: 40, max: 1, fx: { cdr: -0.35, rate: 0.15, dmgTaken: 0.2 } },
     belt:    { name: '巨人腰带', r: 3, cost: 42, max: 1, fx: { dmg: 0.4, maxHp: 6, speed: -0.15 } },
-    trident: { name: '三叉符文', r: 3, cost: 44, max: 1, fx: { extra: 1, crit: 0.1, rate: -0.1 } }
+    trident: { name: '三叉符文', r: 3, cost: 44, max: 1, fx: { extra: 1, crit: 0.1, rate: -0.1 } },
+    eternal: { name: '长明火', r: 3, cost: 44, max: 1, fx: { coreRegen: 2, healCore: 4, towerDmg: 0.3, dmgTaken: 0.12 } }
   };
   RW.MOD_ORDER = Object.keys(RW.MODS);
 
@@ -726,15 +757,20 @@
     b_extra:  { name: '分光祝福', r: 2, fx: { extra: 1 } },
     b_all:    { name: '圣火眷顾', r: 2, fx: { dmg: 0.2, rate: 0.12, maxHp: 8 } },
     b_luck:   { name: '命运祝福', r: 2, fx: { luck: 0.35, harvest: 0.2 } },
-    b_core:   { name: '守火祝福', r: 2, fx: { coreRegen: 1.5, healCore: 3, towerDmg: 0.25 } }
+    b_core:   { name: '守火祝福', r: 2, fx: { coreRegen: 1.5, healCore: 3, towerDmg: 0.25 } },
+    // 流派定向祝福（r 不超过 2：三选一只抽前 3 档）
+    b_keeper: { name: '守夜祝福', r: 1, fx: { towerDmg: 0.2, buildCost: -0.1 } },
+    b_after:  { name: '余光祝福', r: 1, fx: { healOrb: 0.5, coreRegen: 0.5 } },
+    b_pass:   { name: '传火祝福', r: 2, fx: { blastR: 0.15, dmg: 0.08, spell: 0.1, melee: 0.1 } },
+    b_star:   { name: '群星祝福', r: 1, fx: { crit: 0.06, critMul: 0.3, range: 0.06 } }
   };
   RW.BLESS_ORDER = Object.keys(RW.BLESSINGS);
 
-  // 流派套装：按武器槽里同流派武器的「阶数之和」计层（I=1、II=2、III=3）
+  // 流派套装：按武器槽里同流派武器的「阶数之和」计层（I=1、II=2、III=3）；层数 2/4/6/9/12，12 层要 4 把 III 阶同流派武器
   RW.SETS = {
-    melee:  { name: '近战', color: '#ffb08a', tiers: [[2, { armor: 2 }], [4, { melee: 0.2, lifesteal: 0.05 }], [6, { rate: 0.25, knock: 0.5 }]] },
-    ranged: { name: '远程', color: '#d8ff8a', tiers: [[2, { range: 0.15 }], [4, { ranged: 0.2, crit: 0.08 }], [6, { extra: 1 }]] },
-    spell:  { name: '法术', color: '#b58cff', tiers: [[2, { cdr: -0.1 }], [4, { spell: 0.2, blastR: 0.15 }], [6, { cdr: -0.2, mpRegen: 0.5 }]] }
+    melee:  { name: '近战', color: '#ffb08a', tiers: [[2, { armor: 2 }], [4, { melee: 0.2, lifesteal: 0.05 }], [6, { rate: 0.25, knock: 0.5 }], [9, { thorns: 6, armor: 2 }], [12, { melee: 0.35, lifesteal: 0.04, dmgTaken: -0.1 }]] },
+    ranged: { name: '远程', color: '#d8ff8a', tiers: [[2, { range: 0.15 }], [4, { ranged: 0.2, crit: 0.08 }], [6, { extra: 1 }], [9, { crit: 0.1, critMul: 0.3 }], [12, { ranged: 0.35, extra: 1 }]] },
+    spell:  { name: '法术', color: '#b58cff', tiers: [[2, { cdr: -0.1 }], [4, { spell: 0.2, blastR: 0.15 }], [6, { cdr: -0.2, mpRegen: 0.5 }], [9, { blastR: 0.25, spell: 0.15 }], [12, { spell: 0.35, cdr: -0.1 }]] }
   };
   RW.SET_ORDER = ['melee', 'ranged', 'spell'];
 
@@ -830,7 +866,7 @@
 
   // 商店手气（玩家最常骂的是「怎么都刷不到要的东西」）：
   // 已有流派的武器权重 ×ownTag，能升阶的 ×upgrade；缺进化道具时连续 evoPity 次整备没刷到就保底放一件
-  RW.SHOP_BIAS = { ownTag: 1.8, upgrade: 1.6, evoPity: 2, bans: 3 };   // bans：每局可以禁用几件货
+  RW.SHOP_BIAS = { ownTag: 1.8, upgrade: 1.6, evoPity: 1, bans: 3 };   // bans：每局可以禁用几件货
 
   // 变异器：开局可选，难度越高分数倍率越高
   RW.MUTATORS = {
