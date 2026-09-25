@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><title>Boss 骷髅 · 48px · 羊皮纸＋铜饰 · 手绘插画</title><defs>
+ <linearGradient id="surface" x2="0" y2="1"><stop stop-color="#d5ad73"/><stop offset=".48" stop-color="#8d6642"/><stop offset="1" stop-color="#38271c"/></linearGradient>
+ <linearGradient id="gold" x2="0" y2="1"><stop stop-color="#fff1af"/><stop offset=".35" stop-color="#d58b45"/><stop offset="1" stop-color="#9c5d25"/></linearGradient>
+ <linearGradient id="ember"><stop stop-color="#fff0a6"/><stop offset=".45" stop-color="#ffb547"/><stop offset="1" stop-color="#e8702a"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#06080e" flood-opacity=".75"/></filter>
+ <filter id="inset"><feGaussianBlur in="SourceAlpha" stdDeviation="3" result="b"/><feOffset dy="3" result="o"/><feComposite in="o" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="i"/><feFlood flood-color="#000" flood-opacity=".65"/><feComposite in2="i" operator="in"/><feComposite in="SourceGraphic"/></filter>
+ <filter id="rough"><feTurbulence baseFrequency=".035 .22" numOctaves="2" seed="112" result="n"/><feColorMatrix in="n" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 .11 0"/><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+ <pattern id="grain" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M2 8q8-4 16 0t14 0M-5 22q10-5 20 0t22 0" fill="none" stroke="#d58b45" stroke-opacity=".09" stroke-width="1"/></pattern>
+ </defs><style>.cut{fill:#38271c}</style><g stroke="#38271c" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" fill="url(#gold)"><path d="M24 5C11 5 5 13 7 25c1 6 5 8 9 10v9h6v-6h4v6h6v-9c5-2 8-5 9-11C43 13 36 5 24 5Z"/><circle class="cut" cx="16" cy="23" r="5"/><circle class="cut" cx="32" cy="23" r="5"/><path class="cut" d="M24 27l-4 7h8Z"/></g></svg>

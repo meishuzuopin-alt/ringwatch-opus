@@ -1,0 +1,7600 @@
+{
+  "version": 1,
+  "direction": "A+C 炉木夜釉",
+  "palette": {
+    "ink": "#1A1008",
+    "night": "#1E2A4A",
+    "moon": "#5FA8C8",
+    "enemy": "#6B3FA0",
+    "eye": "#FF3B3B",
+    "flame": "#FFB547",
+    "ember": "#E8702A",
+    "earth": "#C9A27A",
+    "roof": "#A8483A",
+    "wood": "#7A5234",
+    "pale": "#D2C8B4",
+    "gray": "#808080"
+  },
+  "coverage": {
+    "required": 226,
+    "actual": 226
+  },
+  "icons": [
+    {
+      "id": "brand-flame",
+      "category": "title-nav",
+      "files": {
+        "16": "assets/ui/icons/title-nav/brand-flame-16.svg",
+        "24": "assets/ui/icons/title-nav/brand-flame-24.svg",
+        "32": "assets/ui/icons/title-nav/brand-flame-32.svg",
+        "48": "assets/ui/icons/title-nav/brand-flame-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "new-run",
+      "category": "title-nav",
+      "files": {
+        "16": "assets/ui/icons/title-nav/new-run-16.svg",
+        "24": "assets/ui/icons/title-nav/new-run-24.svg",
+        "32": "assets/ui/icons/title-nav/new-run-32.svg",
+        "48": "assets/ui/icons/title-nav/new-run-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "continue",
+      "category": "title-nav",
+      "files": {
+        "16": "assets/ui/icons/title-nav/continue-16.svg",
+        "24": "assets/ui/icons/title-nav/continue-24.svg",
+        "32": "assets/ui/icons/title-nav/continue-32.svg",
+        "48": "assets/ui/icons/title-nav/continue-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "codex",
+      "category": "title-nav",
+      "files": {
+        "16": "assets/ui/icons/title-nav/codex-16.svg",
+        "24": "assets/ui/icons/title-nav/codex-24.svg",
+        "32": "assets/ui/icons/title-nav/codex-32.svg",
+        "48": "assets/ui/icons/title-nav/codex-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "quit",
+      "category": "title-nav",
+      "files": {
+        "16": "assets/ui/icons/title-nav/quit-16.svg",
+        "24": "assets/ui/icons/title-nav/quit-24.svg",
+        "32": "assets/ui/icons/title-nav/quit-32.svg",
+        "48": "assets/ui/icons/title-nav/quit-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "warden",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/warden-16.svg",
+        "24": "assets/ui/icons/heroes/warden-24.svg",
+        "32": "assets/ui/icons/heroes/warden-32.svg",
+        "48": "assets/ui/icons/heroes/warden-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "ranger",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/ranger-16.svg",
+        "24": "assets/ui/icons/heroes/ranger-24.svg",
+        "32": "assets/ui/icons/heroes/ranger-32.svg",
+        "48": "assets/ui/icons/heroes/ranger-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "smith",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/smith-16.svg",
+        "24": "assets/ui/icons/heroes/smith-24.svg",
+        "32": "assets/ui/icons/heroes/smith-32.svg",
+        "48": "assets/ui/icons/heroes/smith-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "seer",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/seer-16.svg",
+        "24": "assets/ui/icons/heroes/seer-24.svg",
+        "32": "assets/ui/icons/heroes/seer-32.svg",
+        "48": "assets/ui/icons/heroes/seer-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "herbalist",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/herbalist-16.svg",
+        "24": "assets/ui/icons/heroes/herbalist-24.svg",
+        "32": "assets/ui/icons/heroes/herbalist-32.svg",
+        "48": "assets/ui/icons/heroes/herbalist-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "lancer",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/lancer-16.svg",
+        "24": "assets/ui/icons/heroes/lancer-24.svg",
+        "32": "assets/ui/icons/heroes/lancer-32.svg",
+        "48": "assets/ui/icons/heroes/lancer-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "bard",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/bard-16.svg",
+        "24": "assets/ui/icons/heroes/bard-24.svg",
+        "32": "assets/ui/icons/heroes/bard-32.svg",
+        "48": "assets/ui/icons/heroes/bard-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "monk",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/monk-16.svg",
+        "24": "assets/ui/icons/heroes/monk-24.svg",
+        "32": "assets/ui/icons/heroes/monk-32.svg",
+        "48": "assets/ui/icons/heroes/monk-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "alchemist",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/alchemist-16.svg",
+        "24": "assets/ui/icons/heroes/alchemist-24.svg",
+        "32": "assets/ui/icons/heroes/alchemist-32.svg",
+        "48": "assets/ui/icons/heroes/alchemist-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "captain",
+      "category": "heroes",
+      "files": {
+        "16": "assets/ui/icons/heroes/captain-16.svg",
+        "24": "assets/ui/icons/heroes/captain-24.svg",
+        "32": "assets/ui/icons/heroes/captain-32.svg",
+        "48": "assets/ui/icons/heroes/captain-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "green-hollow",
+      "category": "maps",
+      "files": {
+        "16": "assets/ui/icons/maps/green-hollow-16.svg",
+        "24": "assets/ui/icons/maps/green-hollow-24.svg",
+        "32": "assets/ui/icons/maps/green-hollow-32.svg",
+        "48": "assets/ui/icons/maps/green-hollow-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "river-ford",
+      "category": "maps",
+      "files": {
+        "16": "assets/ui/icons/maps/river-ford-16.svg",
+        "24": "assets/ui/icons/maps/river-ford-24.svg",
+        "32": "assets/ui/icons/maps/river-ford-32.svg",
+        "48": "assets/ui/icons/maps/river-ford-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "ash-ridge",
+      "category": "maps",
+      "files": {
+        "16": "assets/ui/icons/maps/ash-ridge-16.svg",
+        "24": "assets/ui/icons/maps/ash-ridge-24.svg",
+        "32": "assets/ui/icons/maps/ash-ridge-32.svg",
+        "48": "assets/ui/icons/maps/ash-ridge-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "moon-marsh",
+      "category": "maps",
+      "files": {
+        "16": "assets/ui/icons/maps/moon-marsh-16.svg",
+        "24": "assets/ui/icons/maps/moon-marsh-24.svg",
+        "32": "assets/ui/icons/maps/moon-marsh-32.svg",
+        "48": "assets/ui/icons/maps/moon-marsh-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "danger-0",
+      "category": "danger",
+      "files": {
+        "16": "assets/ui/icons/danger/danger-0-16.svg",
+        "24": "assets/ui/icons/danger/danger-0-24.svg",
+        "32": "assets/ui/icons/danger/danger-0-32.svg",
+        "48": "assets/ui/icons/danger/danger-0-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "danger-1",
+      "category": "danger",
+      "files": {
+        "16": "assets/ui/icons/danger/danger-1-16.svg",
+        "24": "assets/ui/icons/danger/danger-1-24.svg",
+        "32": "assets/ui/icons/danger/danger-1-32.svg",
+        "48": "assets/ui/icons/danger/danger-1-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "danger-2",
+      "category": "danger",
+      "files": {
+        "16": "assets/ui/icons/danger/danger-2-16.svg",
+        "24": "assets/ui/icons/danger/danger-2-24.svg",
+        "32": "assets/ui/icons/danger/danger-2-32.svg",
+        "48": "assets/ui/icons/danger/danger-2-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "danger-3",
+      "category": "danger",
+      "files": {
+        "16": "assets/ui/icons/danger/danger-3-16.svg",
+        "24": "assets/ui/icons/danger/danger-3-24.svg",
+        "32": "assets/ui/icons/danger/danger-3-32.svg",
+        "48": "assets/ui/icons/danger/danger-3-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "danger-4",
+      "category": "danger",
+      "files": {
+        "16": "assets/ui/icons/danger/danger-4-16.svg",
+        "24": "assets/ui/icons/danger/danger-4-24.svg",
+        "32": "assets/ui/icons/danger/danger-4-32.svg",
+        "48": "assets/ui/icons/danger/danger-4-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "danger-5",
+      "category": "danger",
+      "files": {
+        "16": "assets/ui/icons/danger/danger-5-16.svg",
+        "24": "assets/ui/icons/danger/danger-5-24.svg",
+        "32": "assets/ui/icons/danger/danger-5-32.svg",
+        "48": "assets/ui/icons/danger/danger-5-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-frost",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-frost-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-frost-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-frost-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-frost-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-haste",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-haste-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-haste-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-haste-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-haste-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-armored",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-armored-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-armored-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-armored-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-armored-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-swarm",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-swarm-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-swarm-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-swarm-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-swarm-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-elite",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-elite-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-elite-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-elite-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-elite-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-dark",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-dark-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-dark-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-dark-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-dark-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-fragile",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-fragile-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-fragile-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-fragile-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-fragile-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "mutator-famine",
+      "category": "mutators",
+      "files": {
+        "16": "assets/ui/icons/mutators/mutator-famine-16.svg",
+        "24": "assets/ui/icons/mutators/mutator-famine-24.svg",
+        "32": "assets/ui/icons/mutators/mutator-famine-32.svg",
+        "48": "assets/ui/icons/mutators/mutator-famine-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "holy-fire",
+      "category": "hud",
+      "files": {
+        "16": "assets/ui/icons/hud/holy-fire-16.svg",
+        "24": "assets/ui/icons/hud/holy-fire-24.svg",
+        "32": "assets/ui/icons/hud/holy-fire-32.svg",
+        "48": "assets/ui/icons/hud/holy-fire-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "flame",
+        "night"
+      ]
+    },
+    {
+      "id": "health",
+      "category": "hud",
+      "files": {
+        "16": "assets/ui/icons/hud/health-16.svg",
+        "24": "assets/ui/icons/hud/health-24.svg",
+        "32": "assets/ui/icons/hud/health-32.svg",
+        "48": "assets/ui/icons/hud/health-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "roof",
+        "night"
+      ]
+    },
+    {
+      "id": "mana",
+      "category": "hud",
+      "files": {
+        "16": "assets/ui/icons/hud/mana-16.svg",
+        "24": "assets/ui/icons/hud/mana-24.svg",
+        "32": "assets/ui/icons/hud/mana-32.svg",
+        "48": "assets/ui/icons/hud/mana-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "night"
+      ]
+    },
+    {
+      "id": "coin",
+      "category": "hud",
+      "files": {
+        "16": "assets/ui/icons/hud/coin-16.svg",
+        "24": "assets/ui/icons/hud/coin-24.svg",
+        "32": "assets/ui/icons/hud/coin-32.svg",
+        "48": "assets/ui/icons/hud/coin-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "night"
+      ]
+    },
+    {
+      "id": "wave",
+      "category": "hud",
+      "files": {
+        "16": "assets/ui/icons/hud/wave-16.svg",
+        "24": "assets/ui/icons/hud/wave-24.svg",
+        "32": "assets/ui/icons/hud/wave-32.svg",
+        "48": "assets/ui/icons/hud/wave-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "night"
+      ]
+    },
+    {
+      "id": "timer",
+      "category": "hud",
+      "files": {
+        "16": "assets/ui/icons/hud/timer-16.svg",
+        "24": "assets/ui/icons/hud/timer-24.svg",
+        "32": "assets/ui/icons/hud/timer-32.svg",
+        "48": "assets/ui/icons/hud/timer-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "night"
+      ]
+    },
+    {
+      "id": "sword",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/sword-16.svg",
+        "24": "assets/ui/icons/weapons/sword-24.svg",
+        "32": "assets/ui/icons/weapons/sword-32.svg",
+        "48": "assets/ui/icons/weapons/sword-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "bow",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/bow-16.svg",
+        "24": "assets/ui/icons/weapons/bow-24.svg",
+        "32": "assets/ui/icons/weapons/bow-32.svg",
+        "48": "assets/ui/icons/weapons/bow-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "hammer",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/hammer-16.svg",
+        "24": "assets/ui/icons/weapons/hammer-24.svg",
+        "32": "assets/ui/icons/weapons/hammer-32.svg",
+        "48": "assets/ui/icons/weapons/hammer-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "spear",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/spear-16.svg",
+        "24": "assets/ui/icons/weapons/spear-24.svg",
+        "32": "assets/ui/icons/weapons/spear-32.svg",
+        "48": "assets/ui/icons/weapons/spear-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "staff",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/staff-16.svg",
+        "24": "assets/ui/icons/weapons/staff-24.svg",
+        "32": "assets/ui/icons/weapons/staff-32.svg",
+        "48": "assets/ui/icons/weapons/staff-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "dagger",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/dagger-16.svg",
+        "24": "assets/ui/icons/weapons/dagger-24.svg",
+        "32": "assets/ui/icons/weapons/dagger-32.svg",
+        "48": "assets/ui/icons/weapons/dagger-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "axe",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/axe-16.svg",
+        "24": "assets/ui/icons/weapons/axe-24.svg",
+        "32": "assets/ui/icons/weapons/axe-32.svg",
+        "48": "assets/ui/icons/weapons/axe-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "crossbow",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/crossbow-16.svg",
+        "24": "assets/ui/icons/weapons/crossbow-24.svg",
+        "32": "assets/ui/icons/weapons/crossbow-32.svg",
+        "48": "assets/ui/icons/weapons/crossbow-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "scythe",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/scythe-16.svg",
+        "24": "assets/ui/icons/weapons/scythe-24.svg",
+        "32": "assets/ui/icons/weapons/scythe-32.svg",
+        "48": "assets/ui/icons/weapons/scythe-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "flail",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/flail-16.svg",
+        "24": "assets/ui/icons/weapons/flail-24.svg",
+        "32": "assets/ui/icons/weapons/flail-32.svg",
+        "48": "assets/ui/icons/weapons/flail-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "torch",
+      "category": "weapons",
+      "files": {
+        "16": "assets/ui/icons/weapons/torch-16.svg",
+        "24": "assets/ui/icons/weapons/torch-24.svg",
+        "32": "assets/ui/icons/weapons/torch-32.svg",
+        "48": "assets/ui/icons/weapons/torch-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "slash",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/slash-16.svg",
+        "24": "assets/ui/icons/skills/slash-24.svg",
+        "32": "assets/ui/icons/skills/slash-32.svg",
+        "48": "assets/ui/icons/skills/slash-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "volley",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/volley-16.svg",
+        "24": "assets/ui/icons/skills/volley-24.svg",
+        "32": "assets/ui/icons/skills/volley-32.svg",
+        "48": "assets/ui/icons/skills/volley-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "slam",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/slam-16.svg",
+        "24": "assets/ui/icons/skills/slam-24.svg",
+        "32": "assets/ui/icons/skills/slam-32.svg",
+        "48": "assets/ui/icons/skills/slam-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "charge",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/charge-16.svg",
+        "24": "assets/ui/icons/skills/charge-24.svg",
+        "32": "assets/ui/icons/skills/charge-32.svg",
+        "48": "assets/ui/icons/skills/charge-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "ward",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/ward-16.svg",
+        "24": "assets/ui/icons/skills/ward-24.svg",
+        "32": "assets/ui/icons/skills/ward-32.svg",
+        "48": "assets/ui/icons/skills/ward-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blink",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/blink-16.svg",
+        "24": "assets/ui/icons/skills/blink-24.svg",
+        "32": "assets/ui/icons/skills/blink-32.svg",
+        "48": "assets/ui/icons/skills/blink-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "heal",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/heal-16.svg",
+        "24": "assets/ui/icons/skills/heal-24.svg",
+        "32": "assets/ui/icons/skills/heal-32.svg",
+        "48": "assets/ui/icons/skills/heal-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "taunt",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/taunt-16.svg",
+        "24": "assets/ui/icons/skills/taunt-24.svg",
+        "32": "assets/ui/icons/skills/taunt-32.svg",
+        "48": "assets/ui/icons/skills/taunt-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "nova",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/nova-16.svg",
+        "24": "assets/ui/icons/skills/nova-24.svg",
+        "32": "assets/ui/icons/skills/nova-32.svg",
+        "48": "assets/ui/icons/skills/nova-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "trap",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/trap-16.svg",
+        "24": "assets/ui/icons/skills/trap-24.svg",
+        "32": "assets/ui/icons/skills/trap-32.svg",
+        "48": "assets/ui/icons/skills/trap-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "summon",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/summon-16.svg",
+        "24": "assets/ui/icons/skills/summon-24.svg",
+        "32": "assets/ui/icons/skills/summon-32.svg",
+        "48": "assets/ui/icons/skills/summon-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "dash",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/dash-16.svg",
+        "24": "assets/ui/icons/skills/dash-24.svg",
+        "32": "assets/ui/icons/skills/dash-32.svg",
+        "48": "assets/ui/icons/skills/dash-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "counter",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/counter-16.svg",
+        "24": "assets/ui/icons/skills/counter-24.svg",
+        "32": "assets/ui/icons/skills/counter-32.svg",
+        "48": "assets/ui/icons/skills/counter-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "rally",
+      "category": "skills",
+      "files": {
+        "16": "assets/ui/icons/skills/rally-16.svg",
+        "24": "assets/ui/icons/skills/rally-24.svg",
+        "32": "assets/ui/icons/skills/rally-32.svg",
+        "48": "assets/ui/icons/skills/rally-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "ember",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/ember-16.svg",
+        "24": "assets/ui/icons/upgrades/ember-24.svg",
+        "32": "assets/ui/icons/upgrades/ember-32.svg",
+        "48": "assets/ui/icons/upgrades/ember-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "whet",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/whet-16.svg",
+        "24": "assets/ui/icons/upgrades/whet-24.svg",
+        "32": "assets/ui/icons/upgrades/whet-32.svg",
+        "48": "assets/ui/icons/upgrades/whet-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blueprint",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/blueprint-16.svg",
+        "24": "assets/ui/icons/upgrades/blueprint-24.svg",
+        "32": "assets/ui/icons/upgrades/blueprint-32.svg",
+        "48": "assets/ui/icons/upgrades/blueprint-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "heart",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/heart-16.svg",
+        "24": "assets/ui/icons/upgrades/heart-24.svg",
+        "32": "assets/ui/icons/upgrades/heart-32.svg",
+        "48": "assets/ui/icons/upgrades/heart-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "roof",
+        "ink"
+      ]
+    },
+    {
+      "id": "iron-grip",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/iron-grip-16.svg",
+        "24": "assets/ui/icons/upgrades/iron-grip-24.svg",
+        "32": "assets/ui/icons/upgrades/iron-grip-32.svg",
+        "48": "assets/ui/icons/upgrades/iron-grip-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "long-string",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/long-string-16.svg",
+        "24": "assets/ui/icons/upgrades/long-string-24.svg",
+        "32": "assets/ui/icons/upgrades/long-string-32.svg",
+        "48": "assets/ui/icons/upgrades/long-string-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "keen-edge",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/keen-edge-16.svg",
+        "24": "assets/ui/icons/upgrades/keen-edge-24.svg",
+        "32": "assets/ui/icons/upgrades/keen-edge-32.svg",
+        "48": "assets/ui/icons/upgrades/keen-edge-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "deep-quiver",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/deep-quiver-16.svg",
+        "24": "assets/ui/icons/upgrades/deep-quiver-24.svg",
+        "32": "assets/ui/icons/upgrades/deep-quiver-32.svg",
+        "48": "assets/ui/icons/upgrades/deep-quiver-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "oak-shaft",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/oak-shaft-16.svg",
+        "24": "assets/ui/icons/upgrades/oak-shaft-24.svg",
+        "32": "assets/ui/icons/upgrades/oak-shaft-32.svg",
+        "48": "assets/ui/icons/upgrades/oak-shaft-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "moon-lens",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/moon-lens-16.svg",
+        "24": "assets/ui/icons/upgrades/moon-lens-24.svg",
+        "32": "assets/ui/icons/upgrades/moon-lens-32.svg",
+        "48": "assets/ui/icons/upgrades/moon-lens-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "thorn-wrap",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/thorn-wrap-16.svg",
+        "24": "assets/ui/icons/upgrades/thorn-wrap-24.svg",
+        "32": "assets/ui/icons/upgrades/thorn-wrap-32.svg",
+        "48": "assets/ui/icons/upgrades/thorn-wrap-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "quick-lock",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/quick-lock-16.svg",
+        "24": "assets/ui/icons/upgrades/quick-lock-24.svg",
+        "32": "assets/ui/icons/upgrades/quick-lock-32.svg",
+        "48": "assets/ui/icons/upgrades/quick-lock-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "warm-core",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/warm-core-16.svg",
+        "24": "assets/ui/icons/upgrades/warm-core-24.svg",
+        "32": "assets/ui/icons/upgrades/warm-core-32.svg",
+        "48": "assets/ui/icons/upgrades/warm-core-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "cold-core",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/cold-core-16.svg",
+        "24": "assets/ui/icons/upgrades/cold-core-24.svg",
+        "32": "assets/ui/icons/upgrades/cold-core-32.svg",
+        "48": "assets/ui/icons/upgrades/cold-core-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "wide-guard",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/wide-guard-16.svg",
+        "24": "assets/ui/icons/upgrades/wide-guard-24.svg",
+        "32": "assets/ui/icons/upgrades/wide-guard-32.svg",
+        "48": "assets/ui/icons/upgrades/wide-guard-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "light-step",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/light-step-16.svg",
+        "24": "assets/ui/icons/upgrades/light-step-24.svg",
+        "32": "assets/ui/icons/upgrades/light-step-32.svg",
+        "48": "assets/ui/icons/upgrades/light-step-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "heavy-step",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/heavy-step-16.svg",
+        "24": "assets/ui/icons/upgrades/heavy-step-24.svg",
+        "32": "assets/ui/icons/upgrades/heavy-step-32.svg",
+        "48": "assets/ui/icons/upgrades/heavy-step-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "lucky-coin",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/lucky-coin-16.svg",
+        "24": "assets/ui/icons/upgrades/lucky-coin-24.svg",
+        "32": "assets/ui/icons/upgrades/lucky-coin-32.svg",
+        "48": "assets/ui/icons/upgrades/lucky-coin-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "battle-drum",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/battle-drum-16.svg",
+        "24": "assets/ui/icons/upgrades/battle-drum-24.svg",
+        "32": "assets/ui/icons/upgrades/battle-drum-32.svg",
+        "48": "assets/ui/icons/upgrades/battle-drum-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "field-kit",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/field-kit-16.svg",
+        "24": "assets/ui/icons/upgrades/field-kit-24.svg",
+        "32": "assets/ui/icons/upgrades/field-kit-32.svg",
+        "48": "assets/ui/icons/upgrades/field-kit-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "ash-vial",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/ash-vial-16.svg",
+        "24": "assets/ui/icons/upgrades/ash-vial-24.svg",
+        "32": "assets/ui/icons/upgrades/ash-vial-32.svg",
+        "48": "assets/ui/icons/upgrades/ash-vial-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "frost-vial",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/frost-vial-16.svg",
+        "24": "assets/ui/icons/upgrades/frost-vial-24.svg",
+        "32": "assets/ui/icons/upgrades/frost-vial-32.svg",
+        "48": "assets/ui/icons/upgrades/frost-vial-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "storm-vial",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/storm-vial-16.svg",
+        "24": "assets/ui/icons/upgrades/storm-vial-24.svg",
+        "32": "assets/ui/icons/upgrades/storm-vial-32.svg",
+        "48": "assets/ui/icons/upgrades/storm-vial-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blood-vial",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/blood-vial-16.svg",
+        "24": "assets/ui/icons/upgrades/blood-vial-24.svg",
+        "32": "assets/ui/icons/upgrades/blood-vial-32.svg",
+        "48": "assets/ui/icons/upgrades/blood-vial-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "roof",
+        "ink"
+      ]
+    },
+    {
+      "id": "tower-oil",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/tower-oil-16.svg",
+        "24": "assets/ui/icons/upgrades/tower-oil-24.svg",
+        "32": "assets/ui/icons/upgrades/tower-oil-32.svg",
+        "48": "assets/ui/icons/upgrades/tower-oil-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "tower-bell",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/tower-bell-16.svg",
+        "24": "assets/ui/icons/upgrades/tower-bell-24.svg",
+        "32": "assets/ui/icons/upgrades/tower-bell-32.svg",
+        "48": "assets/ui/icons/upgrades/tower-bell-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "tower-rope",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/tower-rope-16.svg",
+        "24": "assets/ui/icons/upgrades/tower-rope-24.svg",
+        "32": "assets/ui/icons/upgrades/tower-rope-32.svg",
+        "48": "assets/ui/icons/upgrades/tower-rope-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "tower-nail",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/tower-nail-16.svg",
+        "24": "assets/ui/icons/upgrades/tower-nail-24.svg",
+        "32": "assets/ui/icons/upgrades/tower-nail-32.svg",
+        "48": "assets/ui/icons/upgrades/tower-nail-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "village-map",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/village-map-16.svg",
+        "24": "assets/ui/icons/upgrades/village-map-24.svg",
+        "32": "assets/ui/icons/upgrades/village-map-32.svg",
+        "48": "assets/ui/icons/upgrades/village-map-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "hunter-mark",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/hunter-mark-16.svg",
+        "24": "assets/ui/icons/upgrades/hunter-mark-24.svg",
+        "32": "assets/ui/icons/upgrades/hunter-mark-32.svg",
+        "48": "assets/ui/icons/upgrades/hunter-mark-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "smith-mark",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/smith-mark-16.svg",
+        "24": "assets/ui/icons/upgrades/smith-mark-24.svg",
+        "32": "assets/ui/icons/upgrades/smith-mark-32.svg",
+        "48": "assets/ui/icons/upgrades/smith-mark-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "seer-mark",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/seer-mark-16.svg",
+        "24": "assets/ui/icons/upgrades/seer-mark-24.svg",
+        "32": "assets/ui/icons/upgrades/seer-mark-32.svg",
+        "48": "assets/ui/icons/upgrades/seer-mark-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "herb-mark",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/herb-mark-16.svg",
+        "24": "assets/ui/icons/upgrades/herb-mark-24.svg",
+        "32": "assets/ui/icons/upgrades/herb-mark-32.svg",
+        "48": "assets/ui/icons/upgrades/herb-mark-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "captain-mark",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/captain-mark-16.svg",
+        "24": "assets/ui/icons/upgrades/captain-mark-24.svg",
+        "32": "assets/ui/icons/upgrades/captain-mark-32.svg",
+        "48": "assets/ui/icons/upgrades/captain-mark-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "old-key",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/old-key-16.svg",
+        "24": "assets/ui/icons/upgrades/old-key-24.svg",
+        "32": "assets/ui/icons/upgrades/old-key-32.svg",
+        "48": "assets/ui/icons/upgrades/old-key-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "red-wax",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/red-wax-16.svg",
+        "24": "assets/ui/icons/upgrades/red-wax-24.svg",
+        "32": "assets/ui/icons/upgrades/red-wax-32.svg",
+        "48": "assets/ui/icons/upgrades/red-wax-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "gold-thread",
+      "category": "upgrades",
+      "files": {
+        "16": "assets/ui/icons/upgrades/gold-thread-16.svg",
+        "24": "assets/ui/icons/upgrades/gold-thread-24.svg",
+        "32": "assets/ui/icons/upgrades/gold-thread-32.svg",
+        "48": "assets/ui/icons/upgrades/gold-thread-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-hearth",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-hearth-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-hearth-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-hearth-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-hearth-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "roof",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-dawn",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-dawn-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-dawn-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-dawn-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-dawn-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-dusk",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-dusk-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-dusk-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-dusk-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-dusk-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-rain",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-rain-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-rain-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-rain-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-rain-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-wind",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-wind-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-wind-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-wind-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-wind-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-stone",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-stone-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-stone-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-stone-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-stone-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-river",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-river-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-river-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-river-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-river-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-oak",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-oak-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-oak-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-oak-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-oak-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-wolf",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-wolf-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-wolf-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-wolf-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-wolf-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-hawk",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-hawk-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-hawk-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-hawk-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-hawk-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-stag",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-stag-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-stag-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-stag-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-stag-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-fox",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-fox-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-fox-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-fox-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-fox-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-crow",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-crow-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-crow-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-crow-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-crow-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-boar",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-boar-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-boar-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-boar-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-boar-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-moon",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-moon-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-moon-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-moon-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-moon-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-sun",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-sun-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-sun-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-sun-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-sun-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-star",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-star-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-star-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-star-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-star-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-ash",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-ash-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-ash-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-ash-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-ash-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-ember",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-ember-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-ember-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-ember-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-ember-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-flame",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-flame-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-flame-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-flame-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-flame-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-iron",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-iron-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-iron-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-iron-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-iron-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-bronze",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-bronze-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-bronze-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-bronze-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-bronze-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-silver",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-silver-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-silver-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-silver-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-silver-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "blessing-gold",
+      "category": "blessings",
+      "files": {
+        "16": "assets/ui/icons/blessings/blessing-gold-16.svg",
+        "24": "assets/ui/icons/blessings/blessing-gold-24.svg",
+        "32": "assets/ui/icons/blessings/blessing-gold-32.svg",
+        "48": "assets/ui/icons/blessings/blessing-gold-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "flame-hearth",
+      "category": "flame-forms",
+      "files": {
+        "16": "assets/ui/icons/flame-forms/flame-hearth-16.svg",
+        "24": "assets/ui/icons/flame-forms/flame-hearth-24.svg",
+        "32": "assets/ui/icons/flame-forms/flame-hearth-32.svg",
+        "48": "assets/ui/icons/flame-forms/flame-hearth-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "flame",
+        "ink"
+      ]
+    },
+    {
+      "id": "flame-beacon",
+      "category": "flame-forms",
+      "files": {
+        "16": "assets/ui/icons/flame-forms/flame-beacon-16.svg",
+        "24": "assets/ui/icons/flame-forms/flame-beacon-24.svg",
+        "32": "assets/ui/icons/flame-forms/flame-beacon-32.svg",
+        "48": "assets/ui/icons/flame-forms/flame-beacon-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "flame",
+        "ink"
+      ]
+    },
+    {
+      "id": "flame-crown",
+      "category": "flame-forms",
+      "files": {
+        "16": "assets/ui/icons/flame-forms/flame-crown-16.svg",
+        "24": "assets/ui/icons/flame-forms/flame-crown-24.svg",
+        "32": "assets/ui/icons/flame-forms/flame-crown-32.svg",
+        "48": "assets/ui/icons/flame-forms/flame-crown-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "flame",
+        "ink"
+      ]
+    },
+    {
+      "id": "sentry",
+      "category": "towers",
+      "files": {
+        "16": "assets/ui/icons/towers/sentry-16.svg",
+        "24": "assets/ui/icons/towers/sentry-24.svg",
+        "32": "assets/ui/icons/towers/sentry-32.svg",
+        "48": "assets/ui/icons/towers/sentry-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "pylon",
+      "category": "towers",
+      "files": {
+        "16": "assets/ui/icons/towers/pylon-16.svg",
+        "24": "assets/ui/icons/towers/pylon-24.svg",
+        "32": "assets/ui/icons/towers/pylon-32.svg",
+        "48": "assets/ui/icons/towers/pylon-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "siphon",
+      "category": "towers",
+      "files": {
+        "16": "assets/ui/icons/towers/siphon-16.svg",
+        "24": "assets/ui/icons/towers/siphon-24.svg",
+        "32": "assets/ui/icons/towers/siphon-32.svg",
+        "48": "assets/ui/icons/towers/siphon-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "barracks",
+      "category": "towers",
+      "files": {
+        "16": "assets/ui/icons/towers/barracks-16.svg",
+        "24": "assets/ui/icons/towers/barracks-24.svg",
+        "32": "assets/ui/icons/towers/barracks-32.svg",
+        "48": "assets/ui/icons/towers/barracks-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "order-hold",
+      "category": "barracks",
+      "files": {
+        "16": "assets/ui/icons/barracks/order-hold-16.svg",
+        "24": "assets/ui/icons/barracks/order-hold-24.svg",
+        "32": "assets/ui/icons/barracks/order-hold-32.svg",
+        "48": "assets/ui/icons/barracks/order-hold-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "order-rally",
+      "category": "barracks",
+      "files": {
+        "16": "assets/ui/icons/barracks/order-rally-16.svg",
+        "24": "assets/ui/icons/barracks/order-rally-24.svg",
+        "32": "assets/ui/icons/barracks/order-rally-32.svg",
+        "48": "assets/ui/icons/barracks/order-rally-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "order-retreat",
+      "category": "barracks",
+      "files": {
+        "16": "assets/ui/icons/barracks/order-retreat-16.svg",
+        "24": "assets/ui/icons/barracks/order-retreat-24.svg",
+        "32": "assets/ui/icons/barracks/order-retreat-32.svg",
+        "48": "assets/ui/icons/barracks/order-retreat-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "settings",
+      "category": "settings",
+      "files": {
+        "16": "assets/ui/icons/settings/settings-16.svg",
+        "24": "assets/ui/icons/settings/settings-24.svg",
+        "32": "assets/ui/icons/settings/settings-32.svg",
+        "48": "assets/ui/icons/settings/settings-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "audio",
+      "category": "settings",
+      "files": {
+        "16": "assets/ui/icons/settings/audio-16.svg",
+        "24": "assets/ui/icons/settings/audio-24.svg",
+        "32": "assets/ui/icons/settings/audio-32.svg",
+        "48": "assets/ui/icons/settings/audio-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "display",
+      "category": "settings",
+      "files": {
+        "16": "assets/ui/icons/settings/display-16.svg",
+        "24": "assets/ui/icons/settings/display-24.svg",
+        "32": "assets/ui/icons/settings/display-32.svg",
+        "48": "assets/ui/icons/settings/display-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "controls",
+      "category": "settings",
+      "files": {
+        "16": "assets/ui/icons/settings/controls-16.svg",
+        "24": "assets/ui/icons/settings/controls-24.svg",
+        "32": "assets/ui/icons/settings/controls-32.svg",
+        "48": "assets/ui/icons/settings/controls-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "key-mouse",
+      "category": "keys",
+      "files": {
+        "16": "assets/ui/icons/keys/key-mouse-16.svg",
+        "24": "assets/ui/icons/keys/key-mouse-24.svg",
+        "32": "assets/ui/icons/keys/key-mouse-32.svg",
+        "48": "assets/ui/icons/keys/key-mouse-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "key-keyboard",
+      "category": "keys",
+      "files": {
+        "16": "assets/ui/icons/keys/key-keyboard-16.svg",
+        "24": "assets/ui/icons/keys/key-keyboard-24.svg",
+        "32": "assets/ui/icons/keys/key-keyboard-32.svg",
+        "48": "assets/ui/icons/keys/key-keyboard-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "key-gamepad",
+      "category": "keys",
+      "files": {
+        "16": "assets/ui/icons/keys/key-gamepad-16.svg",
+        "24": "assets/ui/icons/keys/key-gamepad-24.svg",
+        "32": "assets/ui/icons/keys/key-gamepad-32.svg",
+        "48": "assets/ui/icons/keys/key-gamepad-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "key-rebind",
+      "category": "keys",
+      "files": {
+        "16": "assets/ui/icons/keys/key-rebind-16.svg",
+        "24": "assets/ui/icons/keys/key-rebind-24.svg",
+        "32": "assets/ui/icons/keys/key-rebind-32.svg",
+        "48": "assets/ui/icons/keys/key-rebind-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "victory",
+      "category": "results",
+      "files": {
+        "16": "assets/ui/icons/results/victory-16.svg",
+        "24": "assets/ui/icons/results/victory-24.svg",
+        "32": "assets/ui/icons/results/victory-32.svg",
+        "48": "assets/ui/icons/results/victory-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "defeat",
+      "category": "results",
+      "files": {
+        "16": "assets/ui/icons/results/defeat-16.svg",
+        "24": "assets/ui/icons/results/defeat-24.svg",
+        "32": "assets/ui/icons/results/defeat-32.svg",
+        "48": "assets/ui/icons/results/defeat-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "chest",
+      "category": "results",
+      "files": {
+        "16": "assets/ui/icons/results/chest-16.svg",
+        "24": "assets/ui/icons/results/chest-24.svg",
+        "32": "assets/ui/icons/results/chest-32.svg",
+        "48": "assets/ui/icons/results/chest-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-01",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-01-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-01-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-01-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-01-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-02",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-02-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-02-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-02-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-02-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-03",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-03-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-03-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-03-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-03-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-04",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-04-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-04-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-04-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-04-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-05",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-05-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-05-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-05-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-05-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-06",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-06-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-06-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-06-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-06-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-07",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-07-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-07-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-07-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-07-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-08",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-08-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-08-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-08-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-08-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-09",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-09-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-09-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-09-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-09-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-10",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-10-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-10-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-10-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-10-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-11",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-11-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-11-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-11-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-11-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-12",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-12-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-12-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-12-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-12-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-13",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-13-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-13-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-13-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-13-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-14",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-14-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-14-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-14-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-14-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-15",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-15-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-15-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-15-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-15-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-16",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-16-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-16-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-16-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-16-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-17",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-17-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-17-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-17-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-17-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-18",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-18-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-18-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-18-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-18-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-19",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-19-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-19-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-19-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-19-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-20",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-20-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-20-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-20-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-20-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-21",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-21-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-21-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-21-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-21-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-22",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-22-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-22-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-22-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-22-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-23",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-23-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-23-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-23-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-23-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-24",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-24-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-24-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-24-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-24-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-25",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-25-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-25-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-25-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-25-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-26",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-26-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-26-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-26-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-26-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-27",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-27-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-27-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-27-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-27-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-28",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-28-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-28-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-28-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-28-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-29",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-29-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-29-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-29-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-29-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-30",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-30-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-30-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-30-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-30-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-31",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-31-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-31-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-31-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-31-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-32",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-32-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-32-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-32-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-32-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-33",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-33-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-33-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-33-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-33-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-34",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-34-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-34-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-34-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-34-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-35",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-35-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-35-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-35-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-35-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-36",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-36-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-36-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-36-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-36-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-37",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-37-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-37-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-37-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-37-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-38",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-38-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-38-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-38-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-38-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-39",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-39-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-39-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-39-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-39-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-40",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-40-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-40-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-40-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-40-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-41",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-41-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-41-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-41-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-41-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "achievement-42",
+      "category": "achievements",
+      "files": {
+        "16": "assets/ui/icons/achievements/achievement-42-16.svg",
+        "24": "assets/ui/icons/achievements/achievement-42-24.svg",
+        "32": "assets/ui/icons/achievements/achievement-42-32.svg",
+        "48": "assets/ui/icons/achievements/achievement-42-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "warning",
+      "category": "guide",
+      "files": {
+        "16": "assets/ui/icons/guide/warning-16.svg",
+        "24": "assets/ui/icons/guide/warning-24.svg",
+        "32": "assets/ui/icons/guide/warning-32.svg",
+        "48": "assets/ui/icons/guide/warning-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "enemy-class",
+      "category": "guide",
+      "files": {
+        "16": "assets/ui/icons/guide/enemy-class-16.svg",
+        "24": "assets/ui/icons/guide/enemy-class-24.svg",
+        "32": "assets/ui/icons/guide/enemy-class-32.svg",
+        "48": "assets/ui/icons/guide/enemy-class-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "tutorial",
+      "category": "guide",
+      "files": {
+        "16": "assets/ui/icons/guide/tutorial-16.svg",
+        "24": "assets/ui/icons/guide/tutorial-24.svg",
+        "32": "assets/ui/icons/guide/tutorial-32.svg",
+        "48": "assets/ui/icons/guide/tutorial-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "attack",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/attack-16.svg",
+        "24": "assets/ui/icons/stats/attack-24.svg",
+        "32": "assets/ui/icons/stats/attack-32.svg",
+        "48": "assets/ui/icons/stats/attack-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "armor",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/armor-16.svg",
+        "24": "assets/ui/icons/stats/armor-24.svg",
+        "32": "assets/ui/icons/stats/armor-32.svg",
+        "48": "assets/ui/icons/stats/armor-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "critical",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/critical-16.svg",
+        "24": "assets/ui/icons/stats/critical-24.svg",
+        "32": "assets/ui/icons/stats/critical-32.svg",
+        "48": "assets/ui/icons/stats/critical-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "speed",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/speed-16.svg",
+        "24": "assets/ui/icons/stats/speed-24.svg",
+        "32": "assets/ui/icons/stats/speed-32.svg",
+        "48": "assets/ui/icons/stats/speed-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "range",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/range-16.svg",
+        "24": "assets/ui/icons/stats/range-24.svg",
+        "32": "assets/ui/icons/stats/range-32.svg",
+        "48": "assets/ui/icons/stats/range-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "cooldown",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/cooldown-16.svg",
+        "24": "assets/ui/icons/stats/cooldown-24.svg",
+        "32": "assets/ui/icons/stats/cooldown-32.svg",
+        "48": "assets/ui/icons/stats/cooldown-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "duration",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/duration-16.svg",
+        "24": "assets/ui/icons/stats/duration-24.svg",
+        "32": "assets/ui/icons/stats/duration-32.svg",
+        "48": "assets/ui/icons/stats/duration-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "area",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/area-16.svg",
+        "24": "assets/ui/icons/stats/area-24.svg",
+        "32": "assets/ui/icons/stats/area-32.svg",
+        "48": "assets/ui/icons/stats/area-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "projectiles",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/projectiles-16.svg",
+        "24": "assets/ui/icons/stats/projectiles-24.svg",
+        "32": "assets/ui/icons/stats/projectiles-32.svg",
+        "48": "assets/ui/icons/stats/projectiles-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "pierce",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/pierce-16.svg",
+        "24": "assets/ui/icons/stats/pierce-24.svg",
+        "32": "assets/ui/icons/stats/pierce-32.svg",
+        "48": "assets/ui/icons/stats/pierce-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "knockback",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/knockback-16.svg",
+        "24": "assets/ui/icons/stats/knockback-24.svg",
+        "32": "assets/ui/icons/stats/knockback-32.svg",
+        "48": "assets/ui/icons/stats/knockback-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "stun",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/stun-16.svg",
+        "24": "assets/ui/icons/stats/stun-24.svg",
+        "32": "assets/ui/icons/stats/stun-32.svg",
+        "48": "assets/ui/icons/stats/stun-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "slow",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/slow-16.svg",
+        "24": "assets/ui/icons/stats/slow-24.svg",
+        "32": "assets/ui/icons/stats/slow-32.svg",
+        "48": "assets/ui/icons/stats/slow-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "burn",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/burn-16.svg",
+        "24": "assets/ui/icons/stats/burn-24.svg",
+        "32": "assets/ui/icons/stats/burn-32.svg",
+        "48": "assets/ui/icons/stats/burn-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "frost",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/frost-16.svg",
+        "24": "assets/ui/icons/stats/frost-24.svg",
+        "32": "assets/ui/icons/stats/frost-32.svg",
+        "48": "assets/ui/icons/stats/frost-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "moon",
+        "ink"
+      ]
+    },
+    {
+      "id": "shock",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/shock-16.svg",
+        "24": "assets/ui/icons/stats/shock-24.svg",
+        "32": "assets/ui/icons/stats/shock-32.svg",
+        "48": "assets/ui/icons/stats/shock-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "poison",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/poison-16.svg",
+        "24": "assets/ui/icons/stats/poison-24.svg",
+        "32": "assets/ui/icons/stats/poison-32.svg",
+        "48": "assets/ui/icons/stats/poison-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "bleed",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/bleed-16.svg",
+        "24": "assets/ui/icons/stats/bleed-24.svg",
+        "32": "assets/ui/icons/stats/bleed-32.svg",
+        "48": "assets/ui/icons/stats/bleed-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "healing",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/healing-16.svg",
+        "24": "assets/ui/icons/stats/healing-24.svg",
+        "32": "assets/ui/icons/stats/healing-32.svg",
+        "48": "assets/ui/icons/stats/healing-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "regen",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/regen-16.svg",
+        "24": "assets/ui/icons/stats/regen-24.svg",
+        "32": "assets/ui/icons/stats/regen-32.svg",
+        "48": "assets/ui/icons/stats/regen-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "lifesteal",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/lifesteal-16.svg",
+        "24": "assets/ui/icons/stats/lifesteal-24.svg",
+        "32": "assets/ui/icons/stats/lifesteal-32.svg",
+        "48": "assets/ui/icons/stats/lifesteal-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "block",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/block-16.svg",
+        "24": "assets/ui/icons/stats/block-24.svg",
+        "32": "assets/ui/icons/stats/block-32.svg",
+        "48": "assets/ui/icons/stats/block-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "dodge",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/dodge-16.svg",
+        "24": "assets/ui/icons/stats/dodge-24.svg",
+        "32": "assets/ui/icons/stats/dodge-32.svg",
+        "48": "assets/ui/icons/stats/dodge-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "luck",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/luck-16.svg",
+        "24": "assets/ui/icons/stats/luck-24.svg",
+        "32": "assets/ui/icons/stats/luck-32.svg",
+        "48": "assets/ui/icons/stats/luck-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "gold-find",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/gold-find-16.svg",
+        "24": "assets/ui/icons/stats/gold-find-24.svg",
+        "32": "assets/ui/icons/stats/gold-find-32.svg",
+        "48": "assets/ui/icons/stats/gold-find-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "xp",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/xp-16.svg",
+        "24": "assets/ui/icons/stats/xp-24.svg",
+        "32": "assets/ui/icons/stats/xp-32.svg",
+        "48": "assets/ui/icons/stats/xp-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "build-speed",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/build-speed-16.svg",
+        "24": "assets/ui/icons/stats/build-speed-24.svg",
+        "32": "assets/ui/icons/stats/build-speed-32.svg",
+        "48": "assets/ui/icons/stats/build-speed-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "tower-damage",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/tower-damage-16.svg",
+        "24": "assets/ui/icons/stats/tower-damage-24.svg",
+        "32": "assets/ui/icons/stats/tower-damage-32.svg",
+        "48": "assets/ui/icons/stats/tower-damage-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "tower-range",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/tower-range-16.svg",
+        "24": "assets/ui/icons/stats/tower-range-24.svg",
+        "32": "assets/ui/icons/stats/tower-range-32.svg",
+        "48": "assets/ui/icons/stats/tower-range-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "tower-health",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/tower-health-16.svg",
+        "24": "assets/ui/icons/stats/tower-health-24.svg",
+        "32": "assets/ui/icons/stats/tower-health-32.svg",
+        "48": "assets/ui/icons/stats/tower-health-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "roof",
+        "ink"
+      ]
+    },
+    {
+      "id": "minion-damage",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/minion-damage-16.svg",
+        "24": "assets/ui/icons/stats/minion-damage-24.svg",
+        "32": "assets/ui/icons/stats/minion-damage-32.svg",
+        "48": "assets/ui/icons/stats/minion-damage-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "ink"
+      ]
+    },
+    {
+      "id": "minion-health",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/minion-health-16.svg",
+        "24": "assets/ui/icons/stats/minion-health-24.svg",
+        "32": "assets/ui/icons/stats/minion-health-32.svg",
+        "48": "assets/ui/icons/stats/minion-health-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "roof",
+        "ink"
+      ]
+    },
+    {
+      "id": "flame-health",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/flame-health-16.svg",
+        "24": "assets/ui/icons/stats/flame-health-24.svg",
+        "32": "assets/ui/icons/stats/flame-health-32.svg",
+        "48": "assets/ui/icons/stats/flame-health-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "flame",
+        "ink"
+      ]
+    },
+    {
+      "id": "flame-radius",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/flame-radius-16.svg",
+        "24": "assets/ui/icons/stats/flame-radius-24.svg",
+        "32": "assets/ui/icons/stats/flame-radius-32.svg",
+        "48": "assets/ui/icons/stats/flame-radius-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "flame",
+        "ink"
+      ]
+    },
+    {
+      "id": "boss-skull",
+      "category": "stats",
+      "files": {
+        "16": "assets/ui/icons/stats/boss-skull-16.svg",
+        "24": "assets/ui/icons/stats/boss-skull-24.svg",
+        "32": "assets/ui/icons/stats/boss-skull-32.svg",
+        "48": "assets/ui/icons/stats/boss-skull-48.svg"
+      },
+      "sizes": [
+        16,
+        24,
+        32,
+        48
+      ],
+      "states": [
+        "default",
+        "focus",
+        "selected",
+        "cooldown",
+        "poor",
+        "locked",
+        "disabled",
+        "pressed"
+      ],
+      "nineSlice": null,
+      "colors": [
+        "enemy",
+        "ink",
+        "eye"
+      ]
+    }
+  ],
+  "kit": [
+    {
+      "id": "panel-hud",
+      "category": "kit",
+      "file": "assets/ui/kit/panel-hud.svg",
+      "size": [
+        320,
+        96
+      ],
+      "state": "default",
+      "nineSlice": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "colors": [
+        "night",
+        "earth"
+      ]
+    },
+    {
+      "id": "panel-menu",
+      "category": "kit",
+      "file": "assets/ui/kit/panel-menu.svg",
+      "size": [
+        480,
+        320
+      ],
+      "state": "default",
+      "nineSlice": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "button-default",
+      "category": "kit",
+      "file": "assets/ui/kit/button-default.svg",
+      "size": [
+        240,
+        58
+      ],
+      "state": "default",
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "button-hover",
+      "category": "kit",
+      "file": "assets/ui/kit/button-hover.svg",
+      "size": [
+        240,
+        58
+      ],
+      "state": "default",
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "button-pressed",
+      "category": "kit",
+      "file": "assets/ui/kit/button-pressed.svg",
+      "size": [
+        240,
+        58
+      ],
+      "state": "default",
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "button-disabled",
+      "category": "kit",
+      "file": "assets/ui/kit/button-disabled.svg",
+      "size": [
+        240,
+        58
+      ],
+      "state": "default",
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "button-focus",
+      "category": "kit",
+      "file": "assets/ui/kit/button-focus.svg",
+      "size": [
+        240,
+        58
+      ],
+      "state": "default",
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "card-common",
+      "category": "kit",
+      "file": "assets/ui/kit/card-common.svg",
+      "size": [
+        216,
+        240
+      ],
+      "state": "default",
+      "nineSlice": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "night",
+        "earth"
+      ]
+    },
+    {
+      "id": "card-fine",
+      "category": "kit",
+      "file": "assets/ui/kit/card-fine.svg",
+      "size": [
+        216,
+        240
+      ],
+      "state": "default",
+      "nineSlice": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "night",
+        "moon"
+      ]
+    },
+    {
+      "id": "card-epic",
+      "category": "kit",
+      "file": "assets/ui/kit/card-epic.svg",
+      "size": [
+        216,
+        240
+      ],
+      "state": "default",
+      "nineSlice": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "night",
+        "enemy"
+      ]
+    },
+    {
+      "id": "card-legendary",
+      "category": "kit",
+      "file": "assets/ui/kit/card-legendary.svg",
+      "size": [
+        216,
+        240
+      ],
+      "state": "default",
+      "nineSlice": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "colors": [
+        "wood",
+        "ink",
+        "night",
+        "earth"
+      ]
+    },
+    {
+      "id": "bar-health",
+      "category": "kit",
+      "file": "assets/ui/kit/bar-health.svg",
+      "size": [
+        320,
+        40
+      ],
+      "state": "default",
+      "nineSlice": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "colors": [
+        "ink",
+        "pale",
+        "roof"
+      ]
+    },
+    {
+      "id": "bar-mana",
+      "category": "kit",
+      "file": "assets/ui/kit/bar-mana.svg",
+      "size": [
+        320,
+        40
+      ],
+      "state": "default",
+      "nineSlice": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "colors": [
+        "ink",
+        "pale",
+        "moon"
+      ]
+    },
+    {
+      "id": "bar-fury",
+      "category": "kit",
+      "file": "assets/ui/kit/bar-fury.svg",
+      "size": [
+        320,
+        40
+      ],
+      "state": "default",
+      "nineSlice": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "colors": [
+        "ink",
+        "pale",
+        "ember"
+      ]
+    },
+    {
+      "id": "bar-boss",
+      "category": "kit",
+      "file": "assets/ui/kit/bar-boss.svg",
+      "size": [
+        320,
+        40
+      ],
+      "state": "default",
+      "nineSlice": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "colors": [
+        "ink",
+        "pale",
+        "enemy"
+      ]
+    },
+    {
+      "id": "key-disc",
+      "category": "kit",
+      "file": "assets/ui/kit/key-disc.svg",
+      "size": [
+        64,
+        64
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "badge-shield",
+      "category": "kit",
+      "file": "assets/ui/kit/badge-shield.svg",
+      "size": [
+        64,
+        72
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "wood",
+        "ink"
+      ]
+    },
+    {
+      "id": "wave-banner",
+      "category": "kit",
+      "file": "assets/ui/kit/wave-banner.svg",
+      "size": [
+        320,
+        40
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "night"
+      ]
+    },
+    {
+      "id": "hint-scroll",
+      "category": "kit",
+      "file": "assets/ui/kit/hint-scroll.svg",
+      "size": [
+        300,
+        100
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "ink"
+      ]
+    },
+    {
+      "id": "tooltip",
+      "category": "kit",
+      "file": "assets/ui/kit/tooltip.svg",
+      "size": [
+        260,
+        120
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "night"
+      ]
+    },
+    {
+      "id": "tab",
+      "category": "kit",
+      "file": "assets/ui/kit/tab.svg",
+      "size": [
+        120,
+        36
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "wood",
+        "ink"
+      ]
+    },
+    {
+      "id": "slider",
+      "category": "kit",
+      "file": "assets/ui/kit/slider.svg",
+      "size": [
+        240,
+        32
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "toggle",
+      "category": "kit",
+      "file": "assets/ui/kit/toggle.svg",
+      "size": [
+        80,
+        32
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth",
+        "night"
+      ]
+    },
+    {
+      "id": "checkbox",
+      "category": "kit",
+      "file": "assets/ui/kit/checkbox.svg",
+      "size": [
+        32,
+        32
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "wood",
+        "ink",
+        "earth"
+      ]
+    },
+    {
+      "id": "warning-arrow",
+      "category": "kit",
+      "file": "assets/ui/kit/warning-arrow.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "ink"
+      ]
+    },
+    {
+      "id": "overlay-focus",
+      "category": "kit",
+      "file": "assets/ui/kit/overlay-focus.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth"
+      ]
+    },
+    {
+      "id": "overlay-selected",
+      "category": "kit",
+      "file": "assets/ui/kit/overlay-selected.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth"
+      ]
+    },
+    {
+      "id": "overlay-cooldown",
+      "category": "kit",
+      "file": "assets/ui/kit/overlay-cooldown.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth"
+      ]
+    },
+    {
+      "id": "overlay-poor",
+      "category": "kit",
+      "file": "assets/ui/kit/overlay-poor.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "eye"
+      ]
+    },
+    {
+      "id": "overlay-locked",
+      "category": "kit",
+      "file": "assets/ui/kit/overlay-locked.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth"
+      ]
+    },
+    {
+      "id": "overlay-disabled",
+      "category": "kit",
+      "file": "assets/ui/kit/overlay-disabled.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth"
+      ]
+    },
+    {
+      "id": "overlay-pressed",
+      "category": "kit",
+      "file": "assets/ui/kit/overlay-pressed.svg",
+      "size": [
+        48,
+        48
+      ],
+      "state": "default",
+      "nineSlice": null,
+      "colors": [
+        "earth"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 48 48"><title>宝箱 · 128px · 暗夜琉璃＋圣火描金 · 高级感</title><defs>
+ <linearGradient id="surface" x2="0" y2="1"><stop stop-color="#31506e"/><stop offset=".48" stop-color="#172746"/><stop offset="1" stop-color="#0b1020"/></linearGradient>
+ <linearGradient id="gold" x2="0" y2="1"><stop stop-color="#fff1af"/><stop offset=".35" stop-color="#ffd273"/><stop offset="1" stop-color="#9c5d25"/></linearGradient>
+ <linearGradient id="ember"><stop stop-color="#fff0a6"/><stop offset=".45" stop-color="#ffb547"/><stop offset="1" stop-color="#e8702a"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#06080e" flood-opacity=".75"/></filter>
+ <filter id="inset"><feGaussianBlur in="SourceAlpha" stdDeviation="3" result="b"/><feOffset dy="3" result="o"/><feComposite in="o" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="i"/><feFlood flood-color="#000" flood-opacity=".65"/><feComposite in2="i" operator="in"/><feComposite in="SourceGraphic"/></filter>
+ <filter id="rough"><feTurbulence baseFrequency=".035 .22" numOctaves="2" seed="103" result="n"/><feColorMatrix in="n" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 .11 0"/><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+ <pattern id="grain" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M2 8q8-4 16 0t14 0M-5 22q10-5 20 0t22 0" fill="none" stroke="#ffd273" stroke-opacity=".09" stroke-width="1"/></pattern>
+ </defs><style>.cut{fill:#0b1020}</style><g stroke="#0b1020" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round" fill="url(#gold)"><path d="M5 19c0-8 6-13 14-13h10c8 0 14 5 14 13v5H5Z"/><path d="M4 23h40v21H4Z"/><path class="cut" d="M20 20h8v13h-8Z"/><circle cx="24" cy="30" r="3"/></g></svg>
