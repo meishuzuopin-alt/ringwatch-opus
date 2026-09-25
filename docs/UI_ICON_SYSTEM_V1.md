@@ -64,7 +64,7 @@
 | 金币碎片、复活余次、奖励 | 碎晶钱币、独立火苗计数、奖励星章；遵守金色语义 |
 | `pause`、`dash`、`skill:0..2`、`build` | 暂停柱；疾行靴和两道位移尾迹；依所装技能 ID 取对应技能图；蓝图加锤 |
 | `bt:sentry`、`bt:pylon`、`bt:siphon`、`bt:barracks` 及对应科技卡 | 箭塔＝弩箭/塔顶；寒霜塔＝晶簇/减速环；聚金桩＝漏斗/金币；兵营＝旗帜/盾兵。科技卡沿用本体图形并加罗马数字等级角标 |
-| `cmd:post`、`cmd:recall`、`cmd:troop`、`cmd:form` | 插旗布防；回营箭头；盾/枪/弓随当前兵种变化；圆阵/横列/散阵分别用圆点环、直列、疏散点阵 |
+| `cmd:post`、`cmd:recall`、`cmd:troop`、`cmd:form` | 插旗布防；回营箭头；兵种按稳定 ID `guard`（盾卫：盾 + 头盔）、`spear`（枪兵：长枪）、`archer`（弓手：弓 + 箭）分别绘制；阵型 ID `ring`/`line`/`loose` 分别用圆点环、直列、疏散点阵 |
 | `statsHelp`、属性/统计 | 放大镜加刻度；属性徽记依伤害、生命、防御、速度等类别取对应小图，不堆一排纯文本属性名 |
 
 手柄与键鼠提示独立于主图标：跟随当前输入设备显示键帽或手柄按键/肩键；不能让提示遮住技能图。冷却用环形扇区，资源不足用锁定/欠费标记，选中和键盘焦点有清楚的外框。
@@ -75,7 +75,7 @@
   `needle` 单弩矢；`repeater` 连发箭束；`scatter` 扇形弹丸；`javelin` 标枪；`blades` 环绕短刃；`flail` 链锤；`cleaver` 斧刃弧；`pike` 长枪；`lance` 雷光贯矛；`arc` 分叉闪电；`mines` 地面符文陷阱。保持剪影各异，升级只增加层数/亮点/边框，不换成无关图案。
 - **主动技能**（当前 14 个 ID）：`nova` 星爆、`veil` 雷云、`well` 黑洞、`storm` 箭雨、`bash` 盾击、`shade` 影步、`cleave` 宽斩、`hymn` 圣典光环、`salvo` 三连炸、`bounty` 赏金币、`wager` 骰子、`fan` 扇焰、`ring` 冲击环、`lash` 长鞭。技能槽按技能数据 ID 取图，不把技能名直接画成图标。
 - **37 件改造物**（`buy:<id>`）：每件依物件轮廓绘制，避免所有卡片都用同一颗星。按 ID 对应：`fins` 手套、`lens` 透镜、`hull` 疾风靴、`nano` 再生符、`magnet` 磁石、`whet` 磨刀石、`gauntlet` 铁护手、`quiver` 箭袋、`tome` 残页、`bracer` 皮护腕、`apple` 苹果、`feather` 羽毛、`purse` 钱袋、`herb` 草药、`coil` 药剂、`sight` 眼睛/瞄准点、`plate` 重甲、`greed` 戒指、`overclock` 沙漏、`bounty` 悬赏卷、`fang` 獠牙、`cloak` 斗篷、`maul` 重锤、`blueprint` 图纸、`powder` 火药桶、`thornmail` 荆棘甲、`piggy` 存钱罐、`prism` 分裂晶体、`contract` 封蜡契约、`clover` 四叶草、`holy` 圣水瓶、`drum` 战鼓、`ember` 圣火护符、`heart` 龙心、`crown` 时之王冠、`belt` 巨人腰带、`trident` 三叉符文。稀有度用独立角标或边框层级表达，不改物件主剪影。
-- **24 个祝福**（按 `js/data.js` 的完整稳定 ID 映射；运行时按钮序号不得代替图标 ID）：`b_dmg/b_dmg2` 剑刃、`b_hp/b_hp2` 心、`b_armor/b_armor2` 盾、`b_rate/b_rate2` 齿轮、`b_speed` 羽翼、`b_regen` 回环心焰、`b_crit` 鹰目准星、`b_pick` 磁石、`b_melee` 近刃、`b_ranged` 箭、`b_spell` 符文、`b_range` 望远镜、`b_leech` 獠牙与血滴、`b_dodge` 侧闪影、`b_cdr` 沙漏、`b_critm` 断骨星、`b_extra` 分裂弹、`b_all` 四向星、`b_luck` 四叶草、`b_core` 圣火护盾。高阶重复效果沿用原剪影，用双层、刻痕或数字角标区分。
+- **24 个祝福**（按 `js/data.js` 的完整稳定 ID 映射；运行时按钮序号不得代替图标 ID）：`b_dmg`/`b_dmg2` 用剑刃，`b_hp`/`b_hp2` 用心，`b_armor`/`b_armor2` 用盾，`b_rate`/`b_rate2` 用齿轮；`b_speed` 羽翼、`b_regen` 回环心焰、`b_crit` 鹰目准星、`b_pick` 磁石、`b_melee` 近刃、`b_ranged` 箭、`b_spell` 符文、`b_range` 望远镜、`b_leech` 獠牙与血滴、`b_dodge` 侧闪影、`b_cdr` 沙漏、`b_critm` 断骨星、`b_extra` 分裂弹、`b_all` 四向星、`b_luck` 四叶草、`b_core` 圣火护盾。高阶重复效果沿用原剪影，用双层、刻痕或数字角标区分。
 - **3 种圣火形态**（`coreForm:blaze/ward/star`）：烈焰塔、守护盾环、星形天火。三枚图必须能在小卡上立即分辨，不以颜色作为唯一线索。
 - `repair` 用裂纹圣火盾加锤；`upgrade` 用向上阶梯/火晶；`reroll` 用旋转骰；`adReroll` 用同一旋转骰加免费星标（不暗示当前没有的广告流程）；`next` 用向前波旗；`evolve:<id>` 用当前武器剪影加分叉进化火花；`lock:<id>` 用锁；`ban:<id>` 用划掉的物品卡；`bless:<id>` 用对应祝福图。
 
