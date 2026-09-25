@@ -576,6 +576,12 @@
     splitter: { m: 'sack', base: 12 }, bomber: { m: 'goblin', base: 10 }, spitter: { m: 'archer', base: 9 }, shielder: { m: 'shaman', base: 11 },
     warden: { m: 'warlock', base: 22 }, brood: { m: 'brood', base: 26 }, boss: { m: 'golem', base: 38 }
   };
+  // Visual-only scale multipliers bring ordinary enemies toward 0.6x hero height,
+  // elites toward 1.1x and heavy shells/bosses toward 1.4x without changing hitboxes.
+  var ENEMY_RENDER_SCALE = {
+    mite: 2.15, spore: 2.8, shell: 3.4, dasher: 1.45, splitter: 1.75,
+    bomber: 1.85, spitter: 1.8, shielder: 1.5, warden: 1.35, brood: 1.9, boss: 1.2
+  };
   var TMODEL = { sentry: 'sentry', pylon: 'pylon', siphon: 'siphon', barracks: 'barracks' };
 
   // ================= 昼夜 =================
@@ -857,7 +863,7 @@
     for (var i = 0; i < g.enemies.length; i++) {
       var e = g.enemies[i];
       if (!e.on || !W3.inView(e.x, e.y, 60)) continue;
-      var em = EMODEL[e.type], mesh = M[em.m], s = e.r / em.base * 1.25;
+      var em = EMODEL[e.type], mesh = M[em.m], shapeScale = ENEMY_RENDER_SCALE[e.type] || 1.7, s = e.r / em.base * 1.25 * shapeScale;
       var sp = e.spawnT > 0 ? 1 - e.spawnT / 0.18 * 0.8 : 1;
       s *= sp;
       var yaw, tilt = 0, y = 0, tint = tintOf(e), fl = flashOf(e);
