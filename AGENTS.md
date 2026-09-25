@@ -1,9 +1,8 @@
-# 协作约定（Claude / Grok / Codex 共用；Cursor 暂停）
+# 协作约定（Claude / Grok / GPT / Codex 共用；Cursor 暂停）
 
-这份文件是所有 AI 助手和人共同遵守的项目规则。Codex 会自动读取本文件，Claude Code 通过 `CLAUDE.md` 引用它，Grok 通过 `GROK.md` 引用它，Cursor 通过 `.cursor/rules/` 引用它。
+这份文件是所有 AI 助手和人共同遵守的项目规则。Codex 会自动读取本文件，Claude Code 通过 `CLAUDE.md` 引用它，Grok 通过 `GROK.md`、GPT 通过 `GPT.md` 引用它，Cursor 通过 `.cursor/rules/` 引用它。
 
-> 2026-09-25 起：Cursor 额度用完，暂停。Cursor 的位置由 **Grok bot 组**接替，负责微调（数值、手感、文案、小修小改），分支 `grok/*`。
-> （当天曾短暂交给 GPT，GPT 没有产出分支；以 Grok 为准。已有的 `gpt/*` 分支如出现，按 Grok 的规则对待。）
+> 2026-09-25 起：Cursor 额度用完，暂停。它的活按文件拆给两组，各管各的文件：**Grok bot 组**管数值、手感和真机验收（只改 `js/data.js`），**GPT** 管文案、界面文字和界面小修（`js/ui.js`）。边界见「分工」一节。
 
 ## 项目是什么
 
@@ -36,12 +35,21 @@
 | 角色 | 负责 | 通常改哪里 | 分支 |
 |---|---|---|---|
 | **Claude Code** | 工程搭建、渲染管线、系统性功能、收尾完善（修 bug、补测试、重构） | `tools/`、`.github/`、`gl3d.js`、`sim.js`、`main.js`，以及落实美术方案所需的代码 | `claude/*` |
-| **Grok bot 组**（接替 Cursor 的位置） | 微调：数值、手感、文案、小修小改 | `data.js`、`ui.js` 文案、任意小改动；调数值后跑 `npm run balance` 或 `npm run audit:game`，改界面后跑 `npm run audit:ui` | `grok/*` |
+| **Grok bot 组** | 数值与手感微调、难度曲线、真机验收（Windows 实机跑包、截图、回执）、Steam 竞品与差评情报 | 只改 `js/data.js`；验收回执写进 `docs/AUDIT.md` | `grok/*` |
+| **GPT** | 文案与界面文字：按钮、说明、提示、成就和道具描述、商店页文案；界面上的小修（换行、对齐、字数） | `js/ui.js` 的文案和布局小改、`docs/STEAM.md` 文案部分 | `gpt/*` |
 | ~~Cursor~~ | 额度用完，暂停 | — | `cursor/*`（旧分支保留） |
 | **Codex** | 美术指导：定风格、调色板、光照氛围、模型造型、特效观感 | `docs/ART.md`、`world3d.js` 的 `PAL` 与昼夜预设、模型造型函数 | `codex/*` |
 
-**所有工作都要推到 GitHub**：Claude 用 `claude/*`、Grok 用 `grok/*`、Codex 用 `codex/*` 分支（Cursor 暂停，旧的 `cursor/*` 分支保留），改完就提交并推送，不要只留在本地。
+**所有工作都要推到 GitHub**：Claude 用 `claude/*`、Grok 用 `grok/*`、GPT 用 `gpt/*`、Codex 用 `codex/*` 分支（Cursor 暂停，旧的 `cursor/*` 分支保留），改完就提交并推送，不要只留在本地。
 没推送的改动别人看不到，全面升级时会被漏掉。`npm run sync` 汇总所有分支的进度和可能冲突的文件；全面升级方案见 `docs/UPGRADE-PLAN.md`。
+
+**Grok 与 GPT 的边界**（按文件分，基本不会撞车）：
+1. `js/data.js` 只归 Grok。道具、成就等**描述文字**如果放在 `data.js` 里，GPT 不直接改，把要改的文字写进 PR 描述，交给 Grok 合。
+2. `js/ui.js` 的文案和布局归 GPT，Grok 不碰。
+3. 两边都不碰 `sim.js`、`gl3d.js`、`world3d.js`、`main.js`、`tools/`。大改动写成文档交给 Claude。
+4. 两边都从 Claude 最新的集成分支拉新分支；每个分支只做一件事，名字看得出做什么（如 `grok/tune-wave-12`、`gpt/copy-shop-tooltips`）。
+5. 自检：Grok 改完跑 `npm run check` 加 `npm run balance` 或 `npm run audit:game`；GPT 改完跑 `npm run check` 加 `npm run audit:ui`，文字出屏、按钮装不下、文字重叠都必须是 0。
+6. 合并顺序由 Claude 决定。`npm run sync` 分开标注 `grok/*` 和 `gpt/*`，两个分支改到同一个文件、或改了自己范围以外的文件，都会报出来。
 
 交接方式：美术方案先写进 `docs/ART.md`（要什么、参考、验收标准），能直接改颜色 / 造型的就直接改；
 需要渲染器新能力（新着色器、后处理、贴图等）的，在 `docs/ART.md` 的「待工程实现」里列出来，由 Claude 落地。
