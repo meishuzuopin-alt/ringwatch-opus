@@ -220,7 +220,7 @@
     gb.box(x, 0, z, 3, h, 3, PAL.wood);
     gb.box(x, h - 3, z + 5, 1.5, 1.5, 12, PAL.wood);
     gb.box(x + 1, h - 22, z + 5, 1, 19, 10, PAL.banner);
-    gb.box(x + 1.6, h - 15, z + 5, 0.6, 5, 5, PAL.gold, 0.6);
+    gb.box(x + 1.6, h - 15, z + 5, 0.6, 5, 5, PAL.wall, 0.15);
   }
   function gate(gb, x, z, c, r, cols, rows, lamps) {
     var vertical = c === 0 || c === cols - 1;
@@ -426,7 +426,7 @@
       g.tri([0, 11, -3], [0, 13, -3], [-1, 14, -8], hex('#7B55B7')); g.tri([0, 13, -3], [0, 11, -8], [-1, 14, -8], hex('#7B55B7'));
       g.box(4.1, 12, 1.4, 0.6, 1, 1, hex('#FF3B3B'), 2); g.box(4.1, 12, -1.4, 0.6, 1, 1, hex('#FF3B3B'), 2);
       g.blob(-5, 8, 0, 5, 5, 5, hex('#442B6B'), 0, 39, 0.06);
-      g.box(-5, 13, 0, 1, 3, 1, PAL.wood); g.box(-5, 16, 0, 1.8, 1.8, 1.8, hex('#FF3B3B'), 2.2);
+      g.box(-5, 13, 0, 1, 3, 1, PAL.wood); g.box(-5, 16, 0, 1.8, 1.8, 1.8, hex('#7B55B7'), 0.3);
     });
     M.archer = model(function (g) {
       var c = hex('#563383');
@@ -487,7 +487,7 @@
       g.box(0, 53, 0, 30, 5, 30, PAL.plank2);
       g.box(0, 58, 9.2, 10, 9, 1.2, PAL.banner);
       g.roof(0, 60, 0, 36, 30, 36, PAL.roofRed);
-      g.roof(0, 65, 0, 25, 23, 25, shade(PAL.roofRed, 0.88));
+      g.box(0, 90, 0, 5, 3, 36, shade(PAL.roofRed, 0.88));
     });
     M.pylon = model(function (g) {
       g.cyl(0, 0, 0, 18, 14, 9, 8, PAL.stone2);
@@ -495,7 +495,7 @@
       for (var i = -1; i <= 1; i += 2) g.box(i * 7, 14, 0, 3, 42, 3, PAL.wood);
       g.cyl(0, 56, 0, 14, 10, 6, 8, PAL.plank2);
       // The crystal floats above the cap; small shards preserve a clear gap around it.
-      g.blob(0, 80, 0, 8, 18, 8, hex('#5FA8C8'), 1.1, 3, 0.12);
+      g.blob(0, 84, 0, 8, 18, 8, hex('#5FA8C8'), 1.1, 3, 0.12);
       g.blob(7, 68, 4, 3.4, 8, 3.4, hex('#5FA8C8'), 0.6, 5, 0.12);
       g.blob(-7, 66, -4, 3.4, 8, 3.4, hex('#5FA8C8'), 0.6, 6, 0.12);
     });
@@ -517,7 +517,7 @@
       for (var i = -1; i <= 1; i += 2) g.box(i * 11, 7, 12.5, 4, 40, 2.5, PAL.wood);
       g.box(0, 7, 13, 12, 27, 2, PAL.wood);
       g.roof(0, 50, 0, 40, 34, 36, PAL.roofRed);
-      g.roof(0, 54, -1, 30, 27, 27, shade(PAL.roofRed, 0.9));
+      g.box(0, 84, -1, 5, 3, 34, shade(PAL.roofRed, 0.9));
       banner(g, -18, 13, 70);
     });
     M.soldier = model(function (g) {
@@ -593,9 +593,9 @@
         grade: [1.08, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#3A2E3C'), bloom: 0.35, thr: 0.9 },
       dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#E8702A'), 0.85), sky: shade(hex('#5A496A'), 0.78), ground: shade(hex('#3A344A'), 0.55), fog: hex('#4A425E'), clear: hex('#28364E'), fogNear: 1300, fogFar: 3000, em: 1.1, lamp: 0.55,
         grade: [1.04, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#302638'), bloom: 0.6, thr: 0.78 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#5FA8C8'), 0.58), sky: hex('#263653'), ground: shade(hex('#1E2A4A'), 1.5), fog: hex('#223451'), clear: hex('#111A31'), fogNear: 850, fogFar: 2300, em: 1.35, lamp: 0.95,
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#5FA8C8'), 0.77), sky: hex('#3F5475'), ground: hex('#30415F'), fog: hex('#223451'), clear: hex('#111A31'), fogNear: 850, fogFar: 2300, em: 1.35, lamp: 0.95,
         grade: [1.02, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#1E2A4A'), bloom: 0.95, thr: 0.62 },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#E8702A'), 0.55), sky: shade(hex('#34213F'), 0.8), ground: shade(hex('#1E2A4A'), 1.2), fog: hex('#291C38'), clear: hex('#11152B'), fogNear: 850, fogFar: 2300, em: 1.3, lamp: 0.8,
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#5FA8C8'), 0.45), sky: shade(hex('#34213F'), 0.8), ground: shade(hex('#1E2A4A'), 1.2), fog: hex('#291C38'), clear: hex('#11152B'), fogNear: 850, fogFar: 2300, em: 1.3, lamp: 0.8,
         grade: [1.04, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#241A31'), bloom: 0.85, thr: 0.66 }
     };
     var e = P[kind], l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
@@ -891,8 +891,8 @@
       if (e.type === 'bomber') GL.glow(e.x - Math.cos(yaw) * 5 * s, 16 * s, e.y - Math.sin(yaw) * 5 * s, e.state === 1 ? 14 : 6, e.state === 1 ? hex('#FF3B3B') : hex('#6B3FA0'), 0.9);
       if (e.type === 'shielder') GL.glow(e.x + Math.cos(yaw) * 4 * s, 23 * s, e.y + Math.sin(yaw) * 4 * s, 10, hex('#6fc3ff'), 0.7);
       if (e.type === 'warden') {
-        for (var o = 0; o < 3; o++) { var oa = t * 2 + o * TAU / 3; GL.glow(e.x + Math.cos(oa) * 26, 30 + Math.sin(t * 3 + o) * 4, e.y + Math.sin(oa) * 26, e.charging ? 14 : 8, hex('#FF3B3B'), 0.85); }
-        if (e.charging) GL.ground(true, e.x, 1, e.y, e.r + 30, 1, 0.2, hex('#ff3b8c'), 0.6);
+        for (var o = 0; o < 3; o++) { var oa = t * 2 + o * TAU / 3; GL.glow(e.x + Math.cos(oa) * 26, 30 + Math.sin(t * 3 + o) * 4, e.y + Math.sin(oa) * 26, e.charging ? 14 : 8, e.charging ? hex('#FF3B3B') : hex('#7B55B7'), 0.85); }
+        if (e.charging) GL.ground(true, e.x, 1, e.y, e.r + 30, 1, 0.2, hex('#FF3B3B'), 0.6);
       }
       if (e.type === 'boss') {
         GL.glow(e.x, 40, e.y, e.r * 1.2, e.enraged ? hex('#FF3B3B') : hex('#6B3FA0'), 0.25 + 0.15 * Math.sin(t * 5));
