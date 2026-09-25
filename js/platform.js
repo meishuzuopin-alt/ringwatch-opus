@@ -119,6 +119,14 @@
     else document.addEventListener('visibilitychange', function () { if (document.hidden) fn(); });
   };
 
+  // ---------- 手柄（Gamepad API，标准布局：0 A 1 B 2 X 3 Y 4 LB 5 RB 6 LT 7 RT 8 视图 9 菜单 12–15 十字键）----------
+  Plat.pad = function () {
+    if (isWx || typeof navigator === 'undefined' || !navigator.getGamepads) return null;
+    var list = navigator.getGamepads() || [];
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].connected) return list[i];
+    return null;
+  };
+
   // ---------- 存档 ----------
   Plat.load = function (key, def) {
     try {

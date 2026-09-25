@@ -49,7 +49,9 @@ try {
 console.log('玩法闭环');
 try {
   const out = execFileSync(process.execPath, [path.join(__dirname, 'simtest.js')], { encoding: 'utf8' });
-  ok('通关 / 无尽 / 危险 / 变异器 / 祝福 / 套装 / 进化 / 每日挑战 / 成就：' + out.trim().replace(/^✓\s*/, ''));
+  const lines = out.trim().split('\n').map(l => l.trim());
+  ok('通关 / 无尽 / 危险 / 变异器 / 祝福 / 套装 / 进化 / 每日挑战 / 成就 / 局中存档 / 技能槽 / 性能预算：' + lines[lines.length - 1].replace(/^✓\s*/, ''));
+  lines.slice(0, -1).forEach(l => console.log('    ' + l.replace(/^·\s*/, '')));
 } catch (e) { bad('玩法闭环测试失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 
 // 桌面（Steam）版会打进安装包的游戏文件：preview.html + js/ + vendor/ + desktop/（不含 Electron 运行时本身）

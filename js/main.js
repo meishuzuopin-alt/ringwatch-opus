@@ -2,14 +2,32 @@
 (function (root) {
   var RW = root.RW;
   var P = RW.Plat, D = RW.Draw, UI = RW.UI, S = RW.Sfx, T = RW.TUNE, DT = T.DT;
-  var SAVE_KEY = 'ringwatch_save_v1';
+  var SAVE_KEY = 'ringwatch_save_v1', RUN_KEY = 'ringwatch_run_v1';   // 局外进度 / 局中存档（最近一次整备）
 
   var g = null, paused = false, showHow = false, muted = false, musicOff = false, buildMenu = false, buildMenuT = 0;
+  var overlay = '';   // 盖在最上层的面板：'settings' 设置 / 'stats' 属性说明
   var js = { active: false, id: null, ox: 0, oy: 0, kx: 0, ky: 0, mx: 0, my: 0 };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: 0 };
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts } }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts }, opt: RW.opt }); }
+  // 设置生效：音量三条总线、特效亮度（其余由渲染层直接读 RW.opt）
+  function applyOpt() {
+    var o = RW.opt;
+    S.setVolumes(o.vol, o.music, o.sfx);
+    if (RW.GL) RW.GL.addK = o.fx;
+  }
+  // 局中存档：整备时写，结算时清；标题页据此显示「继续上局」
+  function saveRunNow() { var sv = g.saveRun(); if (sv) { P.save(RUN_KEY, sv); UI.runInfo = runInfoOf(sv); } }
+  function clearRun() { P.save(RUN_KEY, null); UI.runInfo = null; }
+  function runInfoOf(sv) { return sv && sv.v === RW.RUN_SAVE_V && RW.CLASSES[sv.cls] ? { hero: RW.CLASSES[sv.cls].name, wave: sv.wave + 1, danger: sv.danger, endless: sv.endless, daily: sv.daily } : null; }
+  // 同一套设置立刻再开一局（英雄、危险、变异器；每日挑战用当天的种子）
+  function startWith(hero, daily) {
+    clearRun();
+    if (daily) { var ds = RW.dailySetup(daily); g.startRun(ds.hero, { danger: ds.danger, mutators: ds.mutators, seed: ds.seed, daily: daily }); }
+    else g.startRun(hero, { danger: Math.min(UI.runDanger, UI.maxDanger(g, hero)), mutators: UI.runMuts });
+    resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+  }
   function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
   function resetStick() { js.active = false; js.id = null; js.mx = js.my = js.kx = js.ky = 0; }
 
@@ -26,9 +44,13 @@
       UI.runDanger = save.setup.danger | 0;
       UI.runMuts = (save.setup.muts || []).filter(function (m) { return !!RW.MUTATORS[m]; });
     }
+    var od = RW.optDefaults(), so = save.opt || {};
+    for (var ok in od) RW.opt[ok] = typeof so[ok] === 'number' ? so[ok] : od[ok];
+    applyOpt();
     muted = !!save.muted;
     S.setMuted(muted);
     musicOff = !!save.musicOff; S.setMusicOff(musicOff); UI.musicOff = musicOff;
+    UI.runInfo = runInfoOf(P.load(RUN_KEY, null));
     RW.game = g;
     P.onPointer(onPointer);
     P.onKey = onKey;
@@ -59,7 +81,7 @@
 
   // ---------- 输入 ----------
   function onPointer(type, id, x, y) {
-    if (type === 'down') S.unlock();
+    if (type === 'down') { S.unlock(); UI.padNav = false; }
     if (inBattle() && !paused) {
       if (type === 'down') {
         var b = UI.hit(x, y);
@@ -94,6 +116,7 @@
   }
   function getInput() {
     if (js.active) { inputBuf.mx = js.mx; inputBuf.my = js.my; return inputBuf; }
+    if (pad.move) { inputBuf.mx = pad.mx; inputBuf.my = pad.my; return inputBuf; }
     var k = P.keys, x = 0, y = 0;
     if (k.KeyA || k.ArrowLeft) x -= 1;
     if (k.KeyD || k.ArrowRight) x += 1;
@@ -105,6 +128,11 @@
   }
   function onKey(code) {
     S.unlock();
+    UI.padNav = false;
+    if (overlay) {
+      if (code === 'Escape' || code === 'Enter') action(overlay === 'settings' ? 'settingsClose' : 'statsClose');
+      return;
+    }
     if (code === 'Escape' || code === 'KeyP') {
       if (inBattle()) { paused = !paused; resetStick(); }
       return;
@@ -123,7 +151,7 @@
       if (g.mode === 'title') action('start');
       else if (g.mode === 'pick') action('pick:' + UI.heroSel);
       else if (g.mode === 'shop') action('next');
-      else if (g.mode === 'result') action('again');
+      else if (g.mode === 'result') action('retry');
       else if (g.mode === 'records') action('home');
     }
     if (g.mode === 'bless' && /^Digit[123]$/.test(code)) { action('bless:' + (+code.slice(5) - 1)); return; }
@@ -138,6 +166,102 @@
     }
     if (g.mode === 'shop' && /^Digit[1234]$/.test(code)) action('buy:' + (+code.slice(5) - 1));
     if (g.mode === 'shop' && code === 'KeyR') action('reroll');
+  }
+
+  // ---------- 手柄 ----------
+  // 战斗：左摇杆 / 十字键移动，A 或 RT 冲刺，X / Y / B 放 Q / E / R，LB 造塔（十字键选种类），菜单键暂停
+  // 菜单：十字键 / 左摇杆移动焦点，A 确认，B 返回，菜单键开始 / 下一波，整备页 X 刷新
+  var pad = { prev: [], move: false, mx: 0, my: 0, navT: 0 };
+  var PAD_DEAD = 0.22;
+  function padDown(p, i) { var b = p.buttons[i]; return !!b && (b.pressed || b.value > 0.5); }
+  function pollPad(dt) {
+    var p = P.pad && P.pad();
+    if (!p) { pad.move = false; return; }
+    var now = [], i, any = false;
+    for (i = 0; i < 16; i++) { now[i] = padDown(p, i); if (now[i]) any = true; }
+    var ax = p.axes[0] || 0, ay = p.axes[1] || 0, mag = Math.sqrt(ax * ax + ay * ay);
+    var prev = pad.prev, hit = function (k) { return now[k] && !prev[k]; };   // 这一帧刚按下
+    pad.prev = now;
+    if (mag > PAD_DEAD) any = true;
+    if (any) { S.unlock(); UI.padNav = true; }
+    var battle = inBattle() && !paused && !overlay;
+    if (battle) {
+      // 移动：摇杆去掉死区后重新映射到 0–1；造塔菜单打开时十字键用来选塔
+      var mx = 0, my = 0;
+      if (mag > PAD_DEAD) { var k = Math.min(1, (mag - PAD_DEAD) / (1 - PAD_DEAD)) / mag; mx = ax * k; my = ay * k; }
+      if (!buildMenu) { if (now[14]) mx = -1; if (now[15]) mx = 1; if (now[12]) my = -1; if (now[13]) my = 1; }
+      var ml = Math.sqrt(mx * mx + my * my);
+      if (ml > 1) { mx /= ml; my /= ml; }
+      pad.move = ml > 0.01; pad.mx = mx; pad.my = my;
+      if (hit(0) || hit(7)) battleButton('dash');
+      if (hit(2)) battleButton('skill:0');
+      if (hit(3)) battleButton('skill:1');
+      if (hit(1) || hit(5)) battleButton('skill:2');
+      if (hit(4)) battleButton('build');
+      if (buildMenu) { var order = [14, 12, 15, 13]; for (i = 0; i < 4; i++) if (hit(order[i])) battleButton('bt:' + RW.TOWER_ORDER[i]); }
+      if (hit(9) || hit(8)) battleButton('pause');
+      return;
+    }
+    pad.move = false;
+    if (!any) return;
+    UI.padNav = true;
+    var btns = UI.lastBtns || [];
+    if (!btns.length) return;
+    if (!findBtn(UI.focusId)) UI.focusId = defaultFocus(btns);
+    // 方向：十字键按一下走一格；摇杆推住时每 0.2 秒走一格
+    var dx = 0, dy = 0;
+    if (hit(14)) dx = -1; else if (hit(15)) dx = 1; else if (hit(12)) dy = -1; else if (hit(13)) dy = 1;
+    pad.navT -= dt;
+    if (!dx && !dy && mag > 0.6 && pad.navT <= 0) {
+      if (Math.abs(ax) > Math.abs(ay)) dx = ax > 0 ? 1 : -1; else dy = ay > 0 ? 1 : -1;
+      pad.navT = 0.2;
+    }
+    if (mag < 0.4) pad.navT = 0;
+    if (dx || dy) moveFocus(btns, dx, dy);
+    if (hit(0)) {
+      var b = findBtn(UI.focusId);
+      if (b) { if (b.disabled) { if (b.why) UI.toast(b.why); S.play({ type: 'deny' }); } else action(b.id); }
+    }
+    if (hit(1)) padBack();
+    if (hit(9)) {
+      if (paused) action('resume');
+      else if (g.mode === 'title') action(UI.runInfo ? 'continueRun' : 'start');
+      else if (g.mode === 'shop') action('next');
+      else if (g.mode === 'result') action('retry');
+    }
+    if (hit(2) && g.mode === 'shop' && !overlay) action('reroll');
+  }
+  function findBtn(id) {
+    var btns = UI.lastBtns || [];
+    for (var i = 0; i < btns.length; i++) if (btns[i].id === id) return btns[i];
+    return null;
+  }
+  function defaultFocus(btns) {
+    var pref = /^(settingsClose|statsClose|howtoClose|resume|continueRun|start|pick:|bless:0|next|retry|revive)/;
+    for (var i = 0; i < btns.length; i++) if (pref.test(btns[i].id)) return btns[i].id;
+    return btns[0].id;
+  }
+  // 往指定方向找最近的按钮：沿方向的距离 + 偏离方向的距离 × 2.5
+  function moveFocus(btns, dx, dy) {
+    var cur = findBtn(UI.focusId);
+    if (!cur) return;
+    var cx = cur.x + cur.w / 2, cy = cur.y + cur.h / 2, best = null, bs = 1e9;
+    for (var i = 0; i < btns.length; i++) {
+      var b = btns[i];
+      if (b.id === cur.id) continue;
+      var vx = b.x + b.w / 2 - cx, vy = b.y + b.h / 2 - cy, along = vx * dx + vy * dy;
+      if (along <= 4) continue;
+      var sc = along + Math.abs(vx * dy - vy * dx) * 2.5;
+      if (sc < bs) { bs = sc; best = b; }
+    }
+    if (best) { UI.focusId = best.id; if (g.mode === 'pick' && best.id.indexOf('hero:') === 0) action(best.id); else S.play({ type: 'ui' }); }
+  }
+  function padBack() {
+    if (overlay) action(overlay === 'settings' ? 'settingsClose' : 'statsClose');
+    else if (showHow) action('howtoClose');
+    else if (paused) action('resume');
+    else if (g.mode === 'pick') action('back');
+    else if (g.mode === 'records' || g.mode === 'result') action('home');
   }
 
   // ---------- 界面动作 ----------
@@ -156,8 +280,34 @@
       case 'pick':
         if (!RW.isUnlocked(arg, g.prog)) { UI.toast('还没解锁：' + RW.CLASSES[arg].unlock.text); S.play({ type: 'deny' }); break; }
         UI.heroSel = arg; persist();
-        g.startRun(arg, { danger: Math.min(UI.runDanger, UI.maxDanger(g, arg)), mutators: UI.runMuts });
-        resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+        startWith(arg, '');
+        break;
+      case 'continueRun':
+        var sv = P.load(RUN_KEY, null);
+        if (g.loadRun(sv)) { resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true; UI.toast('从第 ' + sv.wave + ' 波后的整备继续', 1.8); }
+        else { clearRun(); UI.toast('上局存档读不出来，已清除'); S.play({ type: 'deny' }); }
+        break;
+      case 'retry':   // 结算页 / 暂停页：同设置立刻再来
+        var last = g.result || {}, hero = last.hero || g.clsId, dly = last.daily || g.daily || '';
+        if (g.mode !== 'result') { paused = false; g.finishRun(); }
+        startWith(hero, dly);
+        break;
+      case 'toTitle': paused = false; resetStick(); g.mode = 'title'; break;
+      case 'settings': overlay = 'settings'; break;
+      case 'settingsClose': overlay = ''; persist(); break;
+      case 'statsHelp': overlay = 'stats'; break;
+      case 'statsClose': overlay = ''; break;
+      case 'optReset': RW.opt = RW.optDefaults(); applyOpt(); persist(); break;
+      case 'set':
+        for (var si = 0; si < RW.SETTINGS.length; si++) {
+          var st = RW.SETTINGS[si];
+          if (st.id !== arg) continue;
+          var dir = +parts[2], v = RW.opt[st.id];
+          if (st.opts) v = Math.max(0, Math.min(st.opts.length - 1, v + dir));
+          else v = Math.round(Math.max(st.min, Math.min(st.max, v + dir * st.step)) * 100) / 100;
+          RW.opt[st.id] = v;
+        }
+        applyOpt();
         break;
       case 'danger': UI.runDanger = +arg; persist(); break;
       case 'mut':
@@ -167,8 +317,7 @@
         break;
       case 'daily':
         var dk = UI.dayKey(), ds = RW.dailySetup(dk);
-        g.startRun(ds.hero, { danger: ds.danger, mutators: ds.mutators, seed: ds.seed, daily: dk });
-        resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+        startWith(ds.hero, dk);
         UI.toast('每日挑战 · ' + RW.CLASSES[ds.hero].name + ' · 危险 ' + ds.danger + ' · ' + ds.mutators.map(function (m) { return RW.MUTATORS[m].name; }).join(' '), 2.6);
         break;
       case 'records': g.mode = 'records'; break;
@@ -227,7 +376,8 @@
     var ev = g.events;
     for (var i = 0; i < ev.length; i++) {
       S.play(ev[i]);
-      if (ev[i].type === 'result' || ev[i].type === 'victory') persist();
+      if (ev[i].type === 'result' || ev[i].type === 'victory') { persist(); clearRun(); }
+      if (ev[i].type === 'shop' || (ev[i].type === 'buy' && ev[i].a === 'bless')) saveRunNow();
       if (ev[i].type === 'shop') { UI.sel = null; buildMenu = false; if (g.shop.interest > 0) UI.toast('利息到账 +' + g.shop.interest + ' 金币'); }
     }
     ev.length = 0;
@@ -237,7 +387,8 @@
     last = now;
     UI.frame(dt);
     if (buildMenu && !paused) { buildMenuT -= dt; if (buildMenuT <= 0) buildMenu = false; }
-    if (!paused && !showHow) {
+    pollPad(dt);
+    if (!paused && !showHow && !overlay) {
       acc += dt;
       var steps = 0;
       while (acc >= DT && steps < 5) { g.update(getInput()); drain(); acc -= DT; steps++; }
@@ -277,6 +428,8 @@
       case 'result': UI.result(g); break;
       case 'records': UI.records(g); break;
     }
+    if (overlay === 'settings') UI.settingsPanel();
+    else if (overlay === 'stats') UI.statsPanel(g);
     UI.pressed = pressed;
     UI.drawToast();
   }

@@ -154,10 +154,10 @@
     this.ctx = ctx;
     var comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.18;
-    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.8;
-    this.master.connect(comp); comp.connect(ctx.destination);
-    this.sfxBus = ctx.createGain(); this.sfxBus.gain.value = 0.9; this.sfxBus.connect(this.master);
-    this.musicBus = ctx.createGain(); this.musicBus.gain.value = this.musicOff ? 0 : 0.62; this.musicBus.connect(this.master);
+    this.master = ctx.createGain(); this.master.connect(comp); comp.connect(ctx.destination);
+    this.sfxBus = ctx.createGain(); this.sfxBus.connect(this.master);
+    this.musicBus = ctx.createGain(); this.musicBus.connect(this.master);
+    this.applyGains();
     // 噪声
     var len = Math.floor(ctx.sampleRate * 1.2), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0), seed = 12345;
     for (var i = 0; i < len; i++) { seed = (seed * 1103515245 + 12345) & 0x7fffffff; d[i] = seed / 0x3fffffff - 1; }
@@ -204,14 +204,17 @@
     this.init();
     if (this.ctx && this.ctx.state === 'suspended' && this.ctx.resume) this.ctx.resume();
   };
-  S.setMuted = function (m) {
-    this.muted = m;
-    if (this.master) this.master.gain.value = m ? 0 : 0.8;
+  // 三条总线的基准音量 × 设置页里的百分比（总音量 / 音乐 / 音效）
+  S.vol = { master: 1, music: 1, sfx: 1 };
+  S.applyGains = function () {
+    if (!this.master) return;
+    this.master.gain.value = this.muted ? 0 : 0.8 * this.vol.master;
+    this.sfxBus.gain.value = 0.9 * this.vol.sfx;
+    this.musicBus.gain.value = this.musicOff ? 0 : 0.62 * this.vol.music;
   };
-  S.setMusicOff = function (off) {
-    this.musicOff = off;
-    if (this.musicBus) this.musicBus.gain.value = off ? 0 : 0.62;
-  };
+  S.setVolumes = function (master, music, sfx) { this.vol = { master: master, music: music, sfx: sfx }; this.applyGains(); };
+  S.setMuted = function (m) { this.muted = m; this.applyGains(); };
+  S.setMusicOff = function (off) { this.musicOff = off; this.applyGains(); };
   S.ok = function (key, gap) {
     if (!this.ctx || this.muted) return false;
     var t = this.ctx.currentTime;

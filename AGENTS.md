@@ -10,6 +10,7 @@
 微信小游戏版已搁置（`game.js`、`game.json`、`project.config.json` 保留，暂不维护）。
 玩法设计见 `DESIGN.md`，美术方向见 `docs/ART.md`，上架清单见 `docs/STEAM.md`。
 玩家逐条要求见 `docs/PLAYER-LOG.md`。全面优化以那份日志为准；日志后面的条目覆盖前面的。
+全案白皮书见 `docs/WHITEPAPER.md`；同类游戏差评里的痛点与我们的对策见 `docs/PLAYER-VOICE.md`（每个版本前对照一遍）。
 
 | 文件 | 负责什么 |
 |---|---|
@@ -58,6 +59,7 @@ npm run test:flow    # 改了界面或流程时跑（需要 Playwright + Chromiu
 npm run shots        # 改了画面时跑，截图在 shots/art/，前后对比
 npm run balance      # 改了数值时跑：node tools/balance.js [局数] [最高波数]
 npm run music        # 改了音乐时跑：离线渲染每段音乐为 WAV，检查爆音 / 静音
+npm run voice        # 抓同类游戏的 Steam 差评按痛点计数（需要能访问 store.steampowered.com）
 npm run sync         # 汇总三方分支进度与可能冲突的文件
 npm run dev          # 浏览器预览：http://localhost:8080/
 npm run desktop      # 桌面版（Electron）

@@ -10,6 +10,7 @@
     "check": "node tools/check.js",
     "test:sim": "node tools/simtest.js",
     "balance": "node tools/balance.js",
+    "voice": "node tools/steam-voice.js",
     "test:flow": "node tools/flowtest.js shots/flow",
     "test:play": "node tools/playtest.js shots/play 2",
     "shots": "node tools/shots.js shots/art",

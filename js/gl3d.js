@@ -403,8 +403,10 @@
   function resetInstances() { for (var i = 0; i < GL.meshes.length; i++) GL.meshes[i].count = 0; }
 
   // ---------- 特效 ----------
+  GL.addK = 1;   // 设置：特效亮度（只压叠加发光层，不影响模型和地面预警）
   function fxPush(B, cx, cy, cz, kind, ux, uy, uz, param, vx, vy, vz, r, g, b, a) {
     if (B.n >= B.cap) return;
+    if (B === GL.fxAdd) a *= GL.addK;
     var o = B.n * 16, d = B.data;
     d[o] = cx; d[o + 1] = cy; d[o + 2] = cz; d[o + 3] = kind;
     d[o + 4] = ux; d[o + 5] = uy; d[o + 6] = uz; d[o + 7] = param;

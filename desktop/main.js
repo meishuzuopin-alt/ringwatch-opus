@@ -49,14 +49,19 @@ function createWindow() {
 // ---------- 存档：一个 key 一个 JSON 文件，先写临时文件再改名，避免写一半断电损坏 ----------
 const fs = require('fs');
 function saveFile(key) { return path.join(app.getPath('userData'), 'saves', String(key).replace(/[^\w-]/g, '_') + '.json'); }
+// 读档：主文件坏了（断电、磁盘满）就用上一份备份，不让玩家丢进度
+function readValid(f) { try { const t = fs.readFileSync(f, 'utf8'); JSON.parse(t); return t; } catch (err) { return null; } }
 ipcMain.on('desktop:load', (e, key) => {
-  try { e.returnValue = fs.readFileSync(saveFile(key), 'utf8'); } catch (err) { e.returnValue = null; }
+  const f = saveFile(key);
+  e.returnValue = readValid(f) || readValid(f + '.bak');
 });
+// 写档：先写临时文件再改名（原子替换），旧档留一份 .bak
 ipcMain.on('desktop:save', (e, key, text) => {
   try {
     const f = saveFile(key);
     fs.mkdirSync(path.dirname(f), { recursive: true });
     fs.writeFileSync(f + '.tmp', text);
+    if (readValid(f)) fs.copyFileSync(f, f + '.bak');
     fs.renameSync(f + '.tmp', f);
   } catch (err) { console.error('存档失败', err); }
 });

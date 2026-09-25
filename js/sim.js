@@ -182,7 +182,7 @@
     p.mass = 0; p.stage = 0; p.dashT = 0; p.dashCd = 0; p.trailN = 0; p.trailT = 0;
     this.weapons = [];
     this.mods = {};
-    this.skill = null;
+    this.skill = null; this.skills = []; this.retiredSkills = [];
     this.tech = { sentry: 1, pylon: 1, siphon: 1, barracks: 1 };
     this.towerStats = {};
     for (var id in RW.TOWERS) this.towerStats[id] = src(RW.TOWERS[id].name, RW.TOWERS[id].color, false);
@@ -368,20 +368,30 @@
     for (var i = 0; i < this.weapons.length; i++) if (this.weapons[i].id === id) return this.weapons[i];
     return null;
   };
-  G.setSkill = function (id) {
+  function newSkill(id) {
     var d = RW.SKILLS[id];
-    if (this.skill && this.skill.id === id) { this.skill.tier = Math.min(3, this.skill.tier + 1); return; }
-    var old = this.skill;
-    this.skill = { id: id, d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: old ? 0 : 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0, bountyT: 0, bombs: [] };
+    return { id: id, d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0, bountyT: 0, bombs: [] };
+  }
+  G.skillById = function (id) {
+    var list = this.skills || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return this.skill && this.skill.id === id ? this.skill : null;
+  };
+  // 商店买技能：已有的同名技能升阶；否则替换「当前技能」（最近放过的那一招）所在的槽位
+  G.setSkill = function (id) {
+    var own = this.skillById(id), list = this.skills;
+    if (own) { own.tier = Math.min(3, own.tier + 1); this.skill = own; return; }
+    var old = this.skill, fresh = newSkill(id);
+    if (list && list.length) {
+      var at = Math.max(0, list.indexOf(old));
+      old = list[at]; list[at] = fresh;
+    }
+    this.skill = fresh;
     if (old) { this.retiredSkills = this.retiredSkills || []; this.retiredSkills.push(old); }
   };
   G.loadSkills = function (ids) {
     this.skills = [];
-    for (var i = 0; i < ids.length; i++) {
-      var d = RW.SKILLS[ids[i]];
-      if (!d) continue;
-      this.skills.push({ id: ids[i], d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0, bountyT: 0, bombs: [] });
-    }
+    for (var i = 0; i < ids.length; i++) if (RW.SKILLS[ids[i]]) this.skills.push(newSkill(ids[i]));
     this.skill = this.skills[0] || this.skill;
   };
 
@@ -2530,6 +2540,108 @@
     return 'ok';
   };
 
+  // ================= 局中存档 =================
+  // 进整备（或祝福）时存一份；退出后从这次整备开始。死亡、通关结算时删除，不能靠读档反悔。
+  // 随机数：存档时换一个新种子并记下，读档与不退出的走向完全一样（刷新出的货也一样）。
+  RW.RUN_SAVE_V = 1;
+  G.saveRun = function () {
+    if (this.mode !== 'shop' && this.mode !== 'bless') return null;
+    var seed = Math.floor(this.R() * 4294967296) >>> 0, i;
+    this.rand = mulberry(seed);
+    var p = this.player, co = this.core, out = {
+      v: RW.RUN_SAVE_V, seed: seed, mode: this.mode, cls: this.clsId, danger: this.danger, mutators: this.mutList.slice(), daily: this.daily,
+      endless: this.endless, won: this.won, wave: this.wave, gold: this.shardCount, goldFrac: this.shardFrac, totalGold: this.totalShards,
+      built: this.built, kills: this.kills, bestStreak: this.bestStreak, reviveUsed: this.reviveUsed, runHeals: this.runHeals,
+      blessPending: this.blessPending, blessOffers: this.blessOffers ? this.blessOffers.slice() : null, bless: this.bless, mods: this.mods,
+      tech: this.tech, rs: this.rs, rec: this._rec, lastHits: this.lastHits,
+      player: { mass: p.mass, stage: p.stage, hp: p.hp, mp: p.mp, x: p.x, y: p.y },
+      chests: [], orbs: [],
+      core: { lv: co.lv || 1, hp: co.hp },
+      weapons: [], skills: [], skillAt: -1, retired: [], towers: [], mates: [], src: {},
+      shop: this.shop
+    };
+    for (i = 0; i < this.weapons.length; i++) { var w = this.weapons[i]; out.weapons.push({ id: w.id, tier: w.tier, ev: !!w.ev, dmg: w.dmg, kills: w.kills, spent: w.spent }); }
+    var sk = this.skills || [];
+    for (i = 0; i < sk.length; i++) out.skills.push({ id: sk[i].id, tier: sk[i].tier, dmg: sk[i].dmg, kills: sk[i].kills });
+    out.skillAt = sk.indexOf(this.skill);
+    var rt = this.retiredSkills || [];
+    for (i = 0; i < rt.length; i++) out.retired.push({ name: rt[i].name, color: rt[i].color, dmg: rt[i].dmg, kills: rt[i].kills });
+    for (i = 0; i < this.towers.length; i++) { var t = this.towers[i]; if (t.on) out.towers.push({ id: t.id, x: t.x, y: t.y, hp: t.hp, spent: t.spent, ang: t.ang }); }
+    for (i = 0; i < this.mates.length; i++) { var m = this.mates[i]; if (m.on) out.mates.push({ id: m.id, star: m.star, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, r: m.r }); }
+    for (i = 0; i < this.chests.length; i++) { var c = this.chests[i]; if (c.on) out.chests.push([c.x, c.y, c.life || 0]); }
+    for (i = 0; i < this.orbs.length; i++) { var o = this.orbs[i]; out.orbs.push([o.on ? 1 : 0, o.x, o.y, o.dead || 0, o.bob || 0]); }
+    var srcs = { core: this.coreSrc, dash: this.dashSrc, eat: this.eatSrc, env: this.envSrc, thorn: this.thornSrc };
+    for (var k in srcs) out.src[k] = [srcs[k].dmg, srcs[k].kills];
+    for (k in this.towerStats) out.src['t:' + k] = [this.towerStats[k].dmg, this.towerStats[k].kills];
+    return JSON.parse(JSON.stringify(out));
+  };
+  G.loadRun = function (sv) {
+    if (!sv || sv.v !== RW.RUN_SAVE_V || !RW.CLASSES[sv.cls]) return false;
+    var i, k;
+    this.startRun(sv.cls, { danger: sv.danger, mutators: sv.mutators, daily: sv.daily });
+    this.endless = !!sv.endless; this.won = !!sv.won; this.final = false;
+    this.wave = sv.wave; this.shardCount = sv.gold; this.shardFrac = sv.goldFrac || 0; this.totalShards = sv.totalGold;
+    this.built = sv.built; this.kills = sv.kills; this.bestStreak = sv.bestStreak; this.reviveUsed = !!sv.reviveUsed; this.runHeals = sv.runHeals || 0;
+    this.bless = sv.bless || {}; this.mods = sv.mods || {}; this.tech = sv.tech; this.rs = sv.rs; this._rec = sv.rec; this.lastHits = sv.lastHits || [];
+    this.blessPending = sv.blessPending || 0; this.blessOffers = sv.blessOffers;
+    this.weapons = [];
+    for (i = 0; i < sv.weapons.length; i++) {
+      var ws = sv.weapons[i];
+      if (!RW.WEAPONS[ws.id]) continue;
+      this.addWeapon(ws.id);
+      var w = this.weapons[this.weapons.length - 1];
+      w.tier = ws.tier; w.dmg = ws.dmg; w.kills = ws.kills; w.spent = ws.spent;
+      if (ws.ev && RW.EVOLVE[ws.id]) { w.ev = RW.EVOLVE[ws.id]; w.name = w.ev.name; }
+    }
+    this.skills = [];
+    for (i = 0; i < sv.skills.length; i++) {
+      if (!RW.SKILLS[sv.skills[i].id]) continue;
+      var sk = newSkill(sv.skills[i].id);
+      sk.tier = sv.skills[i].tier; sk.dmg = sv.skills[i].dmg; sk.kills = sv.skills[i].kills;
+      this.skills.push(sk);
+    }
+    this.skill = this.skills[sv.skillAt] || this.skills[0] || null;
+    this.retiredSkills = sv.retired || [];
+    var p = this.player;
+    p.mass = sv.player.mass; p.stage = sv.player.stage;
+    this.core.lv = sv.core.lv; this.applyCoreLevel(); this.core.hp = Math.min(this.core.maxHp, sv.core.hp);
+    this.recalc();
+    p.hp = Math.max(1, Math.min(p.maxHp, sv.player.hp)); p.mp = sv.player.mp;
+    if (sv.player.x != null) { p.x = sv.player.x; p.y = sv.player.y; }
+    if (sv.chests) {
+      clearPool(this.chests);
+      for (i = 0; i < sv.chests.length; i++) { var ch = take(this.chests); if (ch) { ch.x = sv.chests[i][0]; ch.y = sv.chests[i][1]; ch.r = 14; ch.life = sv.chests[i][2]; } }
+    }
+    if (sv.orbs) for (i = 0; i < sv.orbs.length && i < this.orbs.length; i++) {
+      var ob = this.orbs[i], os = sv.orbs[i];
+      ob.on = !!os[0]; ob.x = os[1]; ob.y = os[2]; ob.dead = os[3]; ob.bob = os[4];
+    }
+    clearPool(this.towers); clearPool(this.soldiers); clearPool(this.mates);
+    for (i = 0; i < sv.towers.length; i++) {
+      var ts = sv.towers[i], d = RW.TOWERS[ts.id], tw = take(this.towers);
+      if (!tw || !d) continue;
+      tw.id = ts.id; tw.d = d; tw.x = ts.x; tw.y = ts.y; tw.cd = 0.4; tw.build = 0; tw.pulse = 0; tw.flash = 0;
+      tw.spawnT = 1; tw.soldiers = 0; tw.ang = ts.ang || 0; tw.spent = ts.spent;
+      tw.maxHp = d.hp * RW.TOWER_TIER.hp[this.tech[ts.id] - 1]; tw.hp = Math.min(tw.maxHp, ts.hp);
+    }
+    for (i = 0; i < sv.mates.length; i++) {
+      var ms = sv.mates[i], md = RW.MATES[ms.id], m = take(this.mates);
+      if (!m || !md) continue;
+      m.id = ms.id; m.d = md; m.star = ms.star; m.x = ms.x; m.y = ms.y; m.vx = m.vy = 0;
+      m.hp = ms.hp; m.maxHp = ms.maxHp; m.r = ms.r; m.cd = 0.2; m.ang = 0; m.flash = 0;
+    }
+    var srcs = { core: this.coreSrc, dash: this.dashSrc, eat: this.eatSrc, env: this.envSrc, thorn: this.thornSrc };
+    for (k in srcs) if (sv.src[k]) { srcs[k].dmg = sv.src[k][0]; srcs[k].kills = sv.src[k][1]; }
+    for (k in this.towerStats) if (sv.src['t:' + k]) { this.towerStats[k].dmg = sv.src['t:' + k][0]; this.towerStats[k].kills = sv.src['t:' + k][1]; }
+    clearPool(this.enemies); clearPool(this.ebullets); clearPool(this.bullets); clearPool(this.marks); clearPool(this.shards); clearPool(this.mines);
+    this.enemyCount = 0; this.boss = null; this.banner = 0; this.eliteQ = [];
+    this.shop = sv.shop;
+    this.rand = mulberry(sv.seed >>> 0);
+    this.mode = sv.mode === 'bless' && this.blessOffers ? 'bless' : 'shop';
+    this.emit('resume');
+    return true;
+  };
+
   // 无尽：通关之后接着打
   G.continueEndless = function () {
     if (!this.won || this.endless) return false;
@@ -2556,8 +2668,8 @@
       o.tier = this.tech[id] + 1; o.upgrade = true;
       o.price = Math.round(RW.TOWERS[id].techCost * RW.TECH_COST[o.tier - 1] * pm);
     } else if (kind === 'skill') {
-      var sk = this.skill, sd = RW.SKILLS[id];
-      if (sk && sk.id === id) { o.tier = sk.tier + 1; o.upgrade = true; }
+      var sk = this.skill, sd = RW.SKILLS[id], own = this.skillById(id);
+      if (own) { o.tier = own.tier + 1; o.upgrade = true; }
       else { o.tier = 1; o.replace = sk ? sk.d.name : ''; }
       o.price = Math.round(sd.cost * RW.TIER_COST[o.tier - 1] * pm);
     } else {
@@ -2577,7 +2689,7 @@
     } else if (kind === 'tech') {
       for (i = 0; i < RW.TOWER_ORDER.length; i++) { id = RW.TOWER_ORDER[i]; if (this.tech[id] < 3) out.push(id); }
     } else if (kind === 'skill') {
-      for (i = 0; i < RW.SKILL_ORDER.length; i++) { id = RW.SKILL_ORDER[i]; if (!(this.skill && this.skill.id === id && this.skill.tier >= 3)) out.push(id); }
+      for (i = 0; i < RW.SKILL_ORDER.length; i++) { id = RW.SKILL_ORDER[i]; var ow = this.skillById(id); if (!(ow && ow.tier >= 3)) out.push(id); }
     } else {
       for (i = 0; i < RW.MOD_ORDER.length; i++) { id = RW.MOD_ORDER[i]; if (this.modCount(id) < RW.MODS[id].max) out.push(id); }
     }
@@ -2604,7 +2716,7 @@
         var c = this.candidates(kind, used);
         if (firstNew) { var self = this; c = c.filter(function (id) { return !self.findWeapon(id); }); }
         if (!c.length) continue;
-        var id = kind === 'mod' ? this.pickMod(c) : c[Math.floor(this.R() * c.length)];
+        var id = kind === 'mod' ? this.pickMod(c) : (kind === 'weapon' ? this.pickWeapon(c) : c[Math.floor(this.R() * c.length)]);
         o = this.offerFor(kind, id);
         used[kind + ':' + id] = true;
       }
@@ -2612,6 +2724,37 @@
       slots[s] = o || { kind: 'none', sold: true, price: 0 };
     }
     shop.slots = slots;
+    this.evolvePity();
+  };
+  // 武器按「你已经在走的流派」和「能升阶」加权，少刷到用不上的货
+  G.pickWeapon = function (c) {
+    var B = RW.SHOP_BIAS, tags = {}, i, sum = 0, wts = [];
+    for (i = 0; i < this.weapons.length; i++) { var t = this.weapons[i].d.tag || 'ranged'; tags[t] = (tags[t] || 0) + 1; }
+    for (i = 0; i < c.length; i++) {
+      var d = RW.WEAPONS[c[i]], w = this.findWeapon(c[i]);
+      var k = (w ? B.upgrade : 1) * (tags[d.tag || 'ranged'] ? B.ownTag : 1);
+      wts.push(k); sum += k;
+    }
+    var r = this.R() * sum;
+    for (i = 0; i < c.length; i++) { r -= wts[i]; if (r < 0) return c[i]; }
+    return c[c.length - 1];
+  };
+  // 进化保底：有 II 阶以上武器还缺配方道具时，连续几次整备都没刷到就强制放一件
+  G.evolvePity = function () {
+    var shop = this.shop, need = [], i;
+    for (i = 0; i < this.weapons.length; i++) {
+      var w = this.weapons[i], ev = RW.EVOLVE[w.id];
+      if (ev && !w.ev && w.tier >= 2 && this.modCount(ev.mod) === 0 && need.indexOf(ev.mod) < 0) need.push(ev.mod);
+    }
+    if (!need.length) { shop.evoMiss = 0; return; }
+    for (i = 0; i < shop.slots.length; i++) { var o = shop.slots[i]; if (o && o.kind === 'mod' && need.indexOf(o.id) >= 0) { shop.evoMiss = 0; return; } }
+    shop.evoMiss = (shop.evoMiss || 0) + 1;
+    if (shop.evoMiss < RW.SHOP_BIAS.evoPity) return;
+    var free = [];
+    for (i = 0; i < shop.slots.length; i++) if (shop.slots[i] && !shop.slots[i].locked) free.push(i);
+    if (!free.length) return;
+    shop.slots[free[Math.floor(this.R() * free.length)]] = this.offerFor('mod', need[Math.floor(this.R() * need.length)]);
+    shop.evoMiss = 0;
   };
   // 按品质权重抽道具：先抽品质，该品质没货就往低一档找
   G.pickMod = function (c) {

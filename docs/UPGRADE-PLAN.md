@@ -8,6 +8,7 @@
 | 来源 | 文件 / 分支 | 谁维护 |
 |---|---|---|
 | 全案白皮书（玩法、数值、关卡、路线图） | `docs/WHITEPAPER.md` | Claude |
+| 同类游戏差评痛点与对策 | `docs/PLAYER-VOICE.md`（`npm run voice`） | Claude |
 | 玩家逐条要求（最高优先级，后面的覆盖前面的） | `docs/PLAYER-LOG.md` | Cursor 记录 |
 | 美术总纲、色彩令牌、资产优先级 | `codex/art-direction-v1` 分支的 `docs/art/ART_DIRECTION_AND_HANDOFF_V1.md` | Codex |
 | 整备页图像化需求 | `docs/ART_REVIEW_WAVE_PREP_UI_2026-09-24.md`（`codex/hero-art-readability` 分支） | Codex |

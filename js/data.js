@@ -675,6 +675,42 @@
   };
   RW.EVOLVE_MUL = 1.5;
 
+  // 设置页：同类游戏差评里最常见的是「后期满屏光污染看不清」「数字挡视线」「震屏晕」「音量没法调」，这里都给开关
+  RW.SETTINGS = [
+    { id: 'vol', name: '总音量', def: 1, min: 0, max: 1, step: 0.1, pct: true },
+    { id: 'music', name: '音乐', def: 1, min: 0, max: 1, step: 0.1, pct: true },
+    { id: 'sfx', name: '音效', def: 1, min: 0, max: 1, step: 0.1, pct: true },
+    { id: 'shake', name: '屏幕震动', def: 1, min: 0, max: 1, step: 0.25, pct: true, note: '容易晕的话调低' },
+    { id: 'flash', name: '闪光强度', def: 1, min: 0, max: 1, step: 0.25, pct: true, note: '对闪光敏感请调低或关掉' },
+    { id: 'fx', name: '特效亮度', def: 1, min: 0.3, max: 1, step: 0.1, pct: true, note: '后期看不清自己时调低' },
+    { id: 'nums', name: '伤害数字', def: 2, opts: ['关', '只看暴击和受伤', '全部'] },
+    { id: 'ring', name: '主角脚下光圈', def: 1, opts: ['关', '开'], note: '人多时一眼找到自己' }
+  ];
+  // 属性说明：整备页「属性说明」面板用。玩家常抱怨「这个数到底管什么」「叠加后算多少」，这里一句话讲清楚
+  RW.STAT_DESC = {
+    dmg: '所有武器、技能的伤害倍率，和近战 / 远程 / 法术加成相乘',
+    melee: '只加近战武器（剑环、流星锤、巨斧、长枪）', ranged: '只加远程武器（飞弩、连弩、霰火、标枪）', spell: '只加法术武器和技能（闪电、雷光矛、陷阱、Q/E/R）',
+    rate: '武器出手间隔 ÷ 攻速', speed: '走路速度倍率', range: '武器射程 / 剑环半径倍率',
+    crit: '每次命中暴击的几率，最高 90%', critMul: '暴击时的伤害倍率（基础 ×2）',
+    maxHp: '最大生命；整备时补满', armor: '减伤 = 护甲÷(护甲+12)，最高 75%；负护甲每点多受伤 8%',
+    regen: '每秒回复的生命', dodge: '完全躲开一次伤害的几率，上限 60%', lifesteal: '你的武器和技能命中时回 1 点血的几率，每秒最多 8 次',
+    dmgTaken: '受到的伤害倍率（越低越好）', thorns: '受伤时震伤身边的敌人（再乘伤害倍率）',
+    pickup: '吸取金币和火光的距离', harvest: '每波结束时的固定收成，和捡金币的多少', luck: '商店出精良 / 稀有 / 传说货的几率',
+    knock: '把敌人打退的距离', extra: '每把武器多一发弹 / 多一片刃 / 多跳一次（各武器卡上写了具体效果）',
+    cdr: '技能冷却倍率（越低越好），最低 50%', mpRegen: '蓝（法力）的回复速度', dashCd: '冲刺冷却倍率（越低越好）',
+    towerDmg: '箭塔、寒霜塔、兵营士兵的伤害倍率', buildCost: '造塔价格倍率（越低越好）', blastR: '你的爆炸（陷阱、炎爆）的范围',
+    interest: '每次整备按手上金币发利息，单次最多 40', healOrb: '在身边击杀时掉回血火光的几率倍率', healCore: '捡到火光时同时给圣火回的血',
+    coreRegen: '圣火每秒回血', rage: '生命越低伤害越高，满血时没有加成', shopPrice: '商店价格倍率（越低越好）', freeReroll: '每次整备的免费刷新次数',
+    bounty: '精英掉落金币翻倍，但第 3 波起每波多一只精英'
+  };
+
+  RW.optDefaults = function () { var o = {}; for (var i = 0; i < RW.SETTINGS.length; i++) o[RW.SETTINGS[i].id] = RW.SETTINGS[i].def; return o; };
+  RW.opt = RW.optDefaults();
+
+  // 商店手气（玩家最常骂的是「怎么都刷不到要的东西」）：
+  // 已有流派的武器权重 ×ownTag，能升阶的 ×upgrade；缺进化道具时连续 evoPity 次整备没刷到就保底放一件
+  RW.SHOP_BIAS = { ownTag: 1.8, upgrade: 1.6, evoPity: 2 };
+
   // 变异器：开局可选，难度越高分数倍率越高
   RW.MUTATORS = {
     night:   { name: '夜行',     score: 0.10, note: '全程夜晚' },

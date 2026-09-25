@@ -5,10 +5,10 @@
   var D = RW.Draw, C = D.C;
   var ROMAN = ['I', 'II', 'III'];
 
-  var UI = { btns: [], pressed: null, toastMsg: '', toastT: 0, sel: null, t: 0 };
+  var UI = { btns: [], lastBtns: [], focusId: null, padNav: false, pressed: null, toastMsg: '', toastT: 0, sel: null, t: 0 };
 
   UI.frame = function (dt) {
-    UI.btns.length = 0;
+    UI.lastBtns = UI.btns; UI.btns = [];   // 上一帧的按钮留给手柄导航用
     UI.t += dt;
     if (UI.toastT > 0) UI.toastT -= dt;
   };
@@ -36,7 +36,7 @@
     opts = opts || {};
     UI.btns.push({ id: id, x: x, y: y, w: w, h: h, disabled: !!opts.disabled, why: opts.why });
     var c = D.ctx, pressed = UI.pressed === id;
-    if (opts.draw) { opts.draw(x, y, w, h, pressed); return; }
+    if (opts.draw) { opts.draw(x, y, w, h, pressed); UI.focusRing(id, x, y, w, h); return; }
     var st = opts.style || 'normal';
     if (pressed) { c.save(); c.translate(x + w / 2, y + h / 2); c.scale(0.96, 0.96); c.translate(-x - w / 2, -y - h / 2); }
     c.globalAlpha = opts.disabled ? 0.4 : 1;
@@ -54,6 +54,13 @@
     } else D.text(label, x + w / 2, y + h / 2 + 1, size, tc, 'center', true);
     c.globalAlpha = 1;
     if (pressed) c.restore();
+    UI.focusRing(id, x, y, w, h);
+  };
+  // 手柄 / 键盘导航时，当前选中的按钮画一圈金边
+  UI.focusRing = function (id, x, y, w, h) {
+    if (!UI.padNav || UI.focusId !== id) return;
+    var c = D.ctx, a = 0.65 + 0.35 * Math.sin(UI.t * 8);
+    c.strokeStyle = 'rgba(255,214,120,' + a.toFixed(2) + ')'; c.lineWidth = 3; D.rr(x - 3, y - 3, w + 6, h + 6, 9); c.stroke();
   };
 
   UI.dim = function (a) { var c = D.ctx; c.fillStyle = 'rgba(2,4,10,' + a + ')'; c.fillRect(0, 0, W, H); };
@@ -93,14 +100,21 @@
     D.text('夜色压境，守住村子的圣火。撑过倒计时，整备，再迎下一波。', W / 2, 214, 14, C.text, 'center', true, 3);
     var pr = g.prog || {};
     if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波' + (pr.wins ? ' · 通关 ' + pr.wins + ' 次' : '') + (pr.bestScore ? ' · 最高分 ' + pr.bestScore : ''), W / 2, 244, 13, C.gold, 'center', true, 3);
-    UI.button('start', W / 2 - 150, 272, 300, 58, '开始值守', { style: 'primary', size: 22 });
-    UI.button('mute', W / 2 - 150, 340, 96, 40, muted ? '声音：关' : '声音：开', { size: 13 });
-    UI.button('music', W / 2 - 48, 340, 96, 40, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
-    UI.button('howto', W / 2 + 54, 340, 96, 40, '玩法说明', { size: 13 });
+    var ri = UI.runInfo, y = 272;
+    if (ri) {   // 有没打完的一局：继续是首选
+      UI.button('continueRun', W / 2 - 150, 256, 300, 52, '继续上局', { style: 'primary', size: 20,
+        sub: ri.hero + ' · ' + (ri.daily ? '每日挑战 · ' : '') + (ri.endless ? '无尽 · ' : '') + '第 ' + ri.wave + ' 波前的整备' + (ri.danger ? ' · 危险 ' + ri.danger : '') });
+      UI.button('start', W / 2 - 150, 314, 300, 36, '开始新的一局（会放弃上局）', { size: 13 });
+      y = 358;
+    } else { UI.button('start', W / 2 - 150, 272, 300, 58, '开始值守', { style: 'primary', size: 22 }); y = 340; }
+    UI.button('mute', W / 2 - 150, y, 72, 38, muted ? '声音：关' : '声音：开', { size: 12 });
+    UI.button('music', W / 2 - 74, y, 72, 38, UI.musicOff ? '音乐：关' : '音乐：开', { size: 12 });
+    UI.button('howto', W / 2 + 2, y, 72, 38, '玩法说明', { size: 12 });
+    UI.button('settings', W / 2 + 78, y, 72, 38, '设置', { size: 12 });
     var dk = UI.dayKey(), ds = RW.dailySetup(dk), db = pr.daily && pr.daily[dk];
-    UI.button('daily', W / 2 - 150, 390, 148, 46, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
-    UI.button('records', W / 2 + 2, 390, 148, 46, '成就与纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
-    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q/E/R 技能 · B 造塔 · Enter 开始 · F11 全屏', W / 2, 458, 12, C.dim, 'center', false, 3);
+    UI.button('daily', W / 2 - 150, y + 46, 148, 44, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
+    UI.button('records', W / 2 + 2, y + 46, 148, 44, '成就与纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
+    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q/E/R 技能 · B 造塔 · Enter 开始 · F11 全屏 · 支持手柄', W / 2, y + 108, 12, C.dim, 'center', false, 3);
     if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出游戏', { style: 'ghost', size: 13 });
     D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
   };
@@ -516,6 +530,7 @@
     D.text(String(g.shardCount), W - 94, 31, 28, C.shard, 'left', true);
     // 属性条
     UI.statStrip(g, 74);
+    UI.button('statsHelp', 318, 12, 92, 26, '属性说明', { size: 11, style: 'ghost' });
     // 武器槽
     var y = 128;
     D.text('武器 ' + g.weapons.length + '/' + RW.MAX_SLOTS + ' · 点两次出售（返还 50%）', 16, y, 11, C.dim, 'left');
@@ -537,9 +552,13 @@
     y = 190;
     c.fillStyle = '#1e1712'; D.rr(16, y, LW - 32, 62, 6); c.fill();
     c.strokeStyle = '#4a3a28'; c.lineWidth = 1; D.rr(16, y, LW - 32, 62, 6); c.stroke();
-    var sk = g.skill;
-    D.text('技能', 26, y + 14, 10, C.dim, 'left');
-    if (sk) { D.text(sk.d.name + ' ' + ROMAN[sk.tier - 1], 26, y + 32, 13, sk.d.color, 'left', true); D.text('冷却 ' + Math.round(sk.d.cd * g.st.cdr * 10) / 10 + 's', 26, y + 49, 10, C.dim, 'left'); }
+    // 三个技能；带「◂」的是买新技能时会被替换的那一招（最近放过的）
+    var sks = g.skills && g.skills.length ? g.skills : (g.skill ? [g.skill] : []), keys = ['Q', 'E', 'R'];
+    for (var si = 0; si < sks.length && si < 3; si++) {
+      var sk = sks[si], sy2 = y + 12 + si * 17;
+      D.text(keys[si], 24, sy2, 10, C.faint, 'left', true);
+      D.text(sk.d.name + ' ' + ROMAN[sk.tier - 1] + (sk === g.skill ? ' ◂' : ''), 36, sy2, 11, sk.d.color, 'left', true);
+    }
     var co = g.core, ck = co.hp / co.maxHp;
     var fr = g.front;
     D.text('圣火 Lv' + (co.lv || 1) + (fr ? ' · 王旗' + fr.name : '') + '  ' + Math.ceil(co.hp) + '/' + co.maxHp, 118, y + 14, 10, ck < 0.4 ? C.bad : '#ffd27a', 'left', true);
@@ -797,16 +816,14 @@
       if (c.measureText('解锁新英雄：' + names).width < RX + RWd - 12 - tx) D.glowText('解锁新英雄：' + names, tx, uy + 33, 16, C.gold, 'left', 8);
       else { D.glowText('解锁新英雄 ×' + un.length, tx, uy + 22, 15, C.gold, 'left', 8); D.text(names, tx, uy + 44, 12, '#ffe2a8', 'left', true); }
     }
+    var same = (r.hero && RW.CLASSES[r.hero] ? RW.CLASSES[r.hero].name : '') + (r.daily ? ' · 今日挑战' : (r.danger ? ' · 危险 ' + r.danger : ''));
     if (r.canEndless) {
-      UI.button('endless', RX, 404, RWd - 300, 58, '继续无尽', { style: 'ad', size: 18, sub: '从第 ' + (r.wave + 1) + ' 波接着打' });
-      UI.button('again', RX + RWd - 290, 404, 140, 58, '再来一局', { style: 'primary', size: 16 });
-      UI.button('home', RX + RWd - 140, 404, 140, 58, '返回标题', { size: 14 });
-      D.text('Enter 再来一局 · C 继续无尽', RX + RWd / 2, 476, 10, C.faint, 'center');
-    } else {
-      UI.button('again', RX, 404, RWd - 150, 58, '再来一局', { style: 'primary', size: 20 });
-      UI.button('home', RX + RWd - 140, 404, 140, 58, '返回标题', { size: 14 });
-      D.text('Enter 再来一局', RX + (RWd - 150) / 2, 476, 10, C.faint, 'center');
-    }
+      UI.button('endless', RX, 396, RWd / 2 - 5, 52, '继续无尽', { style: 'ad', size: 17, sub: '从第 ' + (r.wave + 1) + ' 波接着打' });
+      UI.button('retry', RX + RWd / 2 + 5, 396, RWd / 2 - 5, 52, '同设置再来', { style: 'primary', size: 16, sub: same });
+    } else UI.button('retry', RX, 396, RWd, 52, '同设置再来一局', { style: 'primary', size: 18, sub: same });
+    UI.button('again', RX, 456, RWd / 2 - 5, 38, '换英雄 / 设置', { size: 13 });
+    UI.button('home', RX + RWd / 2 + 5, 456, RWd / 2 - 5, 38, '返回标题', { size: 13 });
+    D.text('Enter 同设置再来' + (r.canEndless ? ' · C 继续无尽' : ''), RX + RWd / 2, 508, 10, C.faint, 'center');
   };
   UI.adviceFor = function (r) {
     var h = r.hits[r.hits.length - 1];
@@ -859,17 +876,63 @@
     UI.button('home', 24, 488, 160, 40, '返回', { style: 'ghost', size: 14 });
   };
 
+  // ================= 设置 =================
+  UI.optText = function (st, v) {
+    if (st.opts) return st.opts[v];
+    return st.pct ? Math.round(v * 100) + '%' : String(v);
+  };
+  UI.settingsPanel = function () {
+    UI.btns.length = 0;   // 设置页盖在最上层，下面的按钮不响应
+    UI.dim(0.8);
+    var x0 = W / 2 - 280, w = 560, i;
+    UI.panel(x0, 40, w, 460, C.gold);
+    D.text('设置', W / 2, 72, 22, C.text, 'center', true);
+    for (i = 0; i < RW.SETTINGS.length; i++) {
+      var st = RW.SETTINGS[i], v = RW.opt[st.id], y = 106 + i * 40;
+      D.text(st.name, x0 + 28, st.note ? y + 8 : y + 14, 14, C.text, 'left', true);
+      if (st.note) D.text(st.note, x0 + 28, y + 25, 10, C.dim, 'left');
+      var lo = st.opts ? v <= 0 : v <= st.min + 1e-6, hi = st.opts ? v >= st.opts.length - 1 : v >= st.max - 1e-6;
+      UI.button('set:' + st.id + ':-1', x0 + 300, y, 40, 30, '−', { size: 16, disabled: lo });
+      D.text(UI.optText(st, v), x0 + 410, y + 15, 13, C.gold, 'center', true);
+      UI.button('set:' + st.id + ':1', x0 + 480, y, 40, 30, '+', { size: 16, disabled: hi });
+    }
+    var by = 106 + RW.SETTINGS.length * 40 + 8;
+    UI.button('optReset', x0 + 28, by, 150, 40, '恢复默认', { size: 13, style: 'ghost' });
+    if (root.desktop) UI.button('fullscreen', x0 + 190, by, 150, 40, '全屏 / 窗口（F11）', { size: 12 });
+    UI.button('settingsClose', x0 + w - 178, by, 150, 40, '完成', { style: 'primary', size: 15 });
+  };
+  // 整备页「属性说明」：每个属性一句话，现在的数值写在前面
+  UI.statsPanel = function (g) {
+    UI.btns.length = 0;
+    UI.dim(0.85);
+    UI.panel(24, 20, W - 48, H - 40, C.gold);
+    D.text('属性说明', W / 2, 46, 18, C.text, 'center', true);
+    var keys = Object.keys(RW.STAT_DESC), half = Math.ceil(keys.length / 2), cw = (W - 96) / 2, s = g.st || {};
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i], st = RW.STATS[k], col = (i / half) | 0, x = 48 + col * cw, y = 76 + (i % half) * 24, v = s[k];
+      var vt = v == null ? '' : (st.pct ? (k === 'crit' || k === 'dodge' || k === 'lifesteal' || k === 'luck' || k === 'interest' ? Math.round(v * 100) + '%' : '×' + (Math.round(v * 100) / 100)) : String(Math.round(v * 10) / 10));
+      D.text(st.label, x, y, 12, C.gold, 'left', true);
+      D.text(vt, x + 96, y, 11, C.text, 'right', true);
+      D.text(RW.STAT_DESC[k], x + 106, y, 10, C.dim, 'left');
+    }
+    UI.button('statsClose', W / 2 - 80, H - 62, 160, 36, '知道了', { style: 'primary', size: 14 });
+  };
+
   // ================= 暂停 =================
   UI.pause = function (g, muted) {
     UI.dim(0.75);
     var cx = W / 2;
-    UI.panel(cx - 170, 110, 340, 300, C.cyan);
-    D.text('暂停', cx, 150, 26, C.text, 'center', true);
-    D.text('第 ' + g.wave + ' 波 · Esc 继续', cx, 180, 12, C.dim, 'center');
-    UI.button('resume', cx - 140, 206, 280, 52, '继续', { style: 'primary', size: 18 });
-    UI.button('mute', cx - 140, 270, 136, 44, muted ? '声音：关' : '声音：开', { size: 14 });
-    UI.button('music', cx + 4, 270, 136, 44, UI.musicOff ? '音乐：关' : '音乐：开', { size: 14 });
-    UI.button('quit', cx - 140, 326, 280, 44, '放弃本局', { style: 'danger', size: 14 });
+    UI.panel(cx - 170, 70, 340, 366, C.cyan);
+    D.text('暂停', cx, 104, 26, C.text, 'center', true);
+    D.text('第 ' + g.wave + ' 波 · Esc 继续', cx, 132, 12, C.dim, 'center');
+    UI.button('resume', cx - 140, 150, 280, 48, '继续', { style: 'primary', size: 18 });
+    UI.button('mute', cx - 140, 208, 136, 38, muted ? '声音：关' : '声音：开', { size: 13 });
+    UI.button('music', cx + 4, 208, 136, 38, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
+    UI.button('settings', cx - 140, 254, 136, 38, '设置', { size: 13 });
+    UI.button('retry', cx + 4, 254, 136, 38, '重新开始', { size: 13 });
+    UI.button('toTitle', cx - 140, 300, 280, 44, '退出到标题', { size: 14, sub: UI.runInfo ? '下次从第 ' + UI.runInfo.wave + ' 波前的整备继续' : '第一次整备前退出，本局不保存' });
+    UI.button('quit', cx - 140, 354, 280, 44, '放弃本局，查看结算', { style: 'danger', size: 14 });
+    D.text('重新开始 / 放弃本局都会记一局', cx, 416, 10, C.faint, 'center');
   };
 
   RW.UI = UI;

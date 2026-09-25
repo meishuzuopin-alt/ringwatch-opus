@@ -149,7 +149,7 @@
     var c = D.ctx;
     D.t = g.clock;
     D.drawBg();
-    var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) : 0;
+    var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) * RW.opt.shake : 0;   // 设置：屏幕震动
     var sx = sh ? (Math.random() * 2 - 1) * sh : 0, sy = sh ? (Math.random() * 2 - 1) * sh : 0;
     c.save();
     c.beginPath(); c.rect(V.x, V.y, V.w, V.h); c.clip();
@@ -174,7 +174,7 @@
     D.nums(g);
     c.restore();
     D.norm();
-    if (g.flash > 0) { c.fillStyle = 'rgba(230,250,255,' + (g.flash * 0.35).toFixed(3) + ')'; c.fillRect(V.x, V.y, V.w, V.h); }
+    if (g.flash > 0 && RW.opt.flash > 0) { c.fillStyle = 'rgba(230,250,255,' + (g.flash * 0.35 * RW.opt.flash).toFixed(3) + ')'; c.fillRect(V.x, V.y, V.w, V.h); }
     if (g.streak >= 8) {
       var sk = Math.min(1, g.streakT / 1.3), big = g.streak >= 50 ? 22 : (g.streak >= 25 ? 19 : 16);
       var scol = g.streak >= 50 ? '#ff5cd6' : (g.streak >= 25 ? C.gold : C.cyan);
@@ -1002,7 +1002,7 @@
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
     for (i = 0; i < g.nums.length; i++) {
       var n = g.nums[i];
-      if (!n.on) continue;
+      if (!n.on || !D.numShown(n)) continue;
       sp = W3.toScreen(n.x, 22, n.y);
       if (!sp.ok) continue;
       var k = 1 - n.life / n.max, pop = k < 0.12 ? 1.5 - k / 0.12 * 0.5 : 1, size, color;
@@ -1017,7 +1017,7 @@
       c.fillStyle = color; c.fillText(n.text, sp.x, sp.y);
     }
     c.globalAlpha = 1;
-    if (g.flash > 0) { c.fillStyle = 'rgba(255,245,225,' + (g.flash * 0.3).toFixed(3) + ')'; c.fillRect(V.x, V.y, V.w, V.h); }
+    if (g.flash > 0 && RW.opt.flash > 0) { c.fillStyle = 'rgba(255,245,225,' + (g.flash * 0.3 * RW.opt.flash).toFixed(3) + ')'; c.fillRect(V.x, V.y, V.w, V.h); }
     D.streakUI(g);
     D.edgeArrows(g);
     D.minimap(g);
@@ -1058,12 +1058,14 @@
     c.globalAlpha = 1;
   };
 
+  // 设置：伤害数字 0 关 / 1 只看暴击、受伤、回血 / 2 全部
+  D.numShown = function (n) { var m = RW.opt.nums; return m >= 2 || (m === 1 && (n.kind === 'crit' || n.kind === 'hurt' || n.kind === 'heal')); };
   D.nums = function (g) {
     var c = D.ctx;
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
     for (var i = 0; i < g.nums.length; i++) {
       var n = g.nums[i];
-      if (!n.on || !D.inView(n.x, n.y, 20)) continue;
+      if (!n.on || !D.numShown(n) || !D.inView(n.x, n.y, 20)) continue;
       var k = 1 - n.life / n.max;
       var pop = k < 0.12 ? 1.5 - k / 0.12 * 0.5 : 1;
       var size, color;

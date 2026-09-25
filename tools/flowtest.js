@@ -13,6 +13,11 @@ fs.mkdirSync(out, { recursive: true });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  // 假手柄：测试里改 window.__pad 的按键和摇杆
+  await page.addInitScript(() => {
+    window.__pad = { buttons: new Array(17).fill(0), axes: [0, 0, 0, 0] };
+    navigator.getGamepads = () => [{ connected: true, id: 'test-pad', mapping: 'standard', buttons: window.__pad.buttons.map(v => ({ pressed: v > 0.5, value: v })), axes: window.__pad.axes }];
+  });
   await page.goto(`http://localhost:${server.address().port}/preview.html`);
   await page.waitForTimeout(400);
   const toS = (x, y) => page.evaluate(([x, y]) => { const v = RW.Plat.view; return [v.ox + x * v.s, v.oy + y * v.s]; }, [x, y]);
@@ -27,6 +32,10 @@ fs.mkdirSync(out, { recursive: true });
     const r = await page.evaluate(id => { const b = RW.UI.btns.find(b => b.id === id); return [b.x + b.w / 2, b.y + b.h / 2]; }, id);
     await tap(r[0], r[1]);
   };
+  // 设置页：震屏调低一档，关掉再看是否记住
+  await press('settings'); await btn('set:shake:-1'); await shot('f_settings');
+  await press('set:shake:-1'); await press('settingsClose');
+  const optOk = await page.evaluate(() => RW.opt.shake === 0.75 && JSON.parse(localStorage.getItem('ringwatch_save_v1')).opt.shake === 0.75);
   await press('start'); await press('hero:mage');
   await press('mut:swarm'); await press('mut:swarm');   // 变异器开关：开了再关
   const setupOk = await page.evaluate(() => RW.UI.runMuts.length === 0 && RW.UI.runDanger === 0);
@@ -48,6 +57,7 @@ fs.mkdirSync(out, { recursive: true });
   const blessOk = await page.evaluate(() => RW.game.rs.bless === 2);
   await btn('repair');
   await shot('f2_shop');
+  await press('statsHelp'); await btn('statsClose'); await shot('f2b_stats_help'); await press('statsClose');
   await press('repair');           // 维修
   await until(() => RW.game.core.hp > 90).catch(() => {});
   await press('upgrade');          // 圣火升级（取代旧的「加固」）
@@ -60,6 +70,12 @@ fs.mkdirSync(out, { recursive: true });
   await shot('f3_shop_after');
   const evolved = await page.evaluate(() => RW.game.weapons[0].name || '');
   const coreAfter = await page.evaluate(() => [Math.round(RW.game.core.hp), RW.game.core.maxHp, 'Lv' + (RW.game.core.lv || 1)]);
+  // 局中存档：退出到标题，再「继续上局」回到同一次整备
+  const runSaved = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('ringwatch_run_v1') || 'null'); return !!s && s.wave === 4; });
+  await page.evaluate(() => RW.Main.action('toTitle'));
+  await btn('continueRun'); await shot('f3b_title_continue'); await press('continueRun');
+  await until(() => RW.game.mode === 'shop' && RW.game.wave === 4);
+  const resumed = await page.evaluate(() => RW.game.wave === 4 && RW.game.weapons.length >= 1);
   await press('next');             // 下一波（Boss 波）
   await page.waitForTimeout(8000);
   await shot('f4_boss');
@@ -93,9 +109,23 @@ fs.mkdirSync(out, { recursive: true });
   await press('daily');
   await until(() => RW.game.mode === 'battle' && !!RW.game.daily);
   const daily = await page.evaluate(() => [RW.game.clsId, RW.game.danger, RW.game.mutList.join(',')]);
+  // 手柄：左摇杆往右推，主角往右走；菜单键暂停，B 键继续
+  const x0 = await page.evaluate(() => RW.game.player.x);
+  await page.evaluate(() => { window.__pad.axes[0] = 1; });
+  await until(x0 => RW.game.player.x > x0 + 24, x0).catch(() => {});
+  await page.evaluate(() => { window.__pad.axes[0] = 0; });
+  const x1 = await page.evaluate(() => RW.game.player.x);
+  // 软件渲染一帧可能超过 150 毫秒：按住直到生效再松开
+  await page.evaluate(() => { window.__pad.buttons[9] = 1; });
+  await until(() => RW.Main.isPaused()); await page.evaluate(() => { window.__pad.buttons[9] = 0; });
+  await page.waitForTimeout(300); await shot('f11_pause_pad');
+  await page.evaluate(() => { window.__pad.buttons[1] = 1; });
+  await until(() => !RW.Main.isPaused()); await page.evaluate(() => { window.__pad.buttons[1] = 0; });
+  const padOk = x1 > x0 + 20;
+  console.log('settings', optOk, 'run save', runSaved, 'resumed', resumed, 'pad move', Math.round(x1 - x0));
   console.log('setup', setupOk, 'bless', blessOk, 'evolved', evolved, 'victory [won,score,ach]', victory, 'achievements', achCount, 'daily', daily);
   console.log('towers after build', towers1, 'core after repair/upgrade', coreAfter, 'errors', errors.length ? errors : 'none');
-  if (!setupOk || !blessOk || !evolved || !victory[0] || !daily[0]) { console.error('流程断言失败'); process.exitCode = 1; }
+  if (!setupOk || !blessOk || !evolved || !victory[0] || !daily[0] || !optOk || !runSaved || !resumed || !padOk) { console.error('流程断言失败'); process.exitCode = 1; }
   await browser.close(); server.close();
   if (errors.length) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exit(1); });

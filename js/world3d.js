@@ -503,7 +503,7 @@
     tx = Math.max(mx, Math.min(WD.w - mx, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
     if (W3.snap) { ct.x = tx; ct.z = tz; W3.snap = false; }
     else { var k = 1 - Math.exp(-T.camera.follow * dt); ct.x += (tx - ct.x) * k; ct.z += (tz - ct.z) * k; }
-    var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) : 0;
+    var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) * RW.opt.shake : 0;   // 设置：屏幕震动
     var sx = sh ? (Math.random() * 2 - 1) * sh : 0, sz = sh ? (Math.random() * 2 - 1) * sh : 0;
     var cx = ct.x + sx, cz = ct.z + sz;
     var eye = [cx, Math.sin(CAM.pitch) * CAM.dist, cz + Math.cos(CAM.pitch) * CAM.dist];
@@ -581,6 +581,12 @@
   function drawHero(g, M) {
     var p = g.player;
     if (g.mode === 'revive' || g.mode === 'result') return;
+    // 设置：主角脚下光圈（不受受击闪烁影响，人多时也能一眼找到自己）
+    if (RW.opt.ring && g.mode !== 'down') {
+      var rc = C((g.cls || RW.CLASSES.mage).color);
+      GL.ground(false, p.x, 0.6, p.y, p.r * 2.1 + 7, 1, 0.3, [0.02, 0.02, 0.03], 0.35);
+      GL.ground(false, p.x, 0.7, p.y, p.r * 2.1 + 6, 1, 0.16, rc, 0.8);
+    }
     if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) return;
     var d = g.cls || RW.CLASSES.mage, look = d.look || { hat: 'wizard', prop: 'staff' };
     var sc = p.r / 10 * 1.35, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);

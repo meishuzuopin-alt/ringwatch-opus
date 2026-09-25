@@ -170,5 +170,76 @@ ok(RW.SHEET.hp(20) > RW.SHEET.hp(10) && RW.SHEET.hp(10) > RW.SHEET.hp(5), '怪�
   ok(g1.result.achievements.indexOf('daily') >= 0, '解锁成就：今日值守');
 })();
 
+// 7. 商店买的技能要进 Q/E/R 槽（以前买了放不出来）
+(function () {
+  var g = newGame('mage', {});
+  var ids = g.skills.map(function (k) { return k.id; });
+  var fresh = RW.SKILL_ORDER.filter(function (id) { return ids.indexOf(id) < 0; })[0];
+  g.skill = g.skills[1];
+  g.setSkill(fresh);
+  ok(g.skills[1].id === fresh && g.skill === g.skills[1], '买新技能替换当前技能所在的槽位（E）');
+  ok(g.skills.length === 3, '仍然是三个技能');
+  g.setSkill(fresh);
+  ok(g.skills[1].tier === 2, '再买同名技能：升到 II 阶');
+  var o = g.offerFor('skill', ids[0]);
+  ok(o.upgrade && o.tier === 2, '商店对已有的 Q 技能显示为升阶');
+  g.player.mp = 999; g.skills[1].cd = 0; g.mode = 'battle';
+  ok(g.castSkill(1) !== false, '买来的技能按 E 能放出来');
+})();
+
+// 8. 局中存档：整备时存，读回来状态一致，刷新出的货也一样
+(function () {
+  var g = newGame('knight', { danger: 1, mutators: ['iron'] }, 11);
+  g.prog.heroDanger = { knight: 0 };
+  run(g, 300, { mx: 0.3, my: 0.2 });
+  ok(g.saveRun() === null, '战斗中不存档');
+  g.shardCount = 400;
+  ok(g.buildTower(RW.TOWER_ORDER[0]) === 'ok', '建一座塔');
+  g.addWeapon('cleaver'); g.weapons[1].tier = 3; g.mods[RW.EVOLVE.cleaver.mod] = 1; g.recalc(); g.evolveWeapon(1);
+  g.mods.whet = 2; g.bless = { dmg: 0.1 }; g.core.lv = 2; g.applyCoreLevel(); g.recalc();
+  g.summonMate(g.player.x + 20, g.player.y);
+  g.setSkill(RW.SKILL_ORDER[0]);
+  g.blessPending = 1;
+  g.clearWave();
+  for (var f = 0; f < 600 && g.mode !== 'bless' && g.mode !== 'shop'; f++) run(g, 1);
+  ok(g.mode === 'bless', '清场后先进祝福');
+  var sv = JSON.parse(JSON.stringify(g.saveRun()));
+  ok(sv && sv.v === RW.RUN_SAVE_V, '整备 / 祝福时可以存档');
+  var h = new RW.Game({ seed: 999 });
+  h.prog = { unlocked: {}, heroBest: {}, kills: 0, coins: 0, built: 0, runs: 0 };
+  ok(h.loadRun(sv) === true, '读档成功');
+  ok(h.mode === 'bless' && h.blessOffers.join() === g.blessOffers.join(), '读档回到同一次祝福三选一');
+  ok(h.wave === g.wave && h.shardCount === g.shardCount && h.kills === g.kills, '波数、金币、击杀一致');
+  ok(h.danger === 1 && h.mut.iron && h.clsId === 'knight', '危险等级、变异器、英雄一致');
+  ok(h.weapons.map(function (w) { return w.id + w.tier + (w.ev ? 'E' : ''); }).join() === g.weapons.map(function (w) { return w.id + w.tier + (w.ev ? 'E' : ''); }).join(), '武器、阶数、进化一致');
+  ok(h.skills.map(function (k) { return k.id + k.tier; }).join() === g.skills.map(function (k) { return k.id + k.tier; }).join(), '技能一致');
+  ok(h.towerCount() === g.towerCount() && h.mateCount() === g.mateCount(), '建筑、同伴数量一致');
+  ok(h.core.lv === 2 && Math.abs(h.core.hp - g.core.hp) < 1e-6, '圣火等级、血量一致');
+  ok(Math.abs(h.st.dmg - g.st.dmg) < 1e-9 && Math.abs(h.st.maxHp - g.st.maxHp) < 1e-9 && h.st.armor === g.st.armor, '属性重算后一致');
+  g.chooseBless(0); h.chooseBless(0);
+  ok(JSON.stringify(h.shop.slots) === JSON.stringify(g.shop.slots), '商店货架一致');
+  g.shardCount = h.shardCount = 500;
+  g.reroll(false); h.reroll(false);
+  ok(JSON.stringify(h.shop.slots) === JSON.stringify(g.shop.slots), '读档后刷新出的货与不退出时相同（不能靠读档刷货）');
+  h.nextWave(); run(h, 600, { mx: -0.4, my: 0.1 });
+  ok(finite(h).length === 0 && h.mode === 'battle', '读档后继续打下一波，数值有限');
+  h.finishRun();
+  ok(h.prog.runs === 1, '读档后结算只记一局');
+})();
+
+// 9. 性能预算：场上敌人打满时，一帧模拟的耗时
+(function () {
+  var g = newGame('mage', {}, 5);
+  g.startWave(18);
+  g.player.hp = g.player.maxHp = 1e6; g.core.hp = g.core.maxHp = 1e7;
+  for (var i = 0; i < RW.TUNE.MAX_ENEMIES; i++) g.spawnEnemy(i % 3 ? 'mite' : 'shell', g.core.x + Math.cos(i) * (200 + i % 300), g.core.y + Math.sin(i) * (200 + i % 300), false);
+  run(g, 60);
+  var t0 = process.hrtime.bigint();
+  run(g, 300, { mx: 0.5, my: 0.3 });
+  var ms = Number(process.hrtime.bigint() - t0) / 1e6 / 300;
+  ok(ms < 4, '满屏敌人时每帧模拟 ' + ms.toFixed(2) + ' ms（预算 4 ms，一帧总共 16.7 ms）');
+  console.log('  · 满屏 ' + g.enemyCount + ' 只敌人，每帧模拟 ' + ms.toFixed(2) + ' ms');
+})();
+
 console.log((failed ? '  ' : '  ✓ ') + passed + ' 项通过' + (failed ? '，' + failed + ' 项失败' : ''));
 if (failed) process.exit(1);
