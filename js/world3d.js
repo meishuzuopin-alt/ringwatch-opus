@@ -522,20 +522,27 @@
   // ================= 昼夜 =================
   function envPreset(kind) {
     // grade = [饱和度, 对比度, 边缘光, 亮度偏移]；shadowDark = 阴影里保留多少直射光；line = 描边颜色；
-    // bloom = 泛光强度，thr = 泛光阈值（越低越多东西发光）
+    // bloom = 泛光强度，thr = 旧的泛光阈值（阶段 1 起阈值固定，只有自发光和法术发光）
+    // rim = 冷色边缘光 [r, g, b, 强度]；fogLow = 光圈外低矮冷雾 [浓度, 高度, 从光圈边缘到最浓的距离]；vig = 暗角；
+    // amb = 环境与主光亮度倍率（圣经：夜晚约为白天的 35%，圣火光圈另算）
     var P = {
       day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
-        grade: [1.12, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9 },
+        grade: [1.12, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9,
+        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.16, amb: 1 },
       dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6,
-        grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
-        grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62 },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9,
-        grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66 }
+        grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78,
+        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.2, amb: 0.9 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.72), sky: shade(hex('#5a74b8'), 0.8), ground: shade(hex('#2a2c48'), 0.6), fog: hex('#34497a'), clear: hex('#141e36'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
+        grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62,
+        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.26, amb: 1.0 },
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#7a4070'), 0.8), ground: shade(hex('#3a1c28'), 0.6), fog: hex('#4a2038'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9,
+        grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66,
+        rim: [0.55, 0.35, 0.75, 0.3], fogLow: [0.5, 34, 380], vig: 0.26, amb: 1.0 }
     };
     var e = P[kind], l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
     return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp,
-      grade: e.grade.slice(), shadowDark: e.shadowDark, line: e.line.slice(), bloom: e.bloom, thr: e.thr, time: 0 };
+      grade: e.grade.slice(), shadowDark: e.shadowDark, line: e.line.slice(), bloom: e.bloom, thr: e.thr, time: 0,
+      rim: e.rim.slice(), fogLow: e.fogLow.slice(), vig: e.vig, amb: e.amb };
   }
   W3.envFor = function (g) {
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
@@ -543,10 +550,13 @@
     if (g.mut && g.mut.night) return 'night';   // 变异器「夜行」
     return g.wave <= 3 ? 'day' : (g.wave <= 6 ? 'dusk' : 'night');
   };
+  // 直接切到当前该用的光照（截图 / 验收用，跳过渐变）
+  W3.snapEnv = function (g) { W3.env = envPreset(W3.envFor(g)); };
   function lerpEnv(a, b, k) {
     ['light', 'sun', 'sky', 'ground', 'fog', 'clear', 'line'].forEach(function (key) { for (var i = 0; i < 3; i++) a[key][i] += (b[key][i] - a[key][i]) * k; });
-    for (var j = 0; j < 4; j++) a.grade[j] += (b.grade[j] - a.grade[j]) * k;
-    ['fogNear', 'fogFar', 'em', 'lamp', 'shadowDark', 'bloom', 'thr'].forEach(function (key) { a[key] += (b[key] - a[key]) * k; });
+    for (var j = 0; j < 4; j++) { a.grade[j] += (b.grade[j] - a.grade[j]) * k; a.rim[j] += (b.rim[j] - a.rim[j]) * k; }
+    for (j = 0; j < 3; j++) a.fogLow[j] += (b.fogLow[j] - a.fogLow[j]) * k;
+    ['fogNear', 'fogFar', 'em', 'lamp', 'shadowDark', 'bloom', 'thr', 'vig', 'amb'].forEach(function (key) { a[key] += (b[key] - a[key]) * k; });
   }
 
   // ================= 初始化 =================
@@ -573,11 +583,13 @@
     buildModels();
     // 发光小物件不描边、不投影，保持干净的光点
     ['coin', 'crystal'].forEach(function (k) { if (W3.meshes[k]) { W3.meshes[k].outline = false; W3.meshes[k].shadow = false; } });
+    // 建筑类用 1.5 像素描边，角色和敌人 2 像素（圣经第 3 节）
+    ['sentry', 'pylon', 'siphon', 'barracks', 'core', 'coreRing', 'core_blaze', 'core_ward', 'core_star', 'stone'].forEach(function (k) { GL.lineBuilding(W3.meshes[k]); });
     // 浏览器调试参数：?lowfx 关掉全部画质效果；?hifx 锁定画质、不自动降级（截图用）
     try {
       if (typeof location !== 'undefined') {
-        if (/[?&]lowfx\b/.test(location.search)) GL.fx.shadow = GL.fx.outline = GL.fx.bloom = false;
-        if (/[?&]hifx\b/.test(location.search)) perf.locked = true;
+        if (/[?&]lowfx\b/.test(location.search)) GL.fx.shadow = GL.fx.outline = GL.fx.bloom = GL.fx.ao = false;
+        if (/[?&]hifx\b/.test(location.search)) perf.locked = W3.hifx = true;
       }
     } catch (e) { /* 微信里没有 location */ }
     W3.env = envPreset('dusk');
@@ -659,16 +671,17 @@
     if (perf.slowT < 3) return;
     perf.slowT = 0; perf.avg = 1 / 60;
     var fx = GL.fx;
-    if (fx.bloom) fx.bloom = false; else if (fx.outline) fx.outline = false; else if (fx.shadow) fx.shadow = false;
+    if (fx.bloom) fx.bloom = false; else if (fx.ao) fx.ao = false; else if (fx.outline) fx.outline = false; else if (fx.shadow) fx.shadow = false;
     console.warn('帧率偏低，自动降低画质', JSON.stringify(fx));
   }
   // 设置：画质（0 自动：掉帧时逐级关特效；1 低 / 2 中 / 3 高：固定不变）
   W3.setQuality = function (q) {
     var fx = GL.fx;
     if (!fx) return;
-    if (!q) { perf.locked = false; fx.shadow = fx.outline = fx.bloom = true; return; }
+    if (!q) { perf.locked = !!W3.hifx; fx.shadow = fx.outline = fx.bloom = fx.ao = true; return; }   // ?hifx（截图）下也不自动降级
     perf.locked = true;
-    fx.shadow = q >= 2; fx.outline = q >= 2; fx.bloom = q >= 3;
+    // 低档：关掉环境光遮蔽和描边（保底退路）；中档：有描边和阴影、没有 AO 和泛光；高档：全开
+    fx.shadow = q >= 2; fx.outline = q >= 2; fx.bloom = q >= 3; fx.ao = q >= 3;
   };
   W3.blobShadow = function () { return GL.fx.shadow ? 0.45 : 1; };   // 有真阴影时，脚下的圆影只做接触阴影
 
@@ -679,6 +692,9 @@
     var target = envPreset(W3.envFor(g));
     lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
     var env = W3.env; env.time = W3.t;
+    // 圣火暖光圈：半径就是圣域半径，光圈外是敌人的地盘；夜里（lamp 高）更亮
+    var co = g.core;
+    env.coreLight = co ? { x: co.x, z: co.y, r: Math.max(co.aura || 0, 160), k: 0.12 + 1.5 * env.lamp } : null;
     var open = W3.openK(g);
     env.fogNear += open * 500; env.fogFar += open * 1100;
     W3.updateCamera(g, dt, orbit, viewport[2] / viewport[3]);

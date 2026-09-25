@@ -37,7 +37,9 @@ fs.mkdirSync(out, { recursive: true });
       const g = RW.game;
       if (RW.W3) RW.W3.envFor = () => env;
       g.startWave(wave);
+      if (g.player.dead) g.respawn();   // 上一个场景里倒下的英雄先复活，免得截图里只剩复活进度圈
       g.player.hp = g.player.maxHp = 9999;
+      if (RW.W3 && RW.W3.snapEnv) RW.W3.snapEnv(g);   // 直接切到该光照，软件渲染太慢，等渐变会拍到过渡色
     }, [env, wave]);
     await page.waitForTimeout(4500);
     await shot(page, name);
@@ -89,10 +91,10 @@ fs.mkdirSync(out, { recursive: true });
     const g = RW.game;
     g.core.lv = 5; g.core.form = 'blaze'; g.applyCoreLevel(); g.core.hp = g.core.maxHp = 99999;
     g.player.hp = g.player.maxHp = 99999; g.shardCount = 999; g.banner = 0;
-    g.startWave(12); g.player.x = g.core.x + 160; g.player.y = g.core.y + 40;
+    g.startWave(12); if (g.player.dead) g.respawn(); g.player.x = g.core.x + 160; g.player.y = g.core.y + 40;
     g.buildTower('barracks'); g.player.x += 60; g.buildTower('sentry'); g.player.x = g.core.x - 150; g.buildTower('pylon');
     for (let k = 0; k < 40; k++) { const a = k / 40 * Math.PI * 2, r = 220 + (k % 5) * 30; g.spawnEnemy(k % 7 === 0 ? 'shell' : (k % 5 === 0 ? 'dasher' : 'mite'), g.player.x + Math.cos(a) * r, g.player.y + Math.sin(a) * r, false); }
-    RW.W3.snap = true;
+    RW.W3.snap = true; if (RW.W3.snapEnv) RW.W3.snapEnv(g);
   });
   await page.waitForTimeout(4500);
   await shot(page, '19_combat');

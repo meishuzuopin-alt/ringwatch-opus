@@ -161,36 +161,75 @@
     ok: false, hex: hex, shade: shade, mix: mixc, M4: M4, GB: GB,
     view: new Float32Array(16), proj: new Float32Array(16), vp: new Float32Array(16),
     cam: [0, 0, 0], camRight: [1, 0, 0], camUp: [0, 1, 0],
-    // 画质开关：阴影 / 描边 / 泛光。地址加 ?lowfx 全关；帧率持续偏低时 world3d 会逐级自动关闭
-    fx: { shadow: true, outline: true, bloom: true },
+    // 画质开关：阴影 / 描边 / 泛光 / 环境光遮蔽。地址加 ?lowfx 全关；帧率持续偏低时 world3d 会逐级自动关闭
+    fx: { shadow: true, outline: true, bloom: true, ao: true },
     meshes: []
   };
 
   // ---------- 材质 ----------
-  // 网格材质：顶点色 + 每顶点自发光强度（aEm）+ 每实例闪白（iFlash）
-  var U = { uTime: { value: 0 }, uEmBoost: { value: 1 }, uGrade: { value: null }, uLineW: { value: 1.2 } };
+  // 网格材质（FG-ART-002 阶段 1，美术圣经第 4、5 节）：
+  //   卡通三段色阶（MeshToonMaterial + 3 格渐变图）· 顶点色渐变（下暗上亮）· 冷色边缘光 · 世界坐标噪声斑驳
+  //   · 圣火暖光圈（半径 = 圣域半径，边缘清楚）· 光圈外贴地的低矮冷雾（自发光部分穿透雾，远处敌人先露红眼）
+  //   + 每顶点自发光强度（aEm）+ 每实例闪白（iFlash）
+  var U = {
+    uTime: { value: 0 }, uEmBoost: { value: 1 }, uGrade: { value: null }, uLineW: { value: 1.2 }, uLineWB: { value: 0.9 },
+    uRim: { value: null }, uNoise: { value: 0.12 }, uCore: { value: null }, uCoreCol: { value: null },
+    uFogLow: { value: null }, uEmHDR: { value: 2.2 }
+  };
+  // 3 格渐变：暗面 / 中间调 / 亮面（最近邻采样，形成清楚的色阶）
+  function toonRamp() {
+    var t = new THREE.DataTexture(new Uint8Array([66, 66, 66, 255, 140, 140, 140, 255, 235, 235, 235, 255]), 3, 1, THREE.RGBAFormat);
+    t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true;
+    return t;
+  }
+  var NOISE_GLSL = [
+    'float fgHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+    'float fgNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);',
+    '  return mix(mix(fgHash(i), fgHash(i+vec2(1,0)), f.x), mix(fgHash(i+vec2(0,1)), fgHash(i+vec2(1,1)), f.x), f.y); }'
+  ].join('\n');
   function meshMaterial(water) {
-    var m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.92, metalness: 0 });
+    var m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GL.ramp });
     m.onBeforeCompile = function (sh) {
-      sh.uniforms.uTime = U.uTime; sh.uniforms.uEmBoost = U.uEmBoost;
+      ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR'].forEach(function (k) { sh.uniforms[k] = U[k]; });
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float aEm;\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nuniform float uTime;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEm = aEm;\n#ifdef USE_INSTANCING\nvFlash = iFlash;\n#else\nvFlash = 0.0;\n#endif' +
-          (water ? '\ntransformed.y += sin(transformed.x*0.05 + uTime*2.0)*2.0 + cos(transformed.z*0.06 + uTime*1.6)*2.0;' : ''))
-        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        .replace('#include <common>', '#include <common>\nattribute float aEm;\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEm = aEm;\n' +
+          // 顶点色渐变：模型底部偏暗、顶部偏亮（贴地的平地面不压暗）
+          'vGrad = (normal.y > 0.9 && position.y < 2.0) ? 1.0 : mix(0.74, 1.06, smoothstep(0.0, 42.0, position.y));\n' +
+          '#ifdef USE_INSTANCING\nvFlash = iFlash;\n#else\nvFlash = 0.0;\n#endif' +
+          (water ? '\ntransformed.y += sin(transformed.x*0.05 + uTime*2.0)*2.0 + cos(transformed.z*0.06 + uTime*1.6)*2.0;\nvGrad = 1.0;' : ''))
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nuniform float uTime;\nuniform float uEmBoost;')
-        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost;' +
+        .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\n' + NOISE_GLSL)
+        // 斑驳：两层世界坐标噪声，石头、木头、茅草、草地都带一点笔触感
+        .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);')
+        // 自发光进 HDR（乘 uEmHDR），只有它和法术光效能过泛光阈值
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost * uEmHDR;' +
           (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.85 + 0.25*s1;\ntotalEmissiveRadiance += vec3(0.35,0.6,0.9) * smoothstep(0.82, 0.98, s1) * 0.8;' : ''))
-        .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0), vFlash);');
+        .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' +
+          // 圣火暖光圈：圈内是暖光，边缘在最后 6% 半径内收掉，圈外全交给冷色环境光
+          '{ float cd = length(vWp.xz - uCore.xy);\n  float cm = uCore.w * (1.0 - smoothstep(uCore.z * 0.94, uCore.z, cd)) * (0.55 + 0.45 * (1.0 - cd / max(uCore.z, 1.0)));\n  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * cm; }\n' +
+          // 冷色边缘光：掠射角的面亮一圈月青色
+          '{ float fr = 1.0 - saturate(dot(normalize(geometryNormal), normalize(geometryViewDir)));\n  reflectedLight.indirectDiffuse += uRim.rgb * uRim.w * smoothstep(0.5, 0.95, fr); }')
+        .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0), vFlash);')
+        // 雾：距离雾 + 贴地的低矮冷雾；自发光（圣火、敌人眼睛、法术）穿透雾
+        .replace('#include <fog_fragment>', [
+          '#ifdef USE_FOG',
+          '  float fgF = smoothstep(fogNear, fogFar, vFogDepth);',
+          '  float fgLow = uFogLow.x * (1.0 - smoothstep(0.0, uFogLow.y, vWp.y)) * smoothstep(uFogLow.z, uFogLow.w, length(vWp.xz - uCore.xy));',
+          '  fgF = clamp(fgF + fgLow, 0.0, 1.0) * (1.0 - clamp(vEm * 1.6, 0.0, 0.92));',
+          '  gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fgF);',
+          '#endif'
+        ].join('\n'));
     };
     return m;
   }
   // 描边：背面外壳，沿平滑法线外扩（外扩量随离镜头距离变化，屏幕上粗细基本一致）
-  function lineMaterial() {
-    var m = new THREE.MeshBasicMaterial({ color: 0x1a1420, side: THREE.BackSide, fog: true });
+  // 颜色 = 物体本色压暗（顶点色 × 实例色 × 压暗系数），不用纯黑；角色 2 像素、建筑 1.5 像素（按 960×540 计）
+  function lineMaterial(wU) {
+    var m = new THREE.MeshBasicMaterial({ color: 0x4a4250, vertexColors: true, side: THREE.BackSide, fog: true });
     m.onBeforeCompile = function (sh) {
-      sh.uniforms.uLineW = U.uLineW;
+      sh.uniforms.uLineW = wU;
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', '#include <common>\nattribute vec3 aSmooth;\nuniform float uLineW;')
         .replace('#include <project_vertex>', [
@@ -199,7 +238,7 @@
           'wp0 = modelMatrix * wp0;',
           'vec3 sn = aSmooth;',
           '#ifdef USE_INSTANCING', 'sn = mat3(instanceMatrix) * sn;', '#endif',
-          'wp0.xyz += normalize(sn + vec3(0.0, 0.0001, 0.0)) * uLineW * length(cameraPosition - wp0.xyz) * 0.001;',
+          'wp0.xyz += normalize(sn + vec3(0.0, 0.0001, 0.0)) * uLineW * length(cameraPosition - wp0.xyz);',
           'vec4 mvPosition = viewMatrix * wp0;',
           'gl_Position = projectionMatrix * mvPosition;'
         ].join('\n'));
@@ -251,6 +290,51 @@
     return mesh;
   }
 
+  // 环境光遮蔽（屏幕空间，只读深度，不多渲染一遍场景）：建筑和单位脚下、墙角压暗，解决漂浮感
+  // 16 个采样点螺旋分布在半球投影里，按深度重建的视空间位置估算遮挡；亮的东西（火、法术）不压暗
+  GL.BLOOM_THR = 1.05;   // 泛光阈值（HDR 亮度）：普通受光表面到不了，只有自发光 × uEmHDR 和叠加光效能过
+  function aoPass() {
+    var p = new THREE.ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null }, tDepth: { value: null }, uProj: { value: new THREE.Matrix4() }, uProjInv: { value: new THREE.Matrix4() },
+        uRes: { value: new THREE.Vector2(4, 4) }, uRadius: { value: 30 }, uStrength: { value: 1.5 }
+      },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: [
+        'uniform sampler2D tDiffuse; uniform sampler2D tDepth; uniform mat4 uProj; uniform mat4 uProjInv;',
+        'uniform vec2 uRes; uniform float uRadius; uniform float uStrength; varying vec2 vUv;',
+        'vec3 vpos(vec2 uv){ float d = texture2D(tDepth, uv).x; vec4 p = uProjInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return p.xyz / p.w; }',
+        'void main(){',
+        '  vec4 c = texture2D(tDiffuse, vUv);',
+        '  float d0 = texture2D(tDepth, vUv).x;',
+        '  if (d0 >= 1.0 || uStrength <= 0.0) { gl_FragColor = c; return; }',
+        '  vec3 P = vpos(vUv);',
+        '  vec3 N = normalize(cross(dFdx(P), dFdy(P)));',
+        '  float rpx = uRadius * uProj[1][1] * 0.5 * uRes.y / max(1.0, -P.z);',
+        '  float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));',
+        '  float occ = 0.0; float r2 = uRadius * uRadius;',
+        '  for (int i = 0; i < 16; i++) {',
+        '    float fi = float(i); float t = (fi + 0.5) / 16.0;',
+        '    float a = fi * 2.3999632 + ign * 6.2831853;',
+        '    vec2 uv = vUv + vec2(cos(a), sin(a)) * t * rpx / uRes;',
+        '    vec3 v = vpos(uv) - P; float vv = dot(v, v); float vn = dot(v, N);',
+        '    occ += max(0.0, vn - 0.02 * -P.z * 0.01) / (vv + 1.0) * max(0.0, 1.0 - vv / r2) * 8.0;',
+        '  }',
+        '  float ao = clamp(1.0 - uStrength * occ / 16.0, 0.35, 1.0);',
+        '  float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));',
+        '  ao = mix(ao, 1.0, smoothstep(0.9, 2.0, l));',
+        '  gl_FragColor = vec4(c.rgb * ao, c.a);',
+        '}'
+      ].join('\n')
+    });
+    var render0 = p.render;
+    p.render = function (renderer, writeBuffer, readBuffer, dt, mask) {
+      this.uniforms.tDepth.value = readBuffer.depthTexture;
+      return render0.call(this, renderer, writeBuffer, readBuffer, dt, mask);
+    };
+    return p;
+  }
+
   GL.init = function (canvas) {
     if (!THREE) return false;
     var r;
@@ -260,7 +344,7 @@
     tmpC = new THREE.Color();
     r.setPixelRatio(1);   // 画布尺寸由 platform.js 按设备像素比设置好了
     r.outputColorSpace = THREE.SRGBColorSpace;
-    r.toneMapping = THREE.NeutralToneMapping; r.toneMappingExposure = 1.0;
+    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;   // 圣经第 5 节：ACES 色调映射
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;   // r18x 起 PCFSoftShadowMap 已移除（会报警告），PCFShadowMap 本身已是柔化过滤
     var sc = GL.scene = new THREE.Scene();
     sc.fog = new THREE.Fog(0x7a5f80, 1300, 3000);
@@ -274,30 +358,40 @@
     sun.shadow.bias = -0.0006; sun.shadow.normalBias = 1.2;
     sun.shadow.camera.near = 100; sun.shadow.camera.far = 5000;
     sc.add(sun); sc.add(sun.target);
+    GL.ramp = toonRamp();
+    U.uRim.value = new THREE.Vector4(0.37, 0.66, 0.78, 0.2);
+    U.uCore.value = new THREE.Vector4(0, 0, 0, 0); U.uCoreCol.value = new THREE.Color(1, 0.5, 0.16);   // 圣火金偏余烬橙（线性空间）
+    U.uFogLow.value = new THREE.Vector4(0, 40, 900, 1400);
     GL.matStd = meshMaterial(false);
     GL.matWater = meshMaterial(true);
-    GL.matLine = lineMaterial();
+    GL.matLine = lineMaterial(U.uLineW);     // 角色、敌人、道具
+    GL.matLineB = lineMaterial(U.uLineWB);   // 建筑、塔、地形上的房屋和树
     GL.fxAdd = new Batch(3000, 16);
     GL.fxAlpha = new Batch(2000, 16);
     GL.fxAddMesh = fxMesh(GL.fxAdd, true); GL.fxAlphaMesh = fxMesh(GL.fxAlpha, false);
     sc.add(GL.fxAlphaMesh); sc.add(GL.fxAddMesh);
-    // 后处理：多重采样 HDR 渲染 -> 泛光 -> 调色 -> 色调映射 + sRGB
+    // 后处理：多重采样 HDR 渲染（带深度）-> 环境光遮蔽 -> 泛光（只抓自发光和法术）-> 调色 + 暗角 -> ACES + sRGB
     var rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+    rt.depthTexture = new THREE.DepthTexture(4, 4); rt.depthTexture.type = THREE.UnsignedIntType;
     var comp = GL.composer = new THREE.EffectComposer(r, rt);
     comp.addPass(new THREE.RenderPass(sc, GL.camera));
-    GL.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.55, 0.85);
+    GL.aoPass = aoPass();
+    comp.addPass(GL.aoPass);
+    GL.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.55, GL.BLOOM_THR);
     comp.addPass(GL.bloomPass);
     U.uGrade.value = new THREE.Vector4(1, 1, 0, 0);
     GL.gradePass = new THREE.ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uGrade: U.uGrade },
+      uniforms: { tDiffuse: { value: null }, uGrade: U.uGrade, uVig: { value: 0.22 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: [
-        'uniform sampler2D tDiffuse; uniform vec4 uGrade; varying vec2 vUv;',
+        'uniform sampler2D tDiffuse; uniform vec4 uGrade; uniform float uVig; varying vec2 vUv;',
         'void main(){',
         '  vec4 c = texture2D(tDiffuse, vUv);',
         '  float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));',
         '  c.rgb = mix(vec3(l), c.rgb, uGrade.x);',
         '  c.rgb = max(vec3(0.0), (c.rgb - 0.18) * uGrade.y + 0.18 + uGrade.w);',   // 以中灰为支点做对比度
+        '  vec2 vd = (vUv - 0.5) * vec2(1.0, 0.78);',
+        '  c.rgb *= 1.0 - uVig * smoothstep(0.28, 0.62, length(vd));',   // 轻微暗角，把视线收向画面中间
         '  gl_FragColor = c;',
         '}'
       ].join('\n')
@@ -314,6 +408,7 @@
     GL.renderer.setSize(w, h, false);
     GL.composer.setSize(w, h);
     GL.bloomPass.resolution.set(w, h);
+    GL.aoPass.uniforms.uRes.value.set(w, h);
   };
 
   // ---------- 网格上传：GB -> BufferGeometry + InstancedMesh（+ 描边外壳） ----------
@@ -350,7 +445,7 @@
       mesh.obj = new THREE.Mesh(geo, opts.water ? GL.matWater : GL.matStd);
       mesh.obj.receiveShadow = true; mesh.obj.castShadow = !opts.water;
       GL.scene.add(mesh.obj);
-      if (!opts.water) { mesh.line = new THREE.Mesh(geo, GL.matLine); GL.scene.add(mesh.line); }
+      if (!opts.water) { mesh.line = new THREE.Mesh(geo, GL.matLineB); GL.scene.add(mesh.line); }
       else mesh.outline = mesh.shadow = false;
       mesh.isStatic = true;
       return mesh;
@@ -365,13 +460,17 @@
     im.count = 0; im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true;
     GL.scene.add(im);
     var ln = new THREE.InstancedMesh(geo, GL.matLine, INST_CAP);
-    ln.instanceMatrix = im.instanceMatrix;   // 与本体共用实例矩阵
+    ln.instanceMatrix = im.instanceMatrix;   // 与本体共用实例矩阵和实例色（描边 = 本色压暗）
+    ln.instanceColor = im.instanceColor;
     ln.count = 0; ln.frustumCulled = false;
     GL.scene.add(ln);
     mesh.obj = im; mesh.line = ln; mesh.flash = fl;
     GL.meshes.push(mesh);
     return mesh;
   };
+
+  // 建筑类网格（塔、兵营、圣火）用细一档的描边
+  GL.lineBuilding = function (mesh) { if (mesh && mesh.line && !mesh.isStatic) mesh.line.material = GL.matLineB; };
 
   // 往网格里加一个实例：位置 (x, y 高度, z)、朝向、缩放 (sx, sy, sz)、前倾、着色 rgb、闪白
   // 变换 = 平移 · 绕 Y 转 -yaw · 绕 Z 转 tilt · 缩放（与旧着色器完全一致）
@@ -482,8 +581,9 @@
     U.uTime.value = env.time; U.uEmBoost.value = env.em;
     sc.background.copy(srgb(env.clear));
     sc.fog.color.copy(srgb(env.fog)); sc.fog.near = env.fogNear; sc.fog.far = env.fogFar;
-    GL.hemi.color.copy(srgb(env.sky)); GL.hemi.groundColor.copy(srgb(env.ground)); GL.hemi.intensity = PI * 1.25;
-    GL.sun.color.copy(srgb(env.sun)); GL.sun.intensity = PI * 1.05;
+    var amb = env.amb == null ? 1 : env.amb;   // 昼夜亮度倍率（夜晚约为白天的 35%）
+    GL.hemi.color.copy(srgb(env.sky)); GL.hemi.groundColor.copy(srgb(env.ground)); GL.hemi.intensity = PI * 1.25 * amb;
+    GL.sun.color.copy(srgb(env.sun)); GL.sun.intensity = PI * 1.05 * amb;
     var L = env.light, D = 2000, sb = shadowBox;
     GL.sun.position.set(sb.cx + L[0] * D, L[1] * D, sb.cz + L[2] * D);
     GL.sun.target.position.set(sb.cx, 0, sb.cz); GL.sun.target.updateMatrixWorld();
@@ -491,11 +591,29 @@
     cam.left = -sb.r; cam.right = sb.r; cam.top = sb.r; cam.bottom = -sb.r; cam.far = D + 1500; cam.updateProjectionMatrix();
     GL.sun.castShadow = GL.fx.shadow;
     GL.sun.shadow.intensity = 1 - (env.shadowDark == null ? 0.45 : env.shadowDark);
-    GL.matLine.color.copy(srgb(env.line || [0.08, 0.06, 0.1]));
+    // 描边：本色压暗，略带环境色调；宽度按 960×540 的像素换算成「每单位距离的外扩量」
+    var lc = env.line || [0.08, 0.06, 0.1];
+    GL.matLine.color.setRGB(0.24 + lc[0] * 0.5, 0.22 + lc[1] * 0.5, 0.26 + lc[2] * 0.5); GL.matLineB.color.copy(GL.matLine.color);
+    var perPx = 2 * Math.tan(GL.camera.fov * Math.PI / 360) / 540;
+    U.uLineW.value = 2.0 * perPx; U.uLineWB.value = 1.5 * perPx;
+    GL.matLineB.visible = GL.matLine.visible = GL.fx.outline;
     var gr = env.grade || [1, 1, 0, 0];
     U.uGrade.value.set(gr[0], gr[1], gr[2], gr[3]);
+    // 冷色边缘光、斑驳、圣火暖光圈、低矮冷雾（world3d 的昼夜预设给参数）
+    var rim = env.rim || [0.37, 0.66, 0.78, 0.2];
+    U.uRim.value.set(rim[0], rim[1], rim[2], rim[3]);
+    var cl = env.coreLight;
+    if (cl) U.uCore.value.set(cl.x, cl.z, cl.r, cl.k); else U.uCore.value.w = 0;
+    // 低矮冷雾从光圈边缘往外 fogLow[2] 距离内渐浓
+    var fl = env.fogLow || [0, 40, 360], r0 = cl ? cl.r : 600;
+    U.uFogLow.value.set(fl[0], fl[1], r0, r0 + fl[2]);
+    // 环境光遮蔽：画质开关 + 深度重建需要的投影矩阵
+    GL.aoPass.enabled = GL.fx.ao;
+    GL.aoPass.uniforms.uProj.value.copy(GL.camera.projectionMatrix); GL.aoPass.uniforms.uProjInv.value.copy(GL.camera.projectionMatrixInverse);
+    GL.gradePass.uniforms.uVig.value = env.vig == null ? 0.22 : env.vig;
+    // 泛光：阈值固定在 HDR 1.05，普通受光表面不发光，只有自发光和法术光效会晕开
     GL.bloomPass.enabled = GL.fx.bloom;
-    GL.bloomPass.strength = (env.bloom || 0) * 0.9; GL.bloomPass.threshold = 0.55 + (env.thr || 0.8) * 0.45; GL.bloomPass.radius = 0.5;
+    GL.bloomPass.strength = Math.min(0.9, (env.bloom || 0) * 0.9); GL.bloomPass.threshold = GL.BLOOM_THR; GL.bloomPass.radius = 0.45;
     commitInstances();
     commitFx(GL.fxAlphaMesh); commitFx(GL.fxAddMesh);
     GL.composer.render();

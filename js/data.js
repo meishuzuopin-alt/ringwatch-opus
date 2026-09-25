@@ -764,7 +764,7 @@
     { id: 'fx', name: '特效亮度', def: 1, min: 0.3, max: 1, step: 0.1, pct: true, note: '后期看不清自己时调低' },
     { id: 'nums', name: '伤害数字', def: 2, opts: ['关', '只看暴击和受伤', '全部'] },
     { id: 'ring', name: '主角脚下光圈', def: 1, opts: ['关', '开'], note: '人多时一眼找到自己' },
-    { id: 'gfx', name: '画质', def: 0, opts: ['自动', '低', '中', '高'], note: '自动：掉帧时依次关泛光、描边、阴影' },
+    { id: 'gfx', name: '画质', def: 0, opts: ['自动', '低', '中', '高'], note: '自动：掉帧时依次关泛光、环境光遮蔽、描边、阴影；低：关掉遮蔽和描边' },
     { id: 'cam', name: '镜头远近', def: 1, min: 0.85, max: 1.2, step: 0.05, pct: true, note: '调大看得更广' },
     { id: 'cb', name: '色弱辅助', def: 0, opts: ['关', '开'], note: '危险预警改成蓝 / 黄高对比色' },
     { id: 'blur', name: '切出窗口时暂停', def: 1, opts: ['关', '开'] }

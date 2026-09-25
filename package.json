@@ -17,6 +17,7 @@
     "audit:ui": "node tools/uiaudit.js shots/audit",
     "test:play": "node tools/playtest.js shots/play 2",
     "shots": "node tools/shots.js shots/art",
+    "light": "node tools/lighttest.js shots/light",
     "test": "npm run check && npm run test:flow",
     "music": "node tools/music-preview.js shots/music 20",
     "vendor:three": "node tools/vendor-three.js",
