@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><title>设置 · 48px · 温暖木作金边 · 手工雕刻</title><defs>
+ <linearGradient id="surface" x2="0" y2="1"><stop stop-color="#9a6840"/><stop offset=".48" stop-color="#684126"/><stop offset="1" stop-color="#26170f"/></linearGradient>
+ <linearGradient id="gold" x2="0" y2="1"><stop stop-color="#fff1af"/><stop offset=".35" stop-color="#f4c86a"/><stop offset="1" stop-color="#9c5d25"/></linearGradient>
+ <linearGradient id="ember"><stop stop-color="#fff0a6"/><stop offset=".45" stop-color="#ffb547"/><stop offset="1" stop-color="#e8702a"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#06080e" flood-opacity=".75"/></filter>
+ <filter id="inset"><feGaussianBlur in="SourceAlpha" stdDeviation="3" result="b"/><feOffset dy="3" result="o"/><feComposite in="o" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="i"/><feFlood flood-color="#000" flood-opacity=".65"/><feComposite in2="i" operator="in"/><feComposite in="SourceGraphic"/></filter>
+ <filter id="rough"><feTurbulence baseFrequency=".035 .22" numOctaves="2" seed="119" result="n"/><feColorMatrix in="n" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 .11 0"/><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+ <pattern id="grain" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M2 8q8-4 16 0t14 0M-5 22q10-5 20 0t22 0" fill="none" stroke="#f4c86a" stroke-opacity=".09" stroke-width="1"/></pattern>
+ </defs><style>.cut{fill:#26170f}</style><g stroke="#26170f" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" fill="url(#gold)"><path d="M20 3h8l2 7 6 3 7-2 4 7-6 5v6l6 5-4 7-7-2-6 3-2 7h-8l-2-7-6-3-7 2-4-7 6-5v-6l-6-5 4-7 7 2 6-3Z"/><circle class="cut" cx="24" cy="26" r="8"/></g></svg>
