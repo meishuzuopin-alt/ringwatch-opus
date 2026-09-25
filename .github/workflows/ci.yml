@@ -36,6 +36,7 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'   # 这一步只测浏览器，不需要 Electron
       - run: npx playwright install --with-deps chromium
       - run: npm run test:flow
+      - run: npm run test:cam
       - run: npm run shots
       - name: 上传截图（在本次运行页面底部下载，美术评审用）
         if: always()

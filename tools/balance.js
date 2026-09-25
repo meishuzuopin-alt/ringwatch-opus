@@ -1,4 +1,4 @@
-// 无头数值测试：node tools/balance.js [每个英雄跑几局] [最多打到第几波] [策略] [英雄] [危险等级]
+// 无头数值测试：node tools/balance.js [每个英雄跑几局] [最多打到第几波] [策略] [英雄] [危险等级] [地图]
 // 用一个「普通玩家水平」的走位机器人 + 三种购物策略跑整局，看能打到第几波、通关率多少（一局 20 波）。
 // 机器人会：躲不能吞的怪、躲冲锋线/喷刺线/爆囊圈/弹幕、安全时吃绿球捡晶屑、怪贴脸时冲刺、怪多时放技能。
 require('../js/data.js');
@@ -91,7 +91,7 @@ function shopPolicy(g, policy) {
   // 先顾圣火：残血就修；聪明策略手头宽裕时升级圣火
   var co = g.core;
   if (co.hp < co.maxHp * 0.7 && g.shardCount >= g.coreRepairCost()) g.repairCore();
-  if (policy === 'smart' && RW.CORE_LV[(co.lv || 1) + 1] && g.shardCount >= g.coreUpgradeCost() + 10) g.upgradeCore();
+  if (policy === 'smart' && RW.CORE_LV[(co.lv || 1) + 1] && g.shardCount >= g.coreUpgradeCost() + 10) g.upgradeCore(RW.CORE_FORM_ORDER[Math.floor(g.R() * 3)]);   // 3 级时随机选一种形态
   for (var round = 0; round < 6; round++) {
     var bought = false;
     var order = g.shop.slots.map(function (s, i) { return i; }).filter(function (i) { var s = g.shop.slots[i]; return s && !s.sold && s.kind !== 'none'; });
@@ -141,9 +141,9 @@ function evolvePolicy(g, policy) {
   for (var i = 0; i < g.weapons.length; i++) if (g.canEvolve(g.weapons[i])) g.evolveWeapon(i);
 }
 
-function runOne(seed, weapon, policy, maxWave, danger) {
+function runOne(seed, weapon, policy, maxWave, danger, map) {
   var g = new RW.Game({ seed: seed }), inp = { mx: 0, my: 0 }, bs = { n: 0, lastWave: 0 };
-  g.startRun(weapon, { danger: danger });
+  g.startRun(weapon, { danger: danger, map: map });
   var frames = 0;
   while (frames < 60 * 60 * 40) {
     frames++;
@@ -170,17 +170,18 @@ function runOne(seed, weapon, policy, maxWave, danger) {
 var runs = +process.argv[2] || 12;
 var maxWave = +process.argv[3] || RW.RUN.waves;
 var danger = +process.argv[6] || 0;
+var mapId = process.argv[7] || 'village';   // 第 7 个参数：地图
 var policies = process.argv[4] ? process.argv[4].split(',') : ['none', 'random', 'smart'];
 var t0 = Date.now();
 // 可选第 5 个参数：只跑指定英雄，逗号分隔
 var heroes = process.argv[5] ? process.argv[5].split(',') : RW.CLASS_ORDER;
 for (var pi = 0; pi < policies.length; pi++) {
   var pol = policies[pi], stages = {}, causes = {}, dieAt = {}, winAll = 0, evAll = 0;
-  console.log('[' + pol + '] 危险 ' + danger + '：平均通过波数（≥10 波占比 / 通关率）');
+  console.log('[' + pol + '] ' + RW.MAPS[mapId].name + ' · 危险 ' + danger + '：平均通过波数（≥10 波占比 / 通关率）');
   for (var wi = 0; wi < heroes.length; wi++) {
     var wid = heroes[wi], sum = 0, c10 = 0, wins = 0, all = [];
     for (var s = 0; s < runs; s++) {
-      var r = runOne(1000 + s * 7919 + wi, wid, pol, maxWave, danger);
+      var r = runOne(1000 + s * 7919 + wi, wid, pol, maxWave, danger, mapId);
       sum += r.cleared; all.push(r.cleared); stages[r.stage] = (stages[r.stage] || 0) + 1; evAll += r.ev || 0;
       if (r.cause) { causes[r.cause] = (causes[r.cause] || 0) + 1; dieAt[r.wave] = (dieAt[r.wave] || 0) + 1; }
       if (r.cleared >= 10) c10++;

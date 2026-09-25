@@ -142,6 +142,12 @@
     this.music = { state: 'off', song: null, next: 0, step: 0, part: 0 };
   }
   var S = Sfx.prototype;
+  // 地图主题（js/map.js 的 music）：key 移调半音数、tempo 速度倍率、amb 环境层
+  S.kf = 1; S.tempo = 1; S.amb = 'meadow';
+  S.setTheme = function (mu) {
+    mu = mu || {};
+    this.kf = Math.pow(2, (mu.key || 0) / 12); this.tempo = mu.tempo || 1; this.amb = mu.amb || 'meadow';
+  };
 
   function distCurve(k) {
     var n = 2048, c = new Float32Array(n);
@@ -251,7 +257,7 @@
 
   // 竖琴一拨：基音加很轻的八度泛音，很快衰减
   S.chord = function (chain, semis, at, dur, minor, vol) {
-    var ctx = this.ctx, f = E2 * Math.pow(2, semis / 12) * 2;
+    var ctx = this.ctx, f = E2 * this.kf * Math.pow(2, semis / 12) * 2;
     var g = ctx.createGain();
     var v = (vol || 1) * 0.9;
     g.gain.setValueAtTime(0.0001, at);
@@ -263,7 +269,7 @@
     h.connect(hg); hg.connect(g); h.start(at); h.stop(at + 0.35);
   };
   S.bassNote = function (semis, at, dur, vol) {
-    var ctx = this.ctx, f = E2 / 2 * Math.pow(2, semis / 12), g = ctx.createGain();
+    var ctx = this.ctx, f = E2 * this.kf / 2 * Math.pow(2, semis / 12), g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.006);
     g.gain.exponentialRampToValueAtTime(vol * 0.4, at + dur * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, at + dur + 0.04);
     g.connect(this.bass);
@@ -272,7 +278,7 @@
     s.connect(sg); sg.connect(g); s.start(at); s.stop(at + dur + 0.06);
   };
   S.leadNote = function (semis, at, dur) {
-    var ctx = this.ctx, f = Math.max(40, E2 * 4 * Math.pow(2, semis / 12)), g = ctx.createGain(), o = ctx.createOscillator();
+    var ctx = this.ctx, f = Math.max(40, E2 * this.kf * 4 * Math.pow(2, semis / 12)), g = ctx.createGain(), o = ctx.createOscillator();
     o.type = 'sine';
     var from = this._fl && Math.abs(this._fl - f) > 1 ? this._fl : f;
     o.frequency.setValueAtTime(from, at);
@@ -322,7 +328,7 @@
   // ---------------- 音乐排程 ----------------
   // 在绝对时间 at 播放第 step 个十六分音符（step 从本段落开头算起）
   S.playStep = function (song, step, at) {
-    var spb = 60 / song.bpm / 4, bar = (step >> 4) % 4, s = step % 16, phrase = (step >> 6) % song.parts.length;
+    var spb = 60 / (song.bpm * this.tempo) / 4, bar = (step >> 4) % 4, s = step % 16, phrase = (step >> 6) % song.parts.length;
     var part = song.parts[phrase], riff = R[part[0]], dr = DRUM[part[1]], withLead = part[2], v = song.vol;
     // 吉他 + 贝斯
     var ev = riff[bar][s];
@@ -343,7 +349,24 @@
     if (SN.charAt(s) === 'x') this.snare(at, (fill ? 0.12 : 0.1) * v);
     if (fill && FILL.t.charAt(s) === 'x') this.tom(at, 0.28 * v, 180 - (s - 8) * 12);
     if (!fill && dr.h.charAt(s) === 'x') this.hat(at, 0.025 * v, false);
-    if (s === 0 && bar === 0) this.tone(880, 660, 0.18, 'sine', 0.03 * v, 0, this.musicBus);
+    if (s === 0 && bar === 0) this.tone(880 * this.kf, 660 * this.kf, 0.18, 'sine', 0.03 * v, 0, this.musicBus);
+    this.ambience(step, s, bar, at, v);
+  };
+  // 地图环境层：林地鸟鸣、雪岭风铃与风声、沼泽低鸣与蛙声（都很轻，垫在音乐下面）
+  S.ambience = function (step, s, bar, at, v) {
+    var dt = at - this.ctx.currentTime, B = this.musicBus, k = this.kf;
+    if (dt < 0) dt = 0;
+    if (this.amb === 'forest') {
+      if (s === 6 && bar % 2 === 0) { this.tone(2400, 3300, 0.07, 'sine', 0.018 * v, dt, B); this.tone(2900, 3600, 0.06, 'sine', 0.014 * v, dt + 0.09, B); }
+      if (s === 13 && bar === 3) this.tone(1900, 2600, 0.1, 'sine', 0.015 * v, dt, B);
+    } else if (this.amb === 'snow') {
+      var chime = [1320, 1480, 1760, 1980, 2217];
+      if (s === 0 || s === 10) this.tone(chime[(step >> 2) % 5] * k, chime[(step >> 2) % 5] * k * 0.995, 0.9, 'sine', 0.012 * v, dt, B);
+      if (s === 0 && bar === 0) this.noise(2.4, 0.03 * v, 'bandpass', 500, 1400, dt, B);
+    } else if (this.amb === 'marsh') {
+      if (s === 0 && bar % 2 === 0) { this.tone(E2 * k / 2, E2 * k / 2, 1.8, 'triangle', 0.035 * v, dt, B); this.tone(E2 * k * 0.75, E2 * k * 0.75, 1.8, 'sine', 0.02 * v, dt, B); }
+      if (s === 12 && bar % 2 === 1) { this.tone(180, 120, 0.08, 'triangle', 0.03 * v, dt, B); this.tone(170, 110, 0.08, 'triangle', 0.025 * v, dt + 0.12, B); }
+    }
   };
 
   // state: 'off' | 'menu' | 'battle' | 'boss'；intensity 0–1
@@ -357,20 +380,21 @@
     var bigChange = m.state === 'off' || (m.state.slice(0, 6) !== key.slice(0, 6));
     if (key !== m.state && (bigChange || m.step % 64 === 0)) { m.state = key; m.song = SONG[key]; m.step = 0; if (bigChange) m.next = now + 0.05; }
     if (m.next < now) m.next = now + 0.05;
-    var spb = 60 / m.song.bpm / 4;
+    var spb = 60 / (m.song.bpm * this.tempo) / 4;
     while (m.next < now + 0.2) {
       this.playStep(m.song, m.step, m.next);
       m.next += spb; m.step++;
-      if (key !== m.state && m.step % 64 === 0) { m.state = key; m.song = SONG[key]; m.step = 0; spb = 60 / m.song.bpm / 4; }
+      if (key !== m.state && m.step % 64 === 0) { m.state = key; m.song = SONG[key]; m.step = 0; spb = 60 / (m.song.bpm * this.tempo) / 4; }
     }
   };
 
   // 离线渲染一段音乐（试听、测试用）：返回 AudioBuffer 的 Promise
-  RW.renderMusic = function (state, seconds, sampleRate) {
+  RW.renderMusic = function (state, seconds, sampleRate, theme) {
     var sr = sampleRate || 44100, OAC = root.OfflineAudioContext || root.webkitOfflineAudioContext;
     var ctx = new OAC(2, Math.ceil(sr * seconds), sr), s = new Sfx();
     s.build(ctx);
-    var song = SONG[state], spb = 60 / song.bpm / 4, n = Math.floor(seconds / spb);
+    s.setTheme(theme);   // 地图主题（移调、速度、环境层）
+    var song = SONG[state], spb = 60 / (song.bpm * s.tempo) / 4, n = Math.floor(seconds / spb);
     for (var i = 0; i < n; i++) s.playStep(song, i, 0.05 + i * spb);
     return ctx.startRendering();
   };
@@ -378,9 +402,9 @@
 
   // ---------------- 音效 ----------------
   // 每层分开：低频身体、噪声瞬态、泛音铃。音高每次略偏，避免同一声反复。
-  S.impact = function (power, delay) {
+  S.impact = function (power, delay, pitch) {
     var p = Math.max(0.18, Math.min(1, power || 0.4)), d = delay || 0;
-    var j = 0.92 + Math.random() * 0.16, len = 0.14 + p * 0.62;
+    var j = (0.92 + Math.random() * 0.16) * (pitch || 1), len = 0.14 + p * 0.62;
     this.tone((62 + p * 48) * j, 30, len, 'sine', 0.34 + p * 0.38, d, this.sfxBus);
     this.tone(40 * j, 26, len * 1.25, 'sine', 0.16 * p, d + 0.015, this.sfxBus);
     this.noise(0.02 + p * 0.015, 0.16 + p * 0.2, 'highpass', 1800, 600, d, this.sfxBus);
@@ -412,6 +436,18 @@
     this.whoosh(dur, vol * 0.35, f0 * 3, f1 * 2, delay || 0);
   };
 
+  // 怪物的受击 / 死亡：身体冲击 + 材质层（甲壳金属声、黏液声、骨头声、灵体声）
+  S.creature = function (type, power) {
+    var pr = (RW.ENEMY_SFX && RW.ENEMY_SFX[type]) || { pitch: 1, body: 0.5, tone: 'flesh' }, p = power * (0.6 + 0.6 * pr.body), q = pr.pitch;
+    this.impact(p, 0, q);
+    switch (pr.tone) {
+      case 'shell': this.bell(900 * q, 0.14, 0.05 * power); this.noise(0.04, 0.08 * power, 'highpass', 4200, 2600, 0, this.sfxBus); break;
+      case 'goo': this.tone(320 * q, 110 * q, 0.14, 'sine', 0.12 * power, 0, this.sfxBus); this.noise(0.12, 0.08 * power, 'lowpass', 700, 180, 0.01, this.sfxBus); break;
+      case 'bone': this.noise(0.03, 0.12 * power, 'bandpass', 2600, 2000, 0, this.sfxBus); this.tone(1300 * q, 820 * q, 0.05, 'triangle', 0.05 * power, 0, this.sfxBus); break;
+      case 'spirit': this.whoosh(0.2, 0.07 * power, 1200 * q, 3200 * q); this.bell(1400 * q, 0.3, 0.03 * power, 0.02); break;
+    }
+  };
+
   S.play = function (ev) {
     var a = ev.a;
     switch (ev.type) {
@@ -421,8 +457,8 @@
         else if (a === 'tower' && this.ok('tower', 0.08)) this.whoosh(0.05, 0.05, 1600, 700);
         break;
       case 'hit':
-        if (a && this.ok('crit', 0.05)) { this.impact(0.64); this.bell(740, 0.12, 0.05); }
-        else if (this.ok('hit', 0.04)) this.impact(0.36);
+        if (a && this.ok('crit', 0.05)) { this.creature(ev.b, 0.64); this.bell(740, 0.12, 0.05); }
+        else if (this.ok('hit', 0.04)) this.creature(ev.b, 0.36);
         break;
       case 'bladeHit': if (this.ok('blade', 0.05)) { this.impact(0.46); this.whoosh(0.08, 0.07, 2200, 600); } break;
       case 'charge': if (this.ok('charge', 0.1)) this.swell(140, 420, 0.34, 0.08); break;
@@ -432,9 +468,10 @@
       case 'boom': if (this.ok('boom', 0.06)) this.boom(0.7); break;
       case 'pulse': if (this.ok('pulse', 0.1)) this.swell(90, 50, 0.28, 0.16); break;
       case 'kill':
-        if (a === 'shell' && this.ok('killS', 0.05)) this.impact(0.74);
-        else if (this.ok('kill', 0.03)) this.impact(0.5);
+        if (this.ok('kill' + (a || ''), 0.04)) this.creature(a, a === 'shell' ? 0.74 : 0.5);
         break;
+      case 'shrine': if (this.ok('shrine', 0.5)) { this.bell(660, 0.5, 0.07); this.bell(990, 0.6, 0.06, 0.1); this.bell(1320, 0.8, 0.05, 0.22); } break;
+      case 'coreForm': if (this.ok('cform', 1)) { this.impact(0.7); this.bell(392, 0.8, 0.08, 0.05); this.bell(588, 1, 0.07, 0.2); this.bell(784, 1.3, 0.06, 0.35); } break;
       case 'eliteDown': if (this.ok('eliteDown')) { this.impact(0.86); this.bell(220, 0.7, 0.1, 0.05); this.bell(330, 0.8, 0.08, 0.18); } break;
       case 'pickup': if (this.ok('pick', 0.028)) this.bell(620 * Math.pow(2, Math.min(a || 1, 12) / 12), 0.09, 0.05); break;
       case 'hurt': if (this.ok('hurt', 0.1)) { this.impact(0.72); this.whoosh(0.16, 0.08, 400, 120); } break;

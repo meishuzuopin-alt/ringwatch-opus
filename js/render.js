@@ -1124,9 +1124,11 @@
 
   // ---------- 小地图：整块甲板一览，白框是当前屏幕 ----------
   D.MINI = { w: 110, h: Math.round(110 * WD.h / WD.w) };
+  // 换地图：小地图按新尺寸重建
+  D.onMap = function () { D.miniTerrain = null; D.MINI.w = WD.w >= WD.h ? 150 : 110; D.MINI.h = Math.round(D.MINI.w * WD.h / WD.w); };
   D.buildMiniTerrain = function () {
     var Gd = RW.GRID, M = RW.MAP, cv = RW.Plat.createOffscreen(Gd.cols, Gd.rows), c = cv.getContext('2d');
-    var cols = { '~': '#2f6fa0', 'w': '#2f6fa0', '=': '#8a5a34', '^': '#4a4e56', '#': '#5a5e66', 'T': '#2e5a2a', 'H': '#9a6a44', ',': '#8a7048', '_': '#8a8680', 'C': '#ffd27a', 'S': '#c04040', 'L': '#4a7a34', '.': '#3f6a2e' };
+    var cols = { '~': '#2f6fa0', 'w': '#2f6fa0', '=': '#8a5a34', '^': '#4a4e56', '#': '#5a5e66', 'T': '#2e5a2a', 'H': '#9a6a44', ',': '#8a7048', '_': '#8a8680', 'C': '#ffd27a', 'S': '#c04040', 'L': '#4a7a34', '.': '#3f6a2e', 'A': '#9fe8ff' };
     for (var r = 0; r < Gd.rows; r++) for (var q = 0; q < Gd.cols; q++) { c.fillStyle = cols[M.rows[r][q]] || '#3f6a2e'; c.fillRect(q, r, 1, 1); }
     D.miniTerrain = cv;
   };
@@ -1141,6 +1143,11 @@
     c.fillStyle = 'rgba(125,255,155,0.45)';
     for (i = 0; i < g.orbs.length; i++) { var o = g.orbs[i]; if (o.on && o.dead <= 0) c.fillRect(x0 + o.x * s - 0.5, y0 + o.y * s - 0.5, 1, 1); }
     for (i = 0; i < g.towers.length; i++) { var tw = g.towers[i]; if (tw.on) { c.fillStyle = tw.d.color; c.fillRect(x0 + tw.x * s - 2, y0 + tw.y * s - 2, 4, 4); } }
+    for (i = 0; i < (g.shrines || []).length; i++) {   // 祭坛：没占领的闪蓝光
+      var sh = g.shrines[i];
+      c.fillStyle = sh.done ? 'rgba(120,130,140,0.8)' : (Math.sin(D.t * 5 + i) > 0 ? '#b8f2ff' : '#4fb8d8');
+      c.beginPath(); c.arc(x0 + sh.x * s, y0 + sh.y * s, 3, 0, Math.PI * 2); c.fill();
+    }
     var co = g.core;
     c.fillStyle = co.alert > 0 && Math.sin(D.t * 14) > 0 ? '#ff3b5c' : '#ffd27a';
     c.fillRect(x0 + co.x * s - 3.5, y0 + co.y * s - 3.5, 7, 7);
@@ -1199,6 +1206,7 @@
     var urgent = g.mode === 'battle' && left <= 5;
     var duel = g.final && !g.won && left <= 0;   // 终局：倒计时走完后要打倒灭火者才算守住
     D.text(g.mode === 'clear' ? (g.won ? '守住了' : '清场') : (duel ? '决战' : String(left)), cx, 46, duel ? 22 : 28, duel ? C.red : (urgent ? C.gold : C.text), 'center', true);
+    if (g.furyT > 0) D.text('战意爆发 伤害 +' + Math.round(RW.SHRINE.rewards.filter(function (x) { return x.id === 'fury'; })[0].dmg * 100) + '% · ' + Math.ceil(g.furyT) + 's', cx, 92, 12, '#ffb08a', 'center', true, 3);
     var co = g.core, ck = Math.max(0, co.hp / co.maxHp), cbx = cx - 62, cby = 64;
     D.text('火', cbx - 10, cby + 3, 10, co.alert > 0 && Math.sin(g.clock * 14) > 0 ? C.red : '#ffd27a', 'center', true);
     c.fillStyle = '#1e1712'; c.fillRect(cbx, cby, 132, 7);
@@ -1237,6 +1245,7 @@
       if (g.wave === 1) {
         D.text('踩金色木箱召唤同伴，两个一样的会合成。Q / E / R 放技能', W / 2, 292, 13, C.text, 'center', false, 3);
         D.text('B 造塔（1–4 选种类），花金币建塔，守住中央的圣火', W / 2, 314, 13, C.shard, 'center', false, 3);
+        if (g.shrines && g.shrines.length) D.text('地图上发蓝光的是祭坛：站进圈里占领，每波每座都有奖励（看小地图）', W / 2, 336, 13, '#b8f2ff', 'center', false, 3);
       }
     }
     if (g.evolveT > 0) {

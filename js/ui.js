@@ -164,14 +164,14 @@
       var col = i % 5, row = (i / 5) | 0;
       UI.button('hero:' + ids[i], 24 + col * 86, 76 + row * 104, 80, 96, '', { draw: UI.heroTile(g, ids[i]) });
     }
-    UI.runSetup(g, 24, 294, 424, 162);
-    UI.heroDetail(g, UI.heroSel, 468, 24, W - 492, 432);
+    UI.runSetup(g, 24, 290, 424, 188);
+    UI.heroDetail(g, UI.heroSel, 468, 24, W - 492, 454);
     var sel = UI.heroSel, ok = RW.isUnlocked(sel, prog);
-    UI.button('back', 24, 472, 160, 48, '返回', { style: 'ghost', size: 14 });
-    UI.button('pick:' + sel, 468, 472, W - 492, 48, ok ? '出发 · ' + RW.CLASSES[sel].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 17, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
+    UI.button('back', 24, 486, 160, 44, '返回', { style: 'ghost', size: 14 });
+    UI.button('pick:' + sel, 468, 486, W - 492, 44, ok ? '出发 · ' + RW.CLASSES[sel].name + ' · ' + RW.MAPS[UI.runMap].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 17, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
   };
   // 本局设置：危险等级（按英雄解锁）+ 变异器；记在 UI 上，存档一起保存
-  UI.runDanger = 0; UI.runMuts = [];
+  UI.runDanger = 0; UI.runMuts = []; UI.runMap = 'village';
   UI.maxDanger = function (g, id) {
     var hd = g.prog && g.prog.heroDanger ? g.prog.heroDanger[id] : undefined;
     return hd == null ? 0 : Math.min(RW.DANGER.length - 1, hd + 1);
@@ -185,19 +185,26 @@
     var c = D.ctx, id = UI.heroSel, top = UI.maxDanger(g, id), i;
     if (UI.runDanger > top) UI.runDanger = top;
     UI.panel(x, y, w, h);
-    D.text('本局设置', x + 16, y + 20, 13, C.text, 'left', true);
-    D.text('分数倍率 ×' + UI.scoreMul(UI.runDanger, UI.runMuts).toFixed(2), x + w - 16, y + 20, 12, C.gold, 'right', true);
-    D.text('危险', x + 16, y + 48, 11, C.dim, 'left');
+    D.text('本局设置', x + 16, y + 18, 13, C.text, 'left', true);
+    D.text('分数倍率 ×' + UI.scoreMul(UI.runDanger, UI.runMuts).toFixed(2), x + w - 16, y + 18, 12, C.gold, 'right', true);
+    // 地图
+    D.text('地图', x + 16, y + 46, 11, C.dim, 'left');
+    for (i = 0; i < RW.MAP_ORDER.length; i++) {
+      var mpId = RW.MAP_ORDER[i], mp = RW.MAPS[mpId], mOpen = RW.mapOpen(mpId, g.prog);
+      UI.button('map:' + mpId, x + 50 + i * 92, y + 32, 88, 28, mp.name, { style: UI.runMap === mpId ? 'primary' : 'normal', size: 12, disabled: !mOpen,
+        why: '解锁条件：' + (mp.unlock ? mp.unlock.text : '') });
+    }
+    D.text('危险', x + 16, y + 80, 11, C.dim, 'left');
     for (i = 0; i < RW.DANGER.length; i++) {
       var on = UI.runDanger === i, open = i <= top;
-      UI.button('danger:' + i, x + 50 + i * 42, y + 34, 38, 28, String(i), { style: on ? 'danger' : 'normal', size: 13, disabled: !open,
+      UI.button('danger:' + i, x + 50 + i * 42, y + 66, 38, 28, String(i), { style: on ? 'danger' : 'normal', size: 13, disabled: !open,
         why: '先用' + RW.CLASSES[id].name + '通关危险 ' + (i - 1) });
     }
-    D.text(RW.DANGER[UI.runDanger].note, x + 310, y + 48, 10, UI.runDanger ? '#ffb3c1' : C.dim, 'left');
-    D.text('变异器（点选开关，难度越高分越多）', x + 16, y + 80, 11, C.dim, 'left');
+    D.text(RW.DANGER[UI.runDanger].note, x + 310, y + 80, 10, UI.runDanger ? '#ffb3c1' : C.dim, 'left');
+    D.text('变异器（点选开关，难度越高分越多）', x + 16, y + 110, 11, C.dim, 'left');
     for (i = 0; i < RW.MUT_ORDER.length; i++) {
       var mid = RW.MUT_ORDER[i], mo = UI.runMuts.indexOf(mid) >= 0, col = i % 4, row = (i / 4) | 0;
-      UI.button('mut:' + mid, x + 16 + col * 100, y + 92 + row * 32, 94, 27, RW.MUTATORS[mid].name, { style: mo ? 'ad' : 'ghost', size: 12 });
+      UI.button('mut:' + mid, x + 16 + col * 100, y + 122 + row * 32, 94, 27, RW.MUTATORS[mid].name, { style: mo ? 'ad' : 'ghost', size: 12 });
     }
   };
 
@@ -566,7 +573,9 @@
     c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(118, y + 22, 120 * ck, 6);
     var rc2 = g.coreRepairCost(), uc = g.coreUpgradeCost(), nxt = RW.CORE_LV[(co.lv || 1) + 1], maxed = !nxt;
     UI.button('repair', 118, y + 32, 124, 26, '维修 +50% · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '圣火是满的' : '金币不足' });
-    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火已满级' : ('升级 ' + nxt.note + ' · ' + uc), { size: 11, disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
+    var needF = g.coreNeedsForm(), cf = RW.CORE_FORMS[co.form];
+    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火已满级' : ((needF ? '选形态并升级 · ' : '升级 ' + nxt.note + ' · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
+    if (cf) D.text(cf.name, 396, y + 14, 10, cf.color, 'right', true);
     // 卡片
     // 右栏：4 张货
     for (i = 0; i < 4; i++) {
@@ -574,7 +583,7 @@
       UI.card(g, sl, i, LW + 16, 82 + i * 112, W - LW - 32, 104);
     }
     // 圣火之后：键位提示
-    D.text('1–4 购买 · R 刷新 · Enter 开始下一波', 16, 268, 11, C.faint, 'left');
+    D.text('1–4 购买 · R 刷新 · Enter 开始下一波 · 本局还能禁用 ' + g.bansLeft + ' 件', 16, 268, 11, C.faint, 'left');
     UI.setsPanel(g, 16, 280, LW - 32);
     UI.evolvePanel(g, 16, 360, LW - 32);
     // 底部操作（左栏）
@@ -699,7 +708,8 @@
       D.text(String(sl.price), bx + 36, by + bh / 2 + 1, 18, afford ? '#04121a' : C.text, 'left', true);
       c.globalAlpha = 1;
     } });
-    UI.button('lock:' + i, x + w - 100, y + 60, 90, 28, sl.locked ? '已锁定' : '锁定', { style: sl.locked ? 'ad' : 'ghost', size: 11 });
+    UI.button('lock:' + i, x + w - 100, y + 60, 44, 28, sl.locked ? '已锁' : '锁定', { style: sl.locked ? 'ad' : 'ghost', size: 11 });
+    UI.button('ban:' + i, x + w - 54, y + 60, 44, 28, '禁用', { style: 'ghost', size: 11, disabled: g.bansLeft <= 0, why: '本局禁用次数用完了' });
   };
 
   // ================= 祝福三选一 =================
@@ -864,6 +874,8 @@
         D.rr(214 + k * 16, yy - 6, 12, 12, 3); c.fill();
       }
     }
+    UI.button('recTab', W - 184, 24, 160, 32, UI.recTab === 'history' ? '看成就' : '最近几局', { size: 12 });
+    if (UI.recTab === 'history') { UI.historyList(pr); UI.button('home', 24, 488, 160, 40, '返回', { style: 'ghost', size: 14 }); return; }
     // 右栏：成就两列
     var half = Math.ceil(RW.ACHIEVEMENTS.length / 2), cw = (W - 364) / 2;
     for (i = 0; i < RW.ACHIEVEMENTS.length; i++) {
@@ -874,6 +886,33 @@
       D.text(a.desc, ax + 96, ay, 10, on ? C.text : C.faint, 'left');
     }
     UI.button('home', 24, 488, 160, 40, '返回', { style: 'ghost', size: 14 });
+  };
+
+  // ================= 圣火形态（升到 3 级时三选一） =================
+  UI.formPanel = function (g) {
+    UI.btns.length = 0;
+    UI.dim(0.82);
+    var cw = 270, gap = 20, x0 = (W - cw * 3 - gap * 2) / 2, cost = g.coreUpgradeCost();
+    D.glowText('圣火形态', W / 2, 70, 32, C.gold, 'center', 14);
+    D.text('升到 ' + RW.CORE_FORM_AT + ' 级时选一种，本局不能再改 · 花费 ' + cost + ' 金币', W / 2, 104, 12, C.dim, 'center');
+    for (var i = 0; i < RW.CORE_FORM_ORDER.length; i++) {
+      (function (id, i) {
+        var F = RW.CORE_FORMS[id];
+        UI.button('coreForm:' + id, x0 + i * (cw + gap), 130, cw, 290, '', { disabled: g.shardCount < cost, why: '金币不足，需要 ' + cost, draw: function (x, y, w, h, pressed) {
+          var c = D.ctx;
+          c.fillStyle = pressed ? 'rgba(60,46,30,0.98)' : 'rgba(26,20,16,0.97)'; D.rr(x, y, w, h, 12); c.fill();
+          c.strokeStyle = F.color; c.lineWidth = 2.5; D.rr(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
+          var cx = x + w / 2, cy = y + 80, fl = 0.9 + 0.1 * Math.sin(UI.t * 5 + i);
+          c.fillStyle = 'rgba(255,255,255,0.06)'; c.beginPath(); c.arc(cx, cy, 44, 0, TAU); c.fill();
+          c.fillStyle = F.color; c.beginPath(); c.moveTo(cx, cy - 34 * fl); c.quadraticCurveTo(cx + 22, cy, cx, cy + 26); c.quadraticCurveTo(cx - 22, cy, cx, cy - 34 * fl); c.fill();
+          D.text(F.name, cx, y + 150, 20, F.color, 'center', true);
+          var nl = D.wrap(F.note, w - 40, 13);
+          for (var k = 0; k < nl.length; k++) D.text(nl[k], cx, y + 184 + k * 20, 13, C.text, 'center');
+          D.text('按 ' + (i + 1), cx, y + h - 18, 11, C.faint, 'center');
+        } });
+      })(RW.CORE_FORM_ORDER[i], i);
+    }
+    UI.button('formClose', W / 2 - 80, 440, 160, 40, '再想想', { style: 'ghost', size: 14 });
   };
 
   // ================= 设置 =================
@@ -916,6 +955,19 @@
       D.text(RW.STAT_DESC[k], x + 106, y, 10, C.dim, 'left');
     }
     UI.button('statsClose', W / 2 - 80, H - 62, 160, 36, '知道了', { style: 'primary', size: 14 });
+  };
+
+  UI.historyList = function (pr) {
+    var list = pr.history || [], x = 344;
+    D.text('最近 ' + list.length + ' 局', x, 84, 13, C.text, 'left', true);
+    if (!list.length) { D.text('还没有打完的局', x, 116, 12, C.dim, 'left'); return; }
+    for (var i = 0; i < list.length; i++) {
+      var h = list[i], y = 116 + i * 30, hc = RW.CLASSES[h.hero] || {}, mp = RW.MAPS[h.map] || {};
+      D.text(h.won ? (h.endless ? '通关 · 无尽' : '通关') : '失败', x, y, 12, h.won ? C.gold : C.dim, 'left', true);
+      D.text((hc.name || '') + ' · ' + (mp.name || '') + (h.daily ? ' · 每日' : '') + (h.danger ? ' · 危险 ' + h.danger : ''), x + 90, y, 12, hc.color || C.text, 'left', true);
+      D.text('第 ' + h.wave + ' 波', x + 400, y, 12, C.text, 'left');
+      D.text(h.score + ' 分', W - 40, y, 12, C.gold, 'right', true);
+    }
   };
 
   // ================= 暂停 =================

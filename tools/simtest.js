@@ -51,7 +51,7 @@ RW.BLESS_ORDER.forEach(function (id) { for (var k in RW.BLESSINGS[id].fx) ok(!!R
 RW.SET_ORDER.forEach(function (tag) { RW.SETS[tag].tiers.forEach(function (t) { for (var k in t[1]) ok(!!RW.STATS[k], '套装 ' + tag + ' 的属性 ' + k + ' 存在'); }); });
 var achIds = {};
 RW.ACHIEVEMENTS.forEach(function (a) { ok(!achIds[a.id], '成就 id 不重复：' + a.id); achIds[a.id] = 1; });
-ok(RW.ACHIEVEMENTS.length === 40, '成就共 40 个');
+ok(RW.ACHIEVEMENTS.length === 42, '成就共 42 个');
 ok(RW.SHEET.hp(20) > RW.SHEET.hp(10) && RW.SHEET.hp(10) > RW.SHEET.hp(5), '怪物血量随波数单调增长');
 
 // 3. 终局：第 20 波换成灭火者，击败即通关，结算记分和成就
@@ -240,6 +240,95 @@ ok(RW.SHEET.hp(20) > RW.SHEET.hp(10) && RW.SHEET.hp(10) > RW.SHEET.hp(5), '怪�
   ok(ms < 4, '满屏敌人时每帧模拟 ' + ms.toFixed(2) + ' ms（预算 4 ms，一帧总共 16.7 ms）');
   console.log('  · 满屏 ' + g.enemyCount + ' 只敌人，每帧模拟 ' + ms.toFixed(2) + ' ms');
 })();
+
+// 10. 每张地图：入口、王旗、祭坛都能走到圣火；跑一分钟数值有限
+RW.MAP_ORDER.forEach(function (mid, mi) {
+  var g = newGame(RW.CLASS_ORDER[mi % RW.CLASS_ORDER.length], { map: mid }, 50 + mi);
+  ok(RW.MAP.id === mid && g.mapId === mid, mid + '：切到这张图');
+  var G = RW.GRID, D = RW.NAV.distCore, cell = function (x, y) { return ((y / G.cell) | 0) * G.cols + ((x / G.cell) | 0); };
+  var gates = G.gates.north.concat(G.gates.side, G.gates.south);
+  ok(gates.length >= 3, mid + '：至少 3 个入口（实际 ' + gates.length + '）');
+  ok(gates.every(function (q) { return D[cell(q.x, q.y)] < 32767; }), mid + '：每个入口都能走到圣火');
+  ok(RW.FRONTS.length === 6 && RW.FRONTS.slice(1).every(function (f) { return RW.NAV.walkable(f.x, f.y) && D[cell(f.x, f.y)] < 32767; }), mid + '：五站王旗都在能走的地方');
+  ok(g.shrines.length >= 3 && g.shrines.every(function (q) { return D[cell(q.x, q.y)] < 32767; }), mid + '：至少 3 座祭坛，都走得到');
+  ok(Math.abs(g.core.x - RW.TUNE.core.x) < 1e-6 && RW.NAV.walkable(g.player.x, g.player.y), mid + '：圣火和英雄位置正确');
+  g.player.hp = g.player.maxHp = 1e5; g.core.hp = g.core.maxHp = 1e6;
+  for (var t = 0; t < 30; t++) run(g, 60, { mx: Math.cos(t * 0.7), my: Math.sin(t * 1.3) });
+  ok(finite(g).length === 0 && g.kills + g.enemyCount > 0, mid + '：跑 30 秒数值有限、刷得出怪（击杀 ' + g.kills + '）');
+  g.core.lv = 5; g.applyCoreLevel();
+  ok(g.front && RW.NAV.walkable(g.front.x, g.front.y), mid + '：满级王旗 ' + g.front.name);
+});
+// 敌人配比：雪岭的铁甲兽明显更多
+(function () {
+  var cnt = function (mid) { var g = newGame('mage', { map: mid }, 9), n = 0; for (var i = 0; i < 4000; i++) if (g.pickMix(RW.waveDef(8).mix) === 'shell') n++; return n; };
+  var a = cnt('village'), b = cnt('snow');
+  ok(b > a * 1.3, '雪岭关隘的铁甲兽比圣火村多（' + b + ' / ' + a + '）');
+})();
+
+// 11. 圣火形态
+(function () {
+  RW.CORE_FORM_ORDER.forEach(function (fid) {
+    var g = newGame('knight', {}, 21);
+    g.shardCount = 999; g.upgradeCore();
+    ok(g.core.lv === 2, fid + '：先升到 2 级');
+    ok(g.coreNeedsForm() && g.upgradeCore() !== 'ok' && g.core.lv === 2, fid + '：3 级前必须选形态');
+    ok(g.upgradeCore(fid) === 'ok' && g.core.form === fid && g.core.lv === 3, fid + '：选定形态并升到 3 级');
+    g.player.x = g.core.x + 400; g.player.hp = g.player.maxHp = 1e5; g.core.hp = g.core.maxHp = 1e6;
+    for (var i = 0; i < 6; i++) g.spawnEnemy('mite', g.core.x + 60 + i * 12, g.core.y + (i % 2 ? 40 : -40), false);
+    var hp0 = g.core.hp;
+    run(g, 120);
+    ok(g.coreSrc.dmg > 0, fid + '：圣火打出了伤害（' + Math.round(g.coreSrc.dmg) + '）');
+    if (fid === 'ward') ok(g.enemies.some(function (e) { return e.on && e.slowT > 0; }), '守护：守护波让敌人减速');
+    ok(finite(g).length === 0, fid + '：数值有限');
+  });
+})();
+
+// 12. 野外祭坛：站进圈里占领，每波每座一次
+(function () {
+  var g = newGame('mage', { map: 'forest' }, 33), sh = g.shrines[0];
+  g.player.hp = g.player.maxHp = 1e5; g.core.hp = g.core.maxHp = 1e6;
+  var gold0 = g.shardCount;
+  for (var f = 0; f < 60 * (RW.SHRINE.hold + 1); f++) { g.player.x = sh.x; g.player.y = sh.y; run(g, 1); }
+  ok(sh.done && g.rs.shrines === 1, '站满 ' + RW.SHRINE.hold + ' 秒占领祭坛（奖励：' + sh.reward + '）');
+  for (f = 0; f < 120; f++) { g.player.x = sh.x; g.player.y = sh.y; run(g, 1); }
+  ok(g.rs.shrines === 1, '同一波同一座祭坛只给一次');
+  g.startWave(g.wave + 1);
+  ok(!sh.done && sh.prog === 0, '下一波祭坛重新可以占领');
+  g.furyT = 5; var d1 = g.momDmg(); g.furyT = 0; var d0 = g.momDmg();
+  ok(d1 > d0, '战意爆发期间伤害更高');
+})();
+
+// 13. 局中存档记住地图和圣火形态
+(function () {
+  var g = newGame('ranger', { map: 'marsh' }, 44);
+  g.shardCount = 999; g.upgradeCore(); g.upgradeCore('blaze');
+  g.clearWave();
+  for (var f = 0; f < 600 && g.mode !== 'shop' && g.mode !== 'bless'; f++) run(g, 1);
+  var sv = JSON.parse(JSON.stringify(g.saveRun()));
+  newGame('mage', { map: 'village' }, 1);   // 先切到别的图
+  var h = new RW.Game({ seed: 5 }); h.prog = { unlocked: {}, heroBest: {}, kills: 0, coins: 0, built: 0, runs: 0 };
+  ok(h.loadRun(sv) && h.mapId === 'marsh' && RW.MAP.id === 'marsh', '读档回到沼泽渡口');
+  ok(h.core.form === 'blaze' && h.core.lv === 3, '读档保留圣火形态和等级');
+})();
+// 14. 禁用：这件货本局不再出现，次数有限；最近几局有记录
+(function () {
+  var g = newGame('mage', {}, 71);
+  g.clearWave();
+  for (var f = 0; f < 600 && g.mode !== 'shop' && g.mode !== 'bless'; f++) run(g, 1);
+  if (g.mode === 'bless') g.chooseBless(0);
+  var sl = g.shop.slots[1], key = sl.kind + ':' + sl.id;
+  ok(g.banSlot(1) === 'ok' && g.banned[key] && g.bansLeft === RW.SHOP_BIAS.bans - 1, '禁用一件货，次数 -1');
+  ok(g.shop.slots[1].kind + ':' + g.shop.slots[1].id !== key, '禁用后当场补一件别的');
+  var seen = false;
+  g.shardCount = 99999;
+  for (var r = 0; r < 60; r++) { g.reroll(false); g.shop.slots.forEach(function (o) { if (o && o.kind + ':' + o.id === key) seen = true; }); }
+  ok(!seen, '刷新 60 次都不再出现被禁用的货');
+  g.banSlot(0); g.banSlot(2);
+  ok(g.bansLeft === 0 && g.banSlot(3) !== 'ok', '次数用完不能再禁用');
+  g.finishRun();
+  ok(g.prog.history.length === 1 && g.prog.history[0].hero === 'mage' && g.prog.history[0].map === 'village', '最近几局记下英雄和地图');
+})();
+RW.loadMap('village');
 
 console.log((failed ? '  ' : '  ✓ ') + passed + ' 项通过' + (failed ? '，' + failed + ' 项失败' : ''));
 if (failed) process.exit(1);

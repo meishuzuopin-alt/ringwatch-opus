@@ -1,5 +1,5 @@
 // 美术评审截图：固定几个场景各拍一张，方便对比改动前后的画面。node tools/shots.js [输出目录]
-// 场景：标题、选职业、白天/黄昏/夜晚/Boss 光照下的战斗、整备页、2D 退路画面。
+// 场景：标题、选职业、白天/黄昏/夜晚/Boss 光照下的战斗、整备页、每张地图、圣火三种形态、2D 退路画面。
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
@@ -46,6 +46,32 @@ fs.mkdirSync(out, { recursive: true });
   await page.waitForFunction(() => RW.game.mode === 'shop', null, { timeout: 60000 });
   await page.waitForTimeout(500);
   await shot(page, '07_shop');
+  // 每张地图各拍一张白天战斗（先把地图解锁条件满足）
+  const maps = await page.evaluate(() => RW.MAP_ORDER.filter(m => m !== 'village'));
+  for (let i = 0; i < maps.length; i++) {
+    await page.evaluate(id => {
+      const g = RW.game;
+      g.prog.heroBest = Object.assign({}, g.prog.heroBest, { mage: 20 });
+      RW.UI.runMap = id; RW.Main.action('pick:mage');
+      if (RW.W3) RW.W3.envFor = () => 'day';
+      g.startWave(3); g.player.hp = g.player.maxHp = 9999; g.core.hp = g.core.maxHp = 99999;
+    }, maps[i]);
+    await page.waitForTimeout(5000);
+    await shot(page, String(9 + i).padStart(2, '0') + '_map_' + maps[i]);
+  }
+  // 圣火三种形态（满级），英雄站在圣火旁边
+  const forms = await page.evaluate(() => RW.CORE_FORM_ORDER);
+  await page.evaluate(() => { RW.UI.runMap = 'village'; RW.Main.action('pick:mage'); if (RW.W3) RW.W3.envFor = () => 'dusk'; });
+  for (let i = 0; i < forms.length; i++) {
+    await page.evaluate(f => {
+      const g = RW.game;
+      g.core.lv = 5; g.core.form = f; g.applyCoreLevel(); g.core.hp = g.core.maxHp;
+      g.player.x = g.core.x + 90; g.player.y = g.core.y + 60; g.player.hp = g.player.maxHp = 9999; g.banner = 0;
+      RW.W3.snap = true;
+    }, forms[i]);
+    await page.waitForTimeout(3500);
+    await shot(page, (12 + i) + '_core_' + forms[i]);
+  }
   await page.close();
 
   const p2 = await open('?2d');

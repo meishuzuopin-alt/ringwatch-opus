@@ -5,12 +5,12 @@
   var SAVE_KEY = 'ringwatch_save_v1', RUN_KEY = 'ringwatch_run_v1';   // 局外进度 / 局中存档（最近一次整备）
 
   var g = null, paused = false, showHow = false, muted = false, musicOff = false, buildMenu = false, buildMenuT = 0;
-  var overlay = '';   // 盖在最上层的面板：'settings' 设置 / 'stats' 属性说明
+  var overlay = '';   // 盖在最上层的面板：'settings' 设置 / 'stats' 属性说明 / 'form' 圣火形态
   var js = { active: false, id: null, ox: 0, oy: 0, kx: 0, ky: 0, mx: 0, my: 0 };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: 0 };
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts }, opt: RW.opt }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts, map: UI.runMap }, opt: RW.opt }); }
   // 设置生效：音量三条总线、特效亮度（其余由渲染层直接读 RW.opt）
   function applyOpt() {
     var o = RW.opt;
@@ -24,8 +24,8 @@
   // 同一套设置立刻再开一局（英雄、危险、变异器；每日挑战用当天的种子）
   function startWith(hero, daily) {
     clearRun();
-    if (daily) { var ds = RW.dailySetup(daily); g.startRun(ds.hero, { danger: ds.danger, mutators: ds.mutators, seed: ds.seed, daily: daily }); }
-    else g.startRun(hero, { danger: Math.min(UI.runDanger, UI.maxDanger(g, hero)), mutators: UI.runMuts });
+    if (daily) { var ds = RW.dailySetup(daily); g.startRun(ds.hero, { danger: ds.danger, mutators: ds.mutators, seed: ds.seed, daily: daily, map: ds.map }); }
+    else g.startRun(hero, { danger: Math.min(UI.runDanger, UI.maxDanger(g, hero)), mutators: UI.runMuts, map: RW.mapOpen(UI.runMap, g.prog) ? UI.runMap : 'village' });
     resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
   }
   function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
@@ -43,6 +43,7 @@
     if (save.setup) {   // 上次的本局设置：危险等级与变异器
       UI.runDanger = save.setup.danger | 0;
       UI.runMuts = (save.setup.muts || []).filter(function (m) { return !!RW.MUTATORS[m]; });
+      if (RW.MAPS[save.setup.map] && RW.mapOpen(save.setup.map, g.prog)) UI.runMap = save.setup.map;
     }
     var od = RW.optDefaults(), so = save.opt || {};
     for (var ok in od) RW.opt[ok] = typeof so[ok] === 'number' ? so[ok] : od[ok];
@@ -130,6 +131,11 @@
     S.unlock();
     UI.padNav = false;
     if (overlay) {
+      if (overlay === 'form') {
+        if (/^Digit[123]$/.test(code)) action('coreForm:' + RW.CORE_FORM_ORDER[+code.slice(5) - 1]);
+        else if (code === 'Escape') action('formClose');
+        return;
+      }
       if (code === 'Escape' || code === 'Enter') action(overlay === 'settings' ? 'settingsClose' : 'statsClose');
       return;
     }
@@ -237,7 +243,7 @@
     return null;
   }
   function defaultFocus(btns) {
-    var pref = /^(settingsClose|statsClose|howtoClose|resume|continueRun|start|pick:|bless:0|next|retry|revive)/;
+    var pref = /^(coreForm:|settingsClose|statsClose|howtoClose|resume|continueRun|start|pick:|bless:0|next|retry|revive)/;
     for (var i = 0; i < btns.length; i++) if (pref.test(btns[i].id)) return btns[i].id;
     return btns[0].id;
   }
@@ -257,7 +263,7 @@
     if (best) { UI.focusId = best.id; if (g.mode === 'pick' && best.id.indexOf('hero:') === 0) action(best.id); else S.play({ type: 'ui' }); }
   }
   function padBack() {
-    if (overlay) action(overlay === 'settings' ? 'settingsClose' : 'statsClose');
+    if (overlay) action(overlay === 'settings' ? 'settingsClose' : (overlay === 'form' ? 'formClose' : 'statsClose'));
     else if (showHow) action('howtoClose');
     else if (paused) action('resume');
     else if (g.mode === 'pick') action('back');
@@ -270,7 +276,18 @@
     if (cmd !== 'wslot') UI.sel = null;
     S.play({ type: 'ui' });
     switch (cmd) {
-      case 'start': case 'again': g.rollStartOffers(); break;
+      case 'start': case 'again': g.rollStartOffers(); RW.loadMap(UI.runMap); break;
+      case 'map':
+        if (!RW.mapOpen(arg, g.prog)) break;
+        UI.runMap = arg; RW.loadMap(arg); persist();
+        UI.toast(RW.MAPS[arg].name + '：' + RW.MAPS[arg].desc, 2.4);
+        break;
+      case 'formClose': overlay = ''; break;
+      case 'coreForm':
+        var rf = g.upgradeCore(arg);
+        if (rf === 'ok') { overlay = ''; UI.toast(RW.CORE_FORMS[arg].name + '：' + RW.CORE_FORMS[arg].note, 2.6); }
+        else { UI.toast(rf); S.play({ type: 'deny' }); }
+        break;
       case 'howto': showHow = true; break;
       case 'howtoClose': showHow = false; break;
       case 'mute': muted = !muted; S.setMuted(muted); persist(); break;
@@ -357,8 +374,12 @@
         if (res !== 'ok') { UI.toast(res); S.play({ type: 'deny' }); }
         break;
       case 'lock': g.toggleLock(+arg); break;
+      case 'ban': var rb2 = g.banSlot(+arg); if (rb2 !== 'ok') { UI.toast(rb2); S.play({ type: 'deny' }); } else UI.toast('已禁用，本局不再出现 · 还能禁用 ' + g.bansLeft + ' 件', 1.6); break;
+      case 'recTab': UI.recTab = UI.recTab === 'history' ? 'ach' : 'history'; break;
       case 'repair': var r1 = g.repairCore(); if (r1 !== 'ok') UI.toast(r1); break;
-      case 'upgrade': var r2 = g.upgradeCore(); if (r2 !== 'ok') UI.toast(r2); break;
+      case 'upgrade':
+        if (g.coreNeedsForm()) { overlay = 'form'; break; }
+        var r2 = g.upgradeCore(); if (r2 !== 'ok') UI.toast(r2); break;
       case 'wslot':
         var wi = +arg, w = g.weapons[wi];
         if (!w) break;
@@ -399,6 +420,7 @@
     var mstate = 'menu';
     if (paused || g.mode === 'down' || g.mode === 'revive') mstate = 'off';
     else if (inBattle()) mstate = (g.boss && g.boss.on) || g.bossAlert > 0 ? 'boss' : 'battle';
+    if (S.themeMap !== RW.MAP.id) { S.setTheme(RW.MAP.music); S.themeMap = RW.MAP.id; }   // 每张地图一套音乐主题与环境声
     S.updateMusic(mstate, intensity);
     if (inBattle() || g.mode === 'revive') D.updateCamera(g, paused ? 0 : dt);
     render(paused ? 0 : dt);
@@ -430,6 +452,7 @@
     }
     if (overlay === 'settings') UI.settingsPanel();
     else if (overlay === 'stats') UI.statsPanel(g);
+    else if (overlay === 'form') UI.formPanel(g);
     UI.pressed = pressed;
     UI.drawToast();
   }

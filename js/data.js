@@ -28,7 +28,7 @@
     hitstop: { gap: 0.12, heavy: 3, shellKill: 2, eliteCrit: 2, eliteKill: 8, playerHurt: 5, mine: 3, evolve: 8 },
     shard: { life: 8, blink: 2, recallRate: 0.5, magnetSpeed: 560 },
     spawn: { telegraph: 0.8, safeDist: 170, ringMin: 260, ringMax: 470, anywhere: 0.15 },
-    biomass: { count: 40, respawn: 14, mass: 1 },
+    biomass: { count: 40, respawn: 14, mass: 1, near: 0.45, nearMin: 110, nearMax: 620 },   // near：刷在战线附近的比例（地图可用 orbNear 覆盖）
     momentum: { near: 160, per: 1, decayDelay: 1.6, decay: 6, tiers: [15, 40, 80], rate: [0.15, 0.3, 0.45], dmg: [0, 0.1, 0.2], speed: [0, 0, 0.1], max: 100 },
     healOrb: { chance: 0.08, near: 160, heal: 2, life: 7 },
     build: { max: 8, spacing: 34, step: 0.15, time: 0.5 },
@@ -345,15 +345,39 @@
     { cost: 48, hp: 90, dmg: 3, range: 30, cd: 0.05, heal: 0.1, note: '开波回更多' },
     { cost: 72, hp: 120, dmg: 4, range: 40, cd: 0.05, heal: 0.1, note: '圣火封顶' }
   ];
-  // 圣火每升一级，王旗自动往外插一站。玩家不用选阵型，跟着旗走就行。
-  RW.FRONTS = [
-    null,
-    { name: '王庭', x: 580, y: 900, gate: 'side' },
-    { name: '南街', x: 580, y: 780, gate: 'south' },
-    { name: '北桥', x: 540, y: 580, gate: 'north' },
-    { name: '北道', x: 620, y: 300, gate: 'north' },
-    { name: '山门', x: 260, y: 140, gate: 'north' }
-  ];
+  // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
+  RW.FRONTS = [null];
+
+  // 圣火形态：升到 3 级时三选一，玩法和外形都不同（玩家反馈：圣火不能只有一种形态）
+  RW.CORE_FORM_AT = 3;
+  RW.CORE_FORMS = {
+    blaze: { name: '烈焰圣火', color: '#ff7a2e', note: '火舌伤害 ×1.6，命中处小范围爆燃', dmgMul: 1.6, blast: 46, blastK: 0.5 },
+    ward:  { name: '守护圣火', color: '#8fe8ff', note: '每 1.5 秒一圈守护波：减速敌人，修复身边建筑与同伴，圣火每秒回 2', pulse: 1.5, slow: 0.4, slowT: 1.2, regen: 2, heal: 6, reach: 60 },
+    star:  { name: '星火圣火', color: '#d9a8ff', note: '一次射出 3 道星火，各打不同目标，射程 +40', shots: 3, range: 40, dmgMul: 0.75 }
+  };
+  RW.CORE_FORM_ORDER = ['blaze', 'ward', 'star'];
+
+  // 野外祭坛（地图上的 A 格）：站进圈里撑满进度就占领，每波每座一次。逼玩家离开圣火去开阔地
+  RW.SHRINE = {
+    r: 64, hold: 2.5,
+    rewards: [
+      { id: 'gold', name: '金币', w: 3 },         // 金币 = 10 + 波数 × 3
+      { id: 'heal', name: '圣火回血', w: 2, k: 0.25 },
+      { id: 'fury', name: '战意爆发', w: 2, dmg: 0.25, t: 20 },   // 伤害 +25%，持续 20 秒
+      { id: 'chest', name: '金箱', w: 1 }
+    ]
+  };
+
+  // 怪物的受击 / 死亡音色（玩家反馈：打击声要随怪物变化）。pitch 音高倍率，body 低频分量，
+  // tone：'flesh' 肉 / 'shell' 甲壳金属 / 'goo' 黏液 / 'bone' 骨头 / 'spirit' 灵体
+  RW.ENEMY_SFX = {
+    mite: { pitch: 1.3, body: 0.4, tone: 'flesh' }, spore: { pitch: 1.6, body: 0.25, tone: 'spirit' },
+    shell: { pitch: 0.7, body: 0.8, tone: 'shell' }, dasher: { pitch: 1.05, body: 0.55, tone: 'flesh' },
+    splitter: { pitch: 0.9, body: 0.5, tone: 'goo' }, bomber: { pitch: 1.15, body: 0.5, tone: 'flesh' },
+    spitter: { pitch: 1.1, body: 0.4, tone: 'goo' }, shielder: { pitch: 0.85, body: 0.6, tone: 'bone' },
+    warden: { pitch: 0.75, body: 0.8, tone: 'spirit' }, brood: { pitch: 0.65, body: 0.9, tone: 'goo' },
+    boss: { pitch: 0.55, body: 1, tone: 'shell' }, tyrant: { pitch: 0.5, body: 1, tone: 'spirit' }
+  };
 
   // ---------- 建筑（战斗中随时在脚下建造；整备时买「科技」统一升级） ----------
   RW.TOWERS = {
@@ -709,7 +733,7 @@
 
   // 商店手气（玩家最常骂的是「怎么都刷不到要的东西」）：
   // 已有流派的武器权重 ×ownTag，能升阶的 ×upgrade；缺进化道具时连续 evoPity 次整备没刷到就保底放一件
-  RW.SHOP_BIAS = { ownTag: 1.8, upgrade: 1.6, evoPity: 2 };
+  RW.SHOP_BIAS = { ownTag: 1.8, upgrade: 1.6, evoPity: 2, bans: 3 };   // bans：每局可以禁用几件货
 
   // 变异器：开局可选，难度越高分数倍率越高
   RW.MUTATORS = {
@@ -768,7 +792,9 @@
     { id: 'unlock_all', name: '满堂英雄', desc: '解锁全部英雄', check: function (pr) { for (var i = 0; i < RW.CLASS_ORDER.length; i++) if (!RW.isUnlocked(RW.CLASS_ORDER[i], pr)) return false; return true; } },
     { id: 'runs10', name: '常客', desc: '完成 10 局', check: function (pr) { return pr.runs >= 10; } },
     { id: 'runs50', name: '老兵', desc: '完成 50 局', check: function (pr) { return pr.runs >= 50; } },
-    { id: 'score50k', name: '五万分', desc: '一局得分达到 50000', check: function (pr, r) { return r.score >= 50000; } }
+    { id: 'score50k', name: '五万分', desc: '一局得分达到 50000', check: function (pr, r) { return r.score >= 50000; } },
+    { id: 'shrine10', name: '巡礼者', desc: '一局占领 10 座祭坛', check: function (pr, r) { return r.shrines >= 10; } },
+    { id: 'maps4', name: '走遍四方', desc: '在四张地图上都撑到第 10 波', check: function (pr) { var n = 0; for (var k in (pr.mapBest || {})) if (pr.mapBest[k] >= 10) n++; return n >= 4; } }
   ];
   RW.countKeys = function (o) { var n = 0; for (var k in (o || {})) n++; return n; };
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));

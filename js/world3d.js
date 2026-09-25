@@ -22,6 +22,28 @@
     lamp: hex('#ffcf6b'), banner: hex('#2a2440'), gold: hex('#e0a83a'), flower: [hex('#ffffff'), hex('#ffd6f0'), hex('#fff1a8')]
   };
 
+  // ================= 地貌 =================
+  // 每张地图一套地貌调色（Codex 可以直接改这里的颜色）；未写的键沿用上面的默认调色
+  PAL.skirt = hex('#22402a');
+  var BASE_PAL = {};
+  for (var pk in PAL) BASE_PAL[pk] = PAL[pk];
+  var BIOMES = {
+    meadow: {},
+    forest: { grass: '#5f9440', grass2: '#58893a', grassDark: '#4f7f35', leaf: '#2f6a2c', leaf2: '#3b7a33', leaf3: '#2a5a26',
+      dirt: '#9c7a4a', dirt2: '#957346', moss: '#4f7f35', skirt: '#17331d' },
+    snow: { grass: '#e6edf3', grass2: '#dde6ee', grassDark: '#d0dbe6', moss: '#cfd9e4', dirt: '#b7b0a4', dirt2: '#afa89c',
+      stone: '#b9bec6', stone2: '#c3c8cf', rock: '#8a93a0', rock2: '#9aa3b0', leaf: '#2f5a4a', leaf2: '#3a6a58', leaf3: '#284d40',
+      water: '#a9dcf0', bed: '#7897ad', skirt: '#c7d3de', pine: 1 },
+    marsh: { grass: '#4f6b3a', grass2: '#56713c', grassDark: '#465f34', moss: '#4a6232', dirt: '#6e5f3e', dirt2: '#66583a',
+      water: '#3f6a4a', bed: '#2f3f2a', leaf: '#3d5a2a', leaf2: '#4a6a32', leaf3: '#34502a', trunk: '#4a3a26', skirt: '#1f2c18', willow: 1 }
+  };
+  function applyBiome(name) {
+    var B = BIOMES[name] || BIOMES.meadow, k;
+    for (k in BASE_PAL) PAL[k] = BASE_PAL[k];
+    PAL.pine = PAL.willow = 0;
+    for (k in B) PAL[k] = typeof B[k] === 'string' ? hex(B[k]) : B[k];
+  }
+
   // ================= 地形 =================
   function buildTerrain() {
     var G = RW.GRID, M = RW.MAP, C = G.cell, cols = G.cols, rows = G.rows;
@@ -69,6 +91,12 @@
       for (var q = 0; q < 4; q++) {
         var nk = ch(c + nb[q][0], r + nb[q][1]);
         if (!isWater(nk)) continue;
+        // 沼泽：水边长芦苇（只是装饰，不挡路）
+        if (PAL.willow && nk !== '=' && k !== '=' && h > 0.3) for (var rd = 0; rd < 3; rd++) {
+          var rx = cx + nb[q][0] * 14 + (h2(c * 3 + rd, r) - 0.5) * 22, rz = cz + nb[q][1] * 14 + (h2(c, r * 3 + rd) - 0.5) * 22;
+          gb.box(rx, 0, rz, 1.6, 16 + rd * 5, 1.6, hex('#6f7a3a'));
+          gb.box(rx, 16 + rd * 5, rz, 2.4, 5, 2.4, hex('#5a3e24'));
+        }
         var bank = shade(PAL.rock, 0.85 + h * 0.2);
         if (nb[q][1] === 1) { gb.quad([x0, BED, z1], [x1, BED, z1], [x1, 0, z1], [x0, 0, z1], bank); if (nk !== '=') fence(gb, x0, z1 - 3, x1, z1 - 3); }
         if (nb[q][1] === -1) { gb.quad([x1, BED, z0], [x0, BED, z0], [x0, 0, z0], [x1, 0, z0], bank); if (nk !== '=') fence(gb, x0, z0 + 3, x1, z0 + 3); }
@@ -77,6 +105,7 @@
       }
       if (k === 'T') tree(gb, cx + (h - 0.5) * 12, cz + (h2(r, c) - 0.5) * 12, 1.25 + h * 0.5, c * 7 + r * 13);
       if (k === 'L') { lantern(gb, cx, cz, lamps); }
+      if (k === 'A') altar(gb, cx, cz, lamps);
       if (k === 'S') gate(gb, cx, cz, c, r, cols, rows, lamps);
       if (k === '.' && h > 0.72) flowers(gb, cx, cz, c, r);
       if (k === '.' || k === 'L') tufts(gb, cx, cz, c, r);
@@ -95,7 +124,7 @@
     }
     // 地图外的一圈暗色森林（远景）
     var W = cols * C, H = rows * C;
-    var skirt = hex('#22402a');
+    var skirt = PAL.skirt;
     gb.quad([-900, -3, H + 900], [W + 900, -3, H + 900], [W + 900, -3, -900], [-900, -3, -900], skirt);
     var R2 = rnd(777);
     for (var i = 0; i < 160; i++) {
@@ -118,7 +147,29 @@
     if (Math.abs(dx) > Math.abs(dz)) { gb.box((x0 + x1) / 2, 14, z0, Math.abs(dx), 1.8, 1.6, PAL.plank2); gb.box((x0 + x1) / 2, 8, z0, Math.abs(dx), 1.6, 1.4, PAL.plank); }
     else { gb.box(x0, 14, (z0 + z1) / 2, 1.6, 1.8, Math.abs(dz), PAL.plank2); }
   }
+  // 野外祭坛：石台 + 三根矮石柱（中间留空可以站人）
+  function altar(gb, x, z, lamps) {
+    gb.cyl(x, 0, z, 30, 32, 3, 10, PAL.stone2);
+    gb.cyl(x, 3, z, 22, 24, 2, 10, PAL.stone);
+    for (var i = 0; i < 3; i++) {
+      var a = i * Math.PI * 2 / 3 + 0.4, px = x + Math.cos(a) * 34, pz = z + Math.sin(a) * 34;
+      gb.box(px, 0, pz, 7, 30, 7, PAL.rock2, 0, PAL.stone);
+      gb.box(px, 30, pz, 4, 5, 4, hex('#9fe8ff'), 1.1);
+      lamps.push({ x: px, y: 33, z: pz, s: 0.8 });
+    }
+  }
+  // 雪岭的松树：三层圆锥，顶上压雪
+  function pine(gb, x, z, s, seed) {
+    var R = rnd(seed * 53 + 7), lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3], snowC = hex('#f4f8fb');
+    gb.cyl(x, 0, z, 3.6 * s, 2.4 * s, 20 * s, 6, PAL.trunk);
+    for (var i = 0; i < 3; i++) {
+      var y = (16 + i * 17) * s, r = (22 - i * 6) * s;
+      gb.cyl(x, y, z, r, 0.8, 24 * s, 7, shade(lc, 0.95 + R() * 0.1));
+      gb.cyl(x, y + 12 * s, z, r * 0.52, 0.6, 12 * s, 7, snowC);
+    }
+  }
   function tree(gb, x, z, s, seed) {
+    if (PAL.pine) { pine(gb, x, z, s, seed); return; }
     var R = rnd(seed * 97 + 13);
     var trunk = 52 * s;
     gb.cyl(x, 0, z, 4.4 * s, 2.6 * s, trunk, 6, PAL.trunk);
@@ -415,6 +466,35 @@
       g.cyl(0, 31, 0, 13, 13, 1, 8, PAL.gold, 0.8);
       for (var i = 0; i < 4; i++) { var a = i * Math.PI / 2 + Math.PI / 4; banner(g, Math.cos(a) * 30, Math.sin(a) * 30, 40); }
     });
+    // 圣火外形随等级长大：2 级起一圈石柱；3 级起按形态换上层建筑
+    M.coreRing = model(function (g) {
+      for (var i = 0; i < 6; i++) {
+        var a = i * Math.PI / 3, x = Math.cos(a) * 44, z = Math.sin(a) * 44;
+        g.box(x, 0, z, 8, 26, 8, PAL.rock2, 0, PAL.stone);
+        g.box(x, 26, z, 11, 3, 11, PAL.gold, 0.5);
+      }
+    });
+    M.core_blaze = model(function (g) {   // 烈焰：黑石尖塔，四片向上翻的火翼
+      g.cyl(0, 30, 0, 14, 8, 24, 6, hex('#2a2224'));
+      for (var i = 0; i < 4; i++) {
+        var a = i * Math.PI / 2 + Math.PI / 4, x = Math.cos(a) * 16, z = Math.sin(a) * 16;
+        g.box(x, 34, z, 5, 26, 5, hex('#5a2a1a'), 0, hex('#ff6a2a'));
+        g.box(x * 1.2, 58, z * 1.2, 4, 8, 4, hex('#ff7a2e'), 1.3);
+      }
+    });
+    M.core_ward = model(function (g) {    // 守护：白石穹顶 + 四块立石
+      g.cyl(0, 30, 0, 20, 18, 6, 10, hex('#dfe8ee'));
+      g.blob(0, 42, 0, 16, 12, 16, hex('#cfe6f2'), 0.2, 3, 0.05);
+      for (var i = 0; i < 4; i++) {
+        var a = i * Math.PI / 2, x = Math.cos(a) * 30, z = Math.sin(a) * 30;
+        g.box(x, 24, z, 7, 30, 7, hex('#bcd2de'), 0, hex('#8fe8ff'));
+        g.box(x, 54, z, 3, 6, 3, hex('#8fe8ff'), 1.2);
+      }
+    });
+    M.core_star = model(function (g) {    // 星火：细高方尖碑，顶上一颗星
+      g.box(0, 30, 0, 12, 46, 12, hex('#3a2e4a'), 0, hex('#d9a8ff'));
+      g.cyl(0, 76, 0, 7, 0.5, 14, 4, hex('#d9a8ff'), 1.1);
+    });
     M.coin = model(function (g) { g.cyl(0, -0.8, 0, 3.4, 3.4, 1.6, 8, PAL.gold, 0.6, hex('#ffd76a')); });
     M.stone = model(function (g) { g.blob(0, 2, 0, 5, 3, 5, PAL.rock2, 0, 4, 0.25); });
     M.crystal = model(function (g) { g.blob(0, 0, 0, 2.6, 4.5, 2.6, hex('#9dffcf'), 1.2, 3, 0.1); });
@@ -459,12 +539,23 @@
   }
 
   // ================= 初始化 =================
-  W3.init = function () {
-    if (!GL.ok) return false;
+  // 按当前地图（RW.MAP）重建地形；地图没变就什么都不做
+  W3.setMap = function () {
+    var M = RW.MAP;
+    if (!M || W3.mapId === M.id) return false;
+    GL.removeStatic(W3.land); GL.removeStatic(W3.water);
+    applyBiome(M.biome);
     var t = buildTerrain();
     W3.land = GL.upload(t.land, { static: true });
     W3.water = GL.upload(t.water, { static: true, water: true });
     W3.lamps = t.lamps;
+    W3.mapId = M.id; W3.snap = true;
+    if (RW.Draw && RW.Draw.onMap) RW.Draw.onMap();
+    return true;
+  };
+  W3.init = function () {
+    if (!GL.ok) return false;
+    W3.setMap();
     buildModels();
     // 发光小物件不描边、不投影，保持干净的光点
     ['coin', 'crystal'].forEach(function (k) { if (W3.meshes[k]) { W3.meshes[k].outline = false; W3.meshes[k].shadow = false; } });
@@ -498,21 +589,32 @@
         tz = tz * (1 - pull) + fr.y * pull;
       }
     }
-    // 横屏视野很宽：按地面上的可见半宽限制镜头，别拍到地图外面
-    var asp = aspect || V.w / V.h, mx = Math.min(WD.w / 2, Math.tan(CAM.fov / 2) * CAM.dist * asp * 0.92);
-    tx = Math.max(mx, Math.min(WD.w - mx, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
+    // 地面可见范围：按视锥算出目标点往远（-z）、往近（+z）、左右各能看到多远
+    var asp = aspect || V.w / V.h, f = CAM.fov / 2, hgt = Math.sin(CAM.pitch) * CAM.dist, back = Math.cos(CAM.pitch) * CAM.dist;
+    var zFar = hgt / Math.tan(Math.max(0.05, CAM.pitch - f)) - back, zNear = back - hgt / Math.tan(CAM.pitch + f);
+    var halfW = Math.tan(f) * CAM.dist * asp;
+    // 先别拍到地图外面
+    var mx = Math.min(WD.w / 2, halfW * 0.92);
+    tx = Math.max(mx, Math.min(WD.w - mx, tx));
+    tz = Math.max(Math.min(WD.h / 2, zFar * 0.8), Math.min(WD.h - Math.min(WD.h / 2, zNear * 0.8), tz));
+    // 再保证英雄一定在画面安全区里（四角有 HUD，留出边）：圣火升级镜头拉远、往王旗偏时也不会把英雄甩出去
+    if (!orbit) keepHero(p, halfW * 0.55, zFar * 0.38, zNear * 0.45);
     if (W3.snap) { ct.x = tx; ct.z = tz; W3.snap = false; }
     else { var k = 1 - Math.exp(-T.camera.follow * dt); ct.x += (tx - ct.x) * k; ct.z += (tz - ct.z) * k; }
+    if (!orbit) { tx = ct.x; tz = ct.z; keepHero(p, halfW * 0.7, zFar * 0.5, zNear * 0.6); ct.x = tx; ct.z = tz; }   // 跟随有延迟时的兜底
+    function keepHero(pl, lx, lFar, lNear) {
+      tx = Math.max(pl.x - lx, Math.min(pl.x + lx, tx));
+      tz = Math.max(pl.y - lNear, Math.min(pl.y + lFar, tz));
+    }
     var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) * RW.opt.shake : 0;   // 设置：屏幕震动
     var sx = sh ? (Math.random() * 2 - 1) * sh : 0, sz = sh ? (Math.random() * 2 - 1) * sh : 0;
     var cx = ct.x + sx, cz = ct.z + sz;
     var eye = [cx, Math.sin(CAM.pitch) * CAM.dist, cz + Math.cos(CAM.pitch) * CAM.dist];
-    GL.setCamera(eye, [cx, 0, cz], CAM.fov, aspect || V.w / V.h);
+    GL.setCamera(eye, [cx, 0, cz], CAM.fov, asp);
     GL.updateBillboardAxes();
-    // 可见范围（地面上的大致矩形）
-    var halfW = Math.tan(CAM.fov / 2) * CAM.dist * (aspect || V.w / V.h) * 1.25;
+    // 可见范围（剔除用）：跟着镜头远近变，拉远后边缘的东西不会被误剔
     var b = W3.bounds;
-    b.x0 = cx - halfW - 80; b.x1 = cx + halfW + 80; b.z0 = cz - 760; b.z1 = cz + 360;
+    b.x0 = cx - halfW * 1.25 - 80; b.x1 = cx + halfW * 1.25 + 80; b.z0 = cz - zFar - 120; b.z1 = cz + zNear + 120;
   };
   W3.inView = function (x, z, m) { var b = W3.bounds; return x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m; };
   // 世界点 -> 逻辑屏幕坐标（HUD 用）
@@ -545,6 +647,7 @@
 
   W3.draw = function (g, viewport, dt, orbit) {
     W3.t += dt;
+    W3.setMap();   // 地图换了就重建地形
     adaptQuality(dt);
     var target = envPreset(W3.envFor(g));
     lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
@@ -753,15 +856,31 @@
   }
   function drawCore(g, M) {
     var co = g.core;
-    GL.put(M.core, co.x, 0, co.y, 0, 1, 1, 1, 0, 1, 1, 1, co.flash > 0 ? 0.4 : 0);
+    var lv = co.lv || 1, fl = co.flash > 0 ? 0.4 : 0, F = RW.CORE_FORMS[co.form];
+    var grow = 1 + (lv - 1) * 0.08;   // 每升一级整座神龛长大一点
+    GL.put(M.core, co.x, 0, co.y, 0, grow, grow, grow, 0, 1, 1, 1, fl);
+    if (lv >= 2) GL.put(M.coreRing, co.x, 0, co.y, W3.t * 0.05, grow, grow, grow, 0, 1, 1, 1, fl);
+    if (F && M['core_' + co.form]) GL.put(M['core_' + co.form], co.x, 0, co.y, co.form === 'star' ? W3.t * 0.6 : 0, grow * 1.3, grow * 1.3, grow * 1.3, 0, 1, 1, 1, fl);
     var t = W3.t, k = co.hp / co.maxHp;
-    // 圣火：几层叠起来的火光
-    var fc = co.alert > 0 && Math.sin(t * 14) > 0 ? hex('#ff4a3a') : hex('#ffb347');
-    GL.glow(co.x, 44, co.y, 30 + Math.sin(t * 9) * 3, fc, 0.9);
-    GL.glow(co.x, 52 + Math.sin(t * 7) * 2, co.y, 18, hex('#fff1b0'), 0.9);
+    // 圣火：火焰大小跟着等级和血量走（残血时变矮变暗），颜色跟着形态走
+    var fk = (0.55 + 0.45 * k) * (1 + (lv - 1) * 0.15), top = F ? (co.form === 'star' ? 30 : 20) : 0;
+    var base = F ? C(F.color) : hex('#ffb347');
+    var fc = co.alert > 0 && Math.sin(t * 14) > 0 ? hex('#ff4a3a') : base;
+    GL.glow(co.x, 44 + top, co.y, (30 + Math.sin(t * 9) * 3) * fk, fc, 0.6 + 0.3 * k);
+    GL.glow(co.x, 52 + top + Math.sin(t * 7) * 2, co.y, 18 * fk, hex('#fff1b0'), 0.5 + 0.4 * k);
     for (var i = 0; i < 5; i++) {
       var ph = (t * 1.4 + i / 5) % 1;
-      GL.glow(co.x + Math.sin(i * 2.1 + t * 3) * 6, 38 + ph * 40, co.y + Math.cos(i * 1.7 + t * 2) * 6, 10 * (1 - ph), hex('#ff8a2a'), 0.8 * (1 - ph));
+      GL.glow(co.x + Math.sin(i * 2.1 + t * 3) * 6, 38 + top + ph * 40 * fk, co.y + Math.cos(i * 1.7 + t * 2) * 6, 10 * (1 - ph) * fk, F ? base : hex('#ff8a2a'), 0.8 * (1 - ph) * (0.4 + 0.6 * k));
+    }
+    // 野外祭坛：进度圈与水晶光
+    var SH = RW.SHRINE;
+    for (var si = 0; si < (g.shrines || []).length; si++) {
+      var sh = g.shrines[si];
+      if (!W3.inView(sh.x, sh.y, 80)) continue;
+      var sc2 = sh.done ? hex('#6a7680') : hex('#9fe8ff');
+      GL.ground(true, sh.x, 1.4, sh.y, SH.r, 1, 0.05, sc2, sh.done ? 0.2 : 0.45 + 0.15 * Math.sin(t * 4 + si));
+      if (sh.prog > 0 && !sh.done) GL.ground(true, sh.x, 1.5, sh.y, SH.r * sh.prog, 0, 0, hex('#b8f2ff'), 0.35);
+      GL.glow(sh.x, 22 + Math.sin(t * 2 + si) * 3, sh.y, sh.done ? 8 : 16, sc2, sh.done ? 0.3 : 0.8);
     }
     GL.ground(true, co.x, 1, co.y, 120 + Math.sin(t * 3) * 6, 0, 0, hex('#ffb347'), 0.22 * W3.env.lamp + 0.08);
     GL.ground(true, co.x, 1.2, co.y, 42, 1, 0.12, k < 0.3 ? hex('#ff3b3b') : hex('#ffd27a'), 0.5);

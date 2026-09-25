@@ -38,7 +38,8 @@ fs.mkdirSync(out, { recursive: true });
   const optOk = await page.evaluate(() => RW.opt.shake === 0.75 && JSON.parse(localStorage.getItem('ringwatch_save_v1')).opt.shake === 0.75);
   await press('start'); await press('hero:mage');
   await press('mut:swarm'); await press('mut:swarm');   // 变异器开关：开了再关
-  const setupOk = await page.evaluate(() => RW.UI.runMuts.length === 0 && RW.UI.runDanger === 0);
+  await press('map:forest');                             // 地图：林缘营地
+  const setupOk = await page.evaluate(() => RW.UI.runMuts.length === 0 && RW.UI.runDanger === 0 && RW.MAP.id === 'forest');
   await shot('f_pick'); await press('pick:mage');   // 选第一个英雄 -> 出发
   await until(() => RW.game.mode === 'battle' && RW.UI.btns.some(b => b.id === 'build'));
   // 战斗中：点造塔 → 点哨炮
@@ -62,6 +63,11 @@ fs.mkdirSync(out, { recursive: true });
   await until(() => RW.game.core.hp > 90).catch(() => {});
   await press('upgrade');          // 圣火升级（取代旧的「加固」）
   await until(() => (RW.game.core.lv || 1) > 1).catch(() => {});
+  await press('upgrade');          // 再升一级：3 级要先选圣火形态
+  await btn('coreForm:ward'); await page.waitForTimeout(300); await shot('f2c_core_form');
+  await press('coreForm:ward');
+  await until(() => RW.game.core.form === 'ward').catch(() => {});
+  const formOk = await page.evaluate(() => RW.game.core.form === 'ward' && RW.game.core.lv === 3 && RW.game.mapId === 'forest');
   await press('buy:0');            // 买第一张卡
   await page.waitForTimeout(300);
   await press('evolve:0');         // 进化起手武器
@@ -122,10 +128,10 @@ fs.mkdirSync(out, { recursive: true });
   await page.evaluate(() => { window.__pad.buttons[1] = 1; });
   await until(() => !RW.Main.isPaused()); await page.evaluate(() => { window.__pad.buttons[1] = 0; });
   const padOk = x1 > x0 + 20;
-  console.log('settings', optOk, 'run save', runSaved, 'resumed', resumed, 'pad move', Math.round(x1 - x0));
+  console.log('map+form', formOk, 'settings', optOk, 'run save', runSaved, 'resumed', resumed, 'pad move', Math.round(x1 - x0));
   console.log('setup', setupOk, 'bless', blessOk, 'evolved', evolved, 'victory [won,score,ach]', victory, 'achievements', achCount, 'daily', daily);
   console.log('towers after build', towers1, 'core after repair/upgrade', coreAfter, 'errors', errors.length ? errors : 'none');
-  if (!setupOk || !blessOk || !evolved || !victory[0] || !daily[0] || !optOk || !runSaved || !resumed || !padOk) { console.error('流程断言失败'); process.exitCode = 1; }
+  if (!setupOk || !blessOk || !evolved || !victory[0] || !daily[0] || !optOk || !runSaved || !resumed || !padOk || !formOk) { console.error('流程断言失败'); process.exitCode = 1; }
   await browser.close(); server.close();
   if (errors.length) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exit(1); });

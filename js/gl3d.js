@@ -402,6 +402,14 @@
   }
   function resetInstances() { for (var i = 0; i < GL.meshes.length; i++) GL.meshes[i].count = 0; }
 
+  // 切地图时拆掉旧的静态地形网格
+  GL.removeStatic = function (mesh) {
+    if (!mesh || !mesh.obj) return;
+    GL.scene.remove(mesh.obj);
+    if (mesh.line) GL.scene.remove(mesh.line);
+    mesh.geo.dispose();
+  };
+
   // ---------- 特效 ----------
   GL.addK = 1;   // 设置：特效亮度（只压叠加发光层，不影响模型和地面预警）
   function fxPush(B, cx, cy, cz, kind, ux, uy, uz, param, vx, vy, vz, r, g, b, a) {
