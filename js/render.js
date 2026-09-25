@@ -44,6 +44,71 @@
     c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r);
     c.closePath();
   };
+  // ---------- 木框金边（FG-ART-002 阶段 3，美术圣经第 6 节）----------
+  // 深色木板 + 木纹 + 2 像素黄铜描边 + 四角铆钉，切角代替默认圆角矩形。全部 Canvas 代码绘制。
+  // 颜色只取圣经 token：黄铜描边 #9B7447、选中 #B9894F、焦点羊皮纸 #E8D9B5、危险陶红 #A8483A
+  var UIC = D.UIC = { brass: '#9B7447', select: '#B9894F', parch: '#E8D9B5', coin: '#C18A45', clay: '#A8483A', alert: '#FF3B3B', moon: '#5FA8C8',
+    woodA: '#3b2718', woodB: '#22160d', woodHiA: '#6e4626', woodHiB: '#4a2d17', ink: '#120b06' };
+  // 切角矩形路径（k = 切角大小）
+  D.chamfer = function (x, y, w, h, k) {
+    var c = D.ctx; k = Math.min(k, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + k, y); c.lineTo(x + w - k, y); c.lineTo(x + w, y + k); c.lineTo(x + w, y + h - k);
+    c.lineTo(x + w - k, y + h); c.lineTo(x + k, y + h); c.lineTo(x, y + h - k); c.lineTo(x, y + k); c.closePath();
+  };
+  // o: { style: 'panel'|'hud'|'btn'|'primary'|'ad'|'danger'|'ghost', edge: 描边色, alpha }
+  D.woodFrame = function (x, y, w, h, o) {
+    o = o || {};
+    var c = D.ctx, st = o.style || 'panel', k = h < 34 ? 4 : 6, a0 = c.globalAlpha;
+    var hi = st === 'primary', ghost = st === 'ghost';
+    if (!ghost) {
+      var g = c.createLinearGradient(0, y, 0, y + h);
+      g.addColorStop(0, hi ? UIC.woodHiA : (st === 'danger' ? '#3e1c15' : UIC.woodA));
+      g.addColorStop(1, hi ? UIC.woodHiB : (st === 'danger' ? '#24100c' : UIC.woodB));
+      c.globalAlpha = a0 * (o.alpha == null ? (st === 'hud' ? 0.86 : 0.97) : o.alpha);
+      c.fillStyle = g; D.chamfer(x, y, w, h, k); c.fill();
+      // 木纹：几条随位置固定的横向细纹
+      c.save(); D.chamfer(x, y, w, h, k); c.clip();
+      var seed = Math.abs(Math.floor(x * 7 + y * 13 + w * 3)) % 97;
+      c.strokeStyle = 'rgba(0,0,0,0.22)'; c.lineWidth = 1;
+      for (var i = 0, n = Math.max(2, Math.floor(h / 9)); i < n; i++) {
+        var ly = y + (i + 0.5) * h / n + ((seed * (i + 3)) % 5) - 2, off = ((seed * (i + 1) * 17) % 40) - 20;
+        c.beginPath(); c.moveTo(x, ly); c.bezierCurveTo(x + w * 0.3 + off, ly - 2, x + w * 0.6 - off, ly + 2, x + w, ly - 1); c.stroke();
+      }
+      c.restore();
+      c.globalAlpha = a0;
+    }
+    // 内侧压暗线 + 黄铜描边（外面再压一圈本色暗边，明暗背景上都清楚）
+    var edge = o.edge || (hi ? UIC.select : (st === 'danger' ? UIC.clay : (st === 'ad' ? UIC.coin : UIC.brass)));
+    c.lineJoin = 'round';
+    if (!ghost) { c.strokeStyle = UIC.ink; c.lineWidth = 3.5; D.chamfer(x + 0.5, y + 0.5, w - 1, h - 1, k); c.stroke(); }
+    c.globalAlpha = a0 * (ghost ? 0.7 : 1);
+    c.strokeStyle = edge; c.lineWidth = hi ? 2.5 : 2; D.chamfer(x + 1, y + 1, w - 2, h - 2, k); c.stroke();
+    if (hi) { c.strokeStyle = 'rgba(232,217,181,0.35)'; c.lineWidth = 1; D.chamfer(x + 3.5, y + 3.5, w - 7, h - 7, k - 1); c.stroke(); }
+    // 危险按钮：一道裂纹（不只靠颜色）
+    if (st === 'danger') { c.strokeStyle = UIC.clay; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x + w - 18, y + 3); c.lineTo(x + w - 13, y + 9); c.lineTo(x + w - 16, y + 13); c.lineTo(x + w - 10, y + 19); c.stroke(); }
+    // 四角铆钉（小按钮不画，免得挤）
+    if (!ghost && h >= 30 && w >= 60) {
+      var r = h >= 60 ? 2.6 : 2, m = k + 3;
+      [[x + m, y + m], [x + w - m, y + m], [x + m, y + h - m], [x + w - m, y + h - m]].forEach(function (p) {
+        c.fillStyle = UIC.ink; D.circle(p[0], p[1] + 0.6, r + 0.6); c.fill();
+        c.fillStyle = edge; D.circle(p[0], p[1], r); c.fill();
+        c.fillStyle = 'rgba(255,240,210,0.5)'; D.circle(p[0] - r * 0.3, p[1] - r * 0.3, r * 0.4); c.fill();
+      });
+    }
+    c.globalAlpha = a0;
+  };
+  // 焦点：四角 L 形羊皮纸括号（手柄 / 键盘导航）
+  D.focusBrackets = function (x, y, w, h, a) {
+    var c = D.ctx, L = Math.min(12, w / 3, h / 3);
+    c.strokeStyle = UIC.parch; c.globalAlpha = a; c.lineWidth = 2.5; c.lineCap = 'square';
+    c.beginPath();
+    c.moveTo(x - 4, y - 4 + L); c.lineTo(x - 4, y - 4); c.lineTo(x - 4 + L, y - 4);
+    c.moveTo(x + w + 4 - L, y - 4); c.lineTo(x + w + 4, y - 4); c.lineTo(x + w + 4, y - 4 + L);
+    c.moveTo(x - 4, y + h + 4 - L); c.lineTo(x - 4, y + h + 4); c.lineTo(x - 4 + L, y + h + 4);
+    c.moveTo(x + w + 4 - L, y + h + 4); c.lineTo(x + w + 4, y + h + 4); c.lineTo(x + w + 4, y + h + 4 - L);
+    c.stroke(); c.lineCap = 'butt'; c.globalAlpha = 1;
+  };
   D.wrap = function (s, maxW, size) {
     var c = D.ctx; c.font = D.font(size);
     var lines = [], cur = '';
@@ -386,23 +451,14 @@
   D.bossBar = function (g) {
     var b = g.boss, c = D.ctx;
     if (b && b.on) {
-      var w = 420, x = W / 2 - w / 2, y = 92;
+      var w = 380, x = W / 2 - w / 2, y = 70;   // 顶部横幅下方
       c.fillStyle = 'rgba(4,8,16,0.8)'; c.fillRect(x - 4, y - 4, w + 8, 30);
       D.text('BOSS · ' + b.d.name + (b.enraged ? ' · 狂暴' : ''), x, y + 5, 11, b.enraged ? '#ff9a6a' : '#ff9ab0', 'left', true);
       c.fillStyle = '#2a0610'; c.fillRect(x, y + 14, w, 8);
       c.fillStyle = b.enraged ? '#ff6a2e' : '#ff2e63'; c.fillRect(x, y + 14, w * Math.max(0, b.hp / b.maxHp), 8);
       c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillRect(x + w * b.d.phase2, y + 13, 1.5, 10);
     }
-    if (g.bossAlert > 0 && g.mode === 'battle') {
-      var al = Math.min(1, g.bossAlert * 1.5);
-      c.globalAlpha = al;
-      c.fillStyle = 'rgba(40,0,10,0.75)'; c.fillRect(0, 186, W, 96);
-      c.fillStyle = 'rgba(255,46,99,0.25)';
-      for (var s = -2; s < W / 24 + 2; s++) { c.beginPath(); c.moveTo(s * 24 + (D.t * 60 % 24), 186); c.lineTo(s * 24 + 12 + (D.t * 60 % 24), 186); c.lineTo(s * 24 + (D.t * 60 % 24), 194); c.lineTo(s * 24 - 12 + (D.t * 60 % 24), 194); c.fill(); }
-      D.glowText('BOSS 来袭 · ' + RW.ENEMIES.boss.name, W / 2, 226, 28, '#ff2e63', 'center', 18);
-      D.text('红圈＝砸地，粗红线＝冲撞，半血后狂暴召唤', W / 2, 258, 12, '#ffd0dc', 'center', true, 3);
-      c.globalAlpha = 1;
-    }
+    // Boss 来袭的大字提示移到顶部横幅（D.topBanner），不再盖住战场中央
   };
 
   D.chests = function (g) {
@@ -1064,9 +1120,9 @@
   };
   D.momentumBar = function (g) {
     if (g.mode !== 'battle' && g.mode !== 'clear') return;
-    var c = D.ctx, M = T.momentum, w = 220, x = W / 2 - w / 2, y = H - 26;
+    var c = D.ctx, M = T.momentum, w = 150, x = 96, y = H - 18;   // 左下：造塔键右边，底部中间留给建造栏
     var tier = g.momTier, k = g.mom / M.max;
-    c.fillStyle = 'rgba(8,10,18,0.7)'; D.rr(x - 4, y - 14, w + 8, 26, 6); c.fill();
+    D.woodFrame(x - 6, y - 16, w + 12, 30, { style: 'hud' });
     var names = ['战意', '战意 · 振奋', '战意 · 激昂', '战意 · 狂热'];
     var col = tier >= 3 ? '#ff5a2e' : (tier >= 1 ? '#ffc861' : '#8a8fa0');
     D.text(names[tier], x, y - 5, 10, col, 'left', true);
@@ -1089,10 +1145,10 @@
     var sk = Math.min(1, g.streakT / 1.3), big = g.streak >= 50 ? 22 : (g.streak >= 25 ? 19 : 16);
     var scol = g.streak >= 50 ? '#ff5cd6' : (g.streak >= 25 ? C.gold : '#ffe2a8');
     c.globalAlpha = 0.4 + 0.6 * sk;
-    var sy = 70 + D.MINI.h;
-    D.text('连杀', W - 12 - D.MINI.w / 2, sy + 20, 10, C.dim, 'center', true, 3);
-    D.text('×' + g.streak, W - 12 - D.MINI.w / 2, sy + 40, big, scol, 'center', true, 4);
-    c.fillStyle = scol; c.fillRect(W - 12 - D.MINI.w / 2 - 30, sy + 54, 60 * sk, 3);
+    var sx = 60, sy = 166;   // 左侧武器槽下方（右侧留给教程卷轴和信息卡）
+    D.text('连杀', sx, sy + 20, 10, C.dim, 'center', true, 3);
+    D.text('×' + g.streak, sx, sy + 40, big, scol, 'center', true, 4);
+    c.fillStyle = scol; c.fillRect(sx - 30, sy + 54, 60 * sk, 3);
     c.globalAlpha = 1;
   };
 
@@ -1135,29 +1191,55 @@
     }
     return SCR;
   };
-  function edgeArrow(c, sx, sy, color, label, labelColor, pulse) {
-    var cx = V.x + V.w / 2, cy = V.y + V.h / 2, dx = sx - cx, dy = sy - cy;
-    var k = Math.min((V.w / 2 - 24) / Math.abs(dx || 1e-3), (V.h / 2 - 24) / Math.abs(dy || 1e-3));
-    var ax = Math.min(W - 140, Math.max(40, cx + dx * k)), ay = Math.min(H - 90, Math.max(100, cy + dy * k)), a = Math.atan2(dy, dx);
+  function edgeArrow(c, sx, sy, color, label, labelColor, pulse, size) {
+    var cx = V.x + V.w / 2, cy = V.y + V.h / 2, dx = sx - cx, dy = sy - cy, s = size || 1;
+    var k = Math.min((V.w / 2 - 26) / Math.abs(dx || 1e-3), (V.h / 2 - 26) / Math.abs(dy || 1e-3));
+    // 贴着画面边缘，避开四角的 HUD；上下两边的箭头在中央 50% 之外（上沿 y 124，下沿 y 430）
+    var a = Math.atan2(dy, dx), side = Math.abs(dx * k) > V.w / 2 - 40;
+    var ax = side ? (dx > 0 ? W - 26 : 26) : Math.min(dy > 0 ? W - 330 : W - 250, Math.max(dy > 0 ? 300 : 280, cx + dx * k));   // 下沿避开造塔键和技能栏
+    var ay = side ? Math.min(H - 110, Math.max(150, cy + dy * k)) : (dy > 0 ? H - 110 : 124);
     c.save(); c.translate(ax, ay); c.rotate(a);
-    c.fillStyle = color; c.globalAlpha = pulse;
-    c.beginPath(); c.moveTo(13, 0); c.lineTo(-7, 9); c.lineTo(-7, -9); c.closePath(); c.fill();
+    c.globalAlpha = pulse;
+    c.fillStyle = 'rgba(18,11,6,0.8)';
+    c.beginPath(); c.moveTo(16 * s, 0); c.lineTo(-9 * s, 12 * s); c.lineTo(-4 * s, 0); c.lineTo(-9 * s, -12 * s); c.closePath(); c.fill();
+    c.fillStyle = color;
+    c.beginPath(); c.moveTo(13 * s, 0); c.lineTo(-7 * s, 9 * s); c.lineTo(-3 * s, 0); c.lineTo(-7 * s, -9 * s); c.closePath(); c.fill();
     c.restore(); c.globalAlpha = 1;
-    D.text(label, ax - Math.cos(a) * 22, ay - Math.sin(a) * 16, 10, labelColor, 'center', true, 3);
+    // 文字：左右两侧放在箭头内侧，上下两边放在箭头旁边（不往画面中间伸）
+    D.tip = true;
+    if (label) {
+      if (side) D.text(label, ax + (dx > 0 ? -30 : 30), ay + 16, 10, labelColor, dx > 0 ? 'right' : 'left', true, 3);
+      else D.text(label, ax + 20, ay, 10, labelColor, 'left', true, 3);
+    }
+    D.tip = false;
   }
+  // 边缘来袭箭头（圣经第 6 节 + 文案表第 3 节）：画面外的敌人按方向分 12 个扇区，每个扇区一支红箭头，
+  // 数量越多箭头越大；文案按最危险的那只取（巨影 > 强敌 > 直扑圣火 > 疾影 > 黑影）；3 个及以上方向时顶部加「四面有敌」
   D.edgeArrows = function (g) {
-    var c = D.ctx, co = g.core, sp = D.screenOf(co.x, co.y, 20);
+    var c = D.ctx, co = g.core, sp = D.screenOf(co.x, co.y, 20), RED = D.UIC.alert;
     if (!sp.on) {
       var alert = co.alert > 0;
-      edgeArrow(c, sp.x, sp.y, alert ? (Math.sin(D.t * 14) > 0 ? '#ff3b5c' : '#ffffff') : '#ffd27a', alert ? '圣火受攻击' : '圣火', alert ? '#ff9ab0' : '#ffe2a8', 0.85);
+      edgeArrow(c, sp.x, sp.y, alert ? (Math.sin(D.t * 14) > 0 ? RED : '#ffffff') : '#FFB547', alert ? '圣火受击' : '圣火', alert ? '#ff9ab0' : '#ffe2a8', 0.9);
     }
-    for (var i = 0; i < g.enemies.length; i++) {
+    if (g.mode !== 'battle') return;
+    var N = 12, sec = [], cx = V.x + V.w / 2, cy = V.y + V.h / 2, i;
+    for (i = 0; i < g.enemies.length; i++) {
       var e = g.enemies[i];
-      if (!e.on || !e.elite) continue;
+      if (!e.on) continue;
       sp = D.screenOf(e.x, e.y, 10);
       if (sp.on) continue;
-      edgeArrow(c, sp.x, sp.y, e.d.color, e.d.name, '#ffd0dc', 0.6 + 0.4 * Math.sin(D.t * 8));
+      var a = Math.atan2(sp.y - cy, sp.x - cx), k = ((Math.round(a / (Math.PI * 2) * N) % N) + N) % N;
+      var rank = e.type === 'boss' ? 5 : (e.elite ? 4 : (e.goalCore ? 3 : (e.type === 'dasher' ? 2 : 1)));
+      var S = sec[k] || (sec[k] = { n: 0, x: 0, y: 0, rank: 0 });
+      S.n++; S.x += sp.x; S.y += sp.y; S.rank = Math.max(S.rank, rank);
     }
+    var LABEL = ['', '黑影逼近', '疾影来袭', '直扑圣火', '强敌逼近', '巨影来袭'], dirs = 0, pulse = 0.65 + 0.35 * Math.sin(D.t * 7);
+    for (i = 0; i < N; i++) {
+      var S2 = sec[i]; if (!S2) continue;
+      dirs++;
+      edgeArrow(c, S2.x / S2.n, S2.y / S2.n, RED, S2.rank >= 2 || S2.n >= 6 ? LABEL[S2.rank] : '', '#ffc2c2', S2.rank >= 4 ? pulse : 0.85, Math.min(1.5, 0.85 + S2.n * 0.05 + (S2.rank >= 4 ? 0.2 : 0)));
+    }
+    D.dirs = dirs;   // 3 个及以上方向时顶部横幅显示「四面有敌」
   };
 
   // ---------- 小地图：整块甲板一览，白框是当前屏幕 ----------
@@ -1171,7 +1253,7 @@
     D.miniTerrain = cv;
   };
   D.minimap = function (g) {
-    var c = D.ctx, M = D.MINI, x0 = W - M.w - 12, y0 = 70, s = M.w / WD.w, i;
+    var c = D.ctx, M = D.MINI, x0 = W - M.w - 12, y0 = 86, s = M.w / WD.w, i;   // 右上波次面板下方
     c.fillStyle = 'rgba(4,8,16,0.72)'; c.fillRect(x0, y0, M.w, M.h);
     if (RW.GRID) {
       if (!D.miniTerrain) D.buildMiniTerrain();
@@ -1217,74 +1299,80 @@
 
   // ================= 战斗 HUD =================
   // 悬浮面板底
-  D.hudPanel = function (x, y, w, h) {
+  D.hudPanel = function (x, y, w, h) { D.woodFrame(x, y, w, h, { style: 'hud' }); };
+  // ================= 战斗 HUD：三层（FG-ART-002 阶段 3，圣经第 6 节 + docs/UI_COPY_V1.md 第 2 节）=================
+  // 常驻层：左上火光 / 生命 / 法力，右上波次 / 倒计时 / 金币，底部中间建造栏，右下技能栏
+  // 情境层：走近建筑或圣火时，右下弹出信息卡
+  // 提示层：顶部横幅（一次只显示最要紧的一条）+ 右侧教程卷轴；任何提示都不进画面中央 50%（界面审计会查）
+  D.CENTER = { x: W * 0.25, y: H * 0.25, w: W * 0.5, h: H * 0.5 };
+  // 火苗形状（圣火值条、重燃次数等共用）
+  D.flame = function (x, y, s, fill) {
     var c = D.ctx;
-    c.fillStyle = 'rgba(10,8,14,0.62)'; D.rr(x, y, w, h, 8); c.fill();
-    c.strokeStyle = 'rgba(255,210,122,0.18)'; c.lineWidth = 1; D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 8); c.stroke();
+    c.fillStyle = fill; c.beginPath();
+    c.moveTo(x, y - s); c.bezierCurveTo(x + s * 0.9, y - s * 0.2, x + s * 0.75, y + s * 0.8, x, y + s * 0.8);
+    c.bezierCurveTo(x - s * 0.75, y + s * 0.8, x - s * 0.9, y - s * 0.2, x, y - s); c.fill();
   };
+  // 横向条：切角槽 + 填充 + 文字
+  function bar(x, y, w, h, k, fill, label, labelColor) {
+    var c = D.ctx;
+    c.fillStyle = '#140c07'; D.chamfer(x, y, w, h, 3); c.fill();
+    if (k > 0) { c.fillStyle = fill; D.chamfer(x, y, Math.max(6, w * Math.min(1, k)), h, 3); c.fill(); }
+    c.strokeStyle = D.UIC.brass; c.lineWidth = 1; D.chamfer(x + 0.5, y + 0.5, w - 1, h - 1, 3); c.stroke();
+    if (label) D.text(label, x + 6, y + h / 2 + 0.5, 10, labelColor || C.text, 'left', true, 2.5);
+  }
   D.hud = function (g, ui, menu) {
-    var c = D.ctx, p = g.player;
-    // ---- 左上：生命 / 位阶 / 武器 ----
-    D.hudPanel(10, 10, 250, 118);
-    var hpk = Math.max(0, p.hp / p.maxHp), bx = 22, bw = 226, bh = 18, by = 28;
-    D.text('生命', bx, 21, 10, C.dim, 'left');
-    if (g.cls) D.text(g.cls.name, bx + bw, 21, 10, g.cls.color, 'right', true);
-    D.vial(bx + 22, by + 16, 20, hpk, hpk < 0.3 ? '#e23b4a' : '#c42838', Math.ceil(p.hp));
-    var mpk = Math.max(0, (p.mp || 0) / (p.maxMp || 1));
-    D.vial(bx + 74, by + 16, 20, mpk, '#2f6dff', Math.ceil(p.mp || 0));
-    D.text('红 ' + Math.ceil(p.hp) + '/' + Math.round(p.maxHp), bx + 104, by + 8, 11, '#ffb4be', 'left', true);
-    D.text('蓝 ' + Math.ceil(p.mp || 0) + '/' + Math.round(p.maxMp || 0), bx + 104, by + 24, 11, '#b9d0ff', 'left', true);
+    var c = D.ctx, p = g.player, U = D.UIC;
+    // ---- 常驻层 · 左上：火光（火苗串）/ 生命 / 法力 / 位阶 ----
+    D.hudPanel(10, 10, 256, 112);
+    var co = g.core, ck = Math.max(0, co.hp / co.maxHp), hit = co.alert > 0 && Math.sin(g.clock * 14) > 0;
+    // 炉火包盾徽记
+    c.fillStyle = U.ink; D.chamfer(20, 18, 30, 30, 7); c.fill();
+    c.strokeStyle = hit ? U.alert : U.brass; c.lineWidth = 2; D.chamfer(20, 18, 30, 30, 7); c.stroke();
+    D.flame(35, 34, 10, ck < 0.3 ? '#E8702A' : '#FFB547'); D.flame(35, 37, 5, '#fff1c4');
+    D.text(ck < 0.3 ? '火光微弱' : '火光', 58, 24, 10, ck < 0.3 ? '#ff9a7a' : C.dim, 'left', true);
+    D.text(Math.ceil(co.hp) + '/' + Math.round(co.maxHp), 256, 24, 10, C.text, 'right', true);
+    for (var fi = 0; fi < 10; fi++) {   // 10 簇火苗，按火光比例点亮，最后一簇按余量变暗
+      var fk = Math.max(0, Math.min(1, ck * 10 - fi)), fxp = 64 + fi * 19;
+      D.flame(fxp, 41, 7, '#3a2418');
+      if (fk > 0) { c.globalAlpha = 0.35 + 0.65 * fk; D.flame(fxp, 41, 7, co.flash > 0 ? '#ffffff' : (ck < 0.3 ? '#E8702A' : '#FFB547')); c.globalAlpha = 1; }
+    }
+    var hpk = Math.max(0, p.hp / p.maxHp), mpk = Math.max(0, (p.mp || 0) / (p.maxMp || 1));
+    if (g.cls) D.text(g.cls.name, 256, 58, 10, g.cls.color, 'right', true);
+    bar(22, 64, 234, 13, hpk, hpk < 0.25 ? '#e23b4a' : '#b8323f', (hpk < 0.25 ? '生命垂危 ' : '生命 ') + Math.ceil(p.hp) + '/' + Math.round(p.maxHp), '#ffe4e8');
+    bar(22, 81, 234, 11, mpk, '#2f5fcf', '法力 ' + Math.ceil(p.mp || 0) + '/' + Math.round(p.maxMp || 0), '#dde8ff');
     var evo = RW.EVO, st = p.stage, next = evo[st + 1];
     var ek = next ? (p.mass - evo[st].mass) / (next.mass - evo[st].mass) : 1;
-    c.fillStyle = '#0c1a1a'; c.fillRect(bx, by + 46, bw, 5);
-    c.fillStyle = evo[st].color; c.fillRect(bx, by + 46, bw * Math.min(1, ek), 5);
-    D.text(evo[st].name + (next ? ' → ' + next.name + '  ' + Math.floor(p.mass) + '/' + next.mass : ' · 最终形态'), bx, by + 60, 10, evo[st].color, 'left', true);
-    var x = bx, y = 132;
+    c.fillStyle = '#140c07'; c.fillRect(22, 97, 234, 3);
+    c.fillStyle = evo[st].color; c.fillRect(22, 97, 234 * Math.min(1, ek), 3);
+    D.text(evo[st].name + (next ? ' → ' + next.name + '  ' + Math.floor(p.mass) + '/' + next.mass : ' · 最终形态'), 22, 110, 9, evo[st].color, 'left', true);
+    // 武器槽（面板下方）
+    var x = 16, y = 128;
     for (var i = 0; i < g.weapons.length; i++) {
       var w = g.weapons[i];
-      c.fillStyle = 'rgba(20,15,11,0.85)'; D.rr(x, y, 34, 28, 5); c.fill();
-      c.strokeStyle = w.ev ? C.gold : w.d.color; c.lineWidth = w.ev ? 2 : 1.5; D.rr(x, y, 34, 28, 5); c.stroke();
+      D.woodFrame(x, y, 34, 28, { style: 'hud', edge: w.ev ? U.select : undefined });
       var cd = w.d.kind === 'blades' ? 0 : Math.max(0, Math.min(1, w.cd / (w.d.cd[w.tier - 1] / g.st.rate)));
-      if (cd > 0) { c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(x + 1, y + 1 + 26 * (1 - cd), 32, 26 * cd); }
-      D.text((w.name || w.d.name)[0], x + 13, y + 14, 13, w.ev ? C.gold : w.d.color, 'center', true);
+      if (cd > 0) { c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(x + 2, y + 2 + 24 * (1 - cd), 30, 24 * cd); }
+      D.text((w.name || w.d.name)[0], x + 13, y + 14, 13, w.ev ? U.parch : w.d.color, 'center', true);
       D.text(['I', 'II', 'III'][w.tier - 1], x + 27, y + 21, 8, C.text, 'center', true);
       x += 38;
     }
-    // ---- 上方正中：波次 / 倒计时 / 圣火 ----
-    var left = Math.max(0, Math.ceil(g.dur - g.wt)), cx = W / 2;
-    D.hudPanel(cx - 90, 8, 180, 70);
-    D.text(g.endless ? '无尽 · 第 ' + g.wave + ' 波' : '第 ' + g.wave + ' / ' + RW.RUN.waves + ' 波' + (g.danger ? ' · 危险 ' + g.danger : ''), cx, 22, 12, g.danger >= 4 ? '#ffb3c1' : C.dim, 'center', true);
-    var urgent = g.mode === 'battle' && left <= 5;
-    var duel = g.final && !g.won && left <= 0;   // 终局：倒计时走完后要打倒灭火者才算守住
-    D.text(g.mode === 'clear' ? (g.won ? '守住了' : '清场') : (duel ? '决战' : String(left)), cx, 46, duel ? 22 : 28, duel ? C.red : (urgent ? C.gold : C.text), 'center', true);
-    if (g.furyT > 0) D.text('战意爆发 伤害 +' + Math.round(RW.SHRINE.rewards.filter(function (x) { return x.id === 'fury'; })[0].dmg * 100) + '% · ' + Math.ceil(g.furyT) + 's', cx, 92, 12, '#ffb08a', 'center', true, 3);
-    var co = g.core, ck = Math.max(0, co.hp / co.maxHp), cbx = cx - 62, cby = 64;
-    D.text('火', cbx - 10, cby + 3, 10, co.alert > 0 && Math.sin(g.clock * 14) > 0 ? C.red : '#ffd27a', 'center', true);
-    c.fillStyle = '#1e1712'; c.fillRect(cbx, cby, 132, 7);
-    c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(cbx, cby, 132 * ck, 7);
-    if (co.flash > 0) { c.fillStyle = '#ffffff'; c.fillRect(cbx, cby, 132 * ck, 7); }
-    // ---- 右上：金币 / 击杀 / 暂停 ----
-    D.hudPanel(W - 222, 10, 168, 50);
-    D.shardIcon(W - 204, 30, 9);
-    D.text(String(g.shardCount), W - 190, 31, 22, C.shard, 'left', true);
-    D.text('击杀 ' + g.kills + ' · 建筑 ' + g.towerCount() + '/' + T.build.max, W - 62, 50, 10, C.dim, 'right');
+    // ---- 常驻层 · 右上：波次 / 倒计时 / 金币 ----
+    var left = Math.max(0, Math.ceil(g.dur - g.wt)), duel = g.final && !g.won && left <= 0, urgent = g.mode === 'battle' && left <= 10 && !duel;
+    var px = W - 242;
+    D.hudPanel(px, 10, 188, 66);
+    D.text(g.endless ? '无尽 · 第 ' + g.wave + ' 波' : '第 ' + g.wave + ' 波', px + 12, 25, 13, C.text, 'left', true);
+    D.text(g.endless ? '' : '/ ' + RW.RUN.waves + (g.danger ? ' · 危险 ' + g.danger : ''), px + 12, 41, 9, g.danger >= 4 ? '#ffb3c1' : C.dim, 'left');
+    D.text(g.mode === 'clear' ? (g.won ? '守住了' : '清场') : (duel ? '决战' : left + ' 秒'), px + 176, 32, duel ? 18 : 20, duel ? '#ff9a7a' : (urgent ? U.parch : C.text), 'right', true);
+    if (urgent) D.text('守住片刻', px + 176, 50, 9, U.parch, 'right');
+    D.shardIcon(px + 18, 62, 6);
+    D.text('金币 ' + g.shardCount, px + 28, 62, 11, C.shard, 'left', true);
+    D.text('击杀 ' + g.kills + ' · 建筑 ' + g.towerCount() + '/' + T.build.max, px + 176, 64, 8, C.dim, 'right');
     ui.button('pause', W - 46, 10, 36, 36, '', { draw: function (bx2, by2, bw2, bh2) {
-      c.fillStyle = 'rgba(20,15,11,0.85)'; D.rr(bx2, by2, bw2, bh2, 6); c.fill();
-      c.strokeStyle = C.line; D.rr(bx2, by2, bw2, bh2, 6); c.stroke();
+      D.woodFrame(bx2, by2, bw2, bh2, { style: 'hud' });
       c.fillStyle = C.text; c.fillRect(bx2 + 12, by2 + 10, 4, 14); c.fillRect(bx2 + 20, by2 + 10, 4, 14);
       D.text('Esc', bx2 + bw2 / 2, by2 + bh2 + 8, 8, C.faint, 'center');
     } });
-    // 英雄倒下：圣火还亮着就倒计时复活
-    if (p.dead) {
-      var rk = Math.max(0, p.respawnT / (p.respawnMax || 1));
-      c.fillStyle = 'rgba(8,6,12,0.72)'; D.rr(W / 2 - 170, 118, 340, 70, 10); c.fill();
-      c.strokeStyle = '#ffd27a'; c.lineWidth = 1.5; D.rr(W / 2 - 170, 118, 340, 70, 10); c.stroke();
-      D.text('英雄倒下 · ' + Math.ceil(p.respawnT) + ' 秒后在圣火旁复活', W / 2, 138, 15, '#ffe2a8', 'center', true);
-      c.fillStyle = '#2a2016'; c.fillRect(W / 2 - 140, 154, 280, 7);
-      c.fillStyle = '#ffd27a'; c.fillRect(W / 2 - 140, 154, 280 * (1 - rk), 7);
-      D.text((p.coreCost ? '圣火分出 ' + p.coreCost + ' 点火焰为你续命 · ' : '') + '圣火还亮着，这局就没输', W / 2, 176, 11, C.dim, 'center');
-    }
-    // 低血警示
+    // 低血警示（画面四周泛红，不是文字）
     if (g.mode === 'battle' && hpk < 0.35 && !p.dead) {
       var pulse = 0.35 + 0.25 * Math.sin(g.clock * 6);
       var gr = c.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.6);
@@ -1292,55 +1380,95 @@
       c.fillStyle = gr; c.fillRect(0, 0, W, H);
     }
     D.battleButtons(g, ui, menu);
-    // 横幅
-    if (g.banner > 0 && (g.mode === 'battle' || (g.mode === 'clear' && g.won))) {
-      var k = g.banner / 1.6, al = Math.min(1, k * 3);
-      c.globalAlpha = al;
-      // 心流：横幅放在上方、半透明，不挡住英雄和身边的怪
-      var grd = c.createLinearGradient(0, 96, W, 96);
-      grd.addColorStop(0, 'rgba(4,8,16,0)'); grd.addColorStop(0.25, 'rgba(4,8,16,0.55)'); grd.addColorStop(0.75, 'rgba(4,8,16,0.55)'); grd.addColorStop(1, 'rgba(4,8,16,0)');
-      c.fillStyle = grd; c.fillRect(0, 96, W, 52);
-      D.glowText(g.bannerText || ('第 ' + g.wave + ' 波'), W / 2, 116, g.bannerText ? 20 : 24, C.cyan, 'center', 12);
-      var sub = g.won ? (RW.RUN.waves + ' 波全部守住') : (g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒'));
-      if (!g.won && g.final && !g.bannerText) sub = '终局 · 坚守 ' + g.dur + ' 秒并击败灭火者';
+    // ---- 情境层：信息卡 ----
+    D.infoCard(g);
+    // ---- 提示层 ----
+    D.tip = true;
+    D.topBanner(g, left);
+    D.tutorialScroll(g);
+    D.tip = false;
+  };
+  // 顶部横幅：一次只显示一条，按优先级取最要紧的
+  D.topBanner = function (g, left) {
+    var p = g.player, co = g.core, t = null;
+    if (p.dead) t = { title: '守火人倒下，等待归来', sub: (p.coreCost ? '圣火分出 ' + p.coreCost + ' 点火光为你续命 · ' : '') + Math.ceil(p.respawnT) + ' 秒后在圣火旁归来', col: '#ffe2a8', prog: 1 - Math.max(0, p.respawnT / (p.respawnMax || 1)) };
+    else if (g.bossAlert > 0 && g.mode === 'battle') t = { title: '巨影踏入村庄', sub: RW.ENEMIES.boss.name + ' · 红圈＝砸地，粗红线＝冲撞，半血后狂暴', col: '#ff9ab0', a: Math.min(1, g.bossAlert * 1.5) };
+    else if (g.eliteAlert > 0 && g.mode === 'battle') t = { title: '强敌逼近 · ' + g.eliteAlertName, sub: g.eliteAlertType === 'brood' ? '它会不停放出蝙蝠，先杀它' : '它会充能后放出一圈弹幕', col: '#ffb3c1', a: Math.min(1, g.eliteAlert * 2) };
+    else if (co.alert > 2.2 && g.mode === 'battle') t = { title: '圣火受击，快回防', col: '#ff9ab0' };
+    else if (g.mode === 'battle' && co.hp / co.maxHp < 0.3) t = { title: '火光将熄', sub: '回到圣火旁清掉围攻的敌人', col: '#ff9a7a' };
+    else if (g.mode === 'clear') t = { title: g.won ? '圣火长明' : '天色稍缓，可以整备', sub: '收成 +' + (g.haul || 0) + (g.yieldGold ? ' · 圣域收成 +' + g.yieldGold : '') + ' · 地上的金币按 50% 回收', col: D.UIC.parch };
+    else if (g.banner > 0 && g.mode === 'battle') {
+      var sub = g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒');
+      if (g.final && !g.bannerText) sub = '终局 · 坚守 ' + g.dur + ' 秒并击败灭火者';
       if (g.eliteQ.length) sub += ' · 精英 ×' + g.eliteQ.length;
-      D.text(sub, W / 2, 138, 11, C.dim, 'center');
-      c.globalAlpha = 1;
+      t = { title: g.bannerText || ('第 ' + g.wave + ' 波 · 黑影逼近'), sub: sub, col: D.UIC.parch, a: Math.min(1, g.banner / 1.6 * 3) };
     }
-    // 第一波的操作提示：放在下方，整波都在，不挡中间
-    if (g.wave === 1 && g.mode === 'battle' && g.wt < 14) {
-      c.globalAlpha = Math.min(1, (14 - g.wt) / 2);
-      // 放在底部按钮行上方，不压冲刺 / 技能键帽
-      D.text('踩金色木箱召唤同伴，两个一样的会合成 · ' + RW.keyLabel('skill0') + ' / ' + RW.keyLabel('skill1') + ' / ' + RW.keyLabel('skill2') + ' 放技能 · ' + RW.keyLabel('dash') + ' 冲刺', W / 2, H - 164, 12, C.text, 'center', false, 3);
-      D.text('按 1–4 直接在脚下造塔（左下角有价格）· 守住中央的圣火', W / 2, H - 146, 12, C.shard, 'center', false, 3);
-      if (g.shrines && g.shrines.length) D.text('发蓝光的是祭坛：站进圈里占领，每波每座都有奖励（看小地图）', W / 2, H - 128, 12, '#b8f2ff', 'center', false, 3);
-      c.globalAlpha = 1;
-    }
-    if (g.evolveT > 0) {
-      c.globalAlpha = Math.min(1, g.evolveT * 2);
-      var ev = evo[p.stage];
-      D.glowText('晋升 · ' + ev.name, W / 2, 150, 30, ev.color, 'center', 18);
-      var bits = [];
+    else if (g.evolveT > 0) {
+      var ev = RW.EVO[p.stage], bits = [];
       if (ev.armor) bits.push('护甲 ' + ev.armor);
       if (ev.hp) bits.push('生命 +' + ev.hp);
       if (ev.dmg) bits.push('伤害 +' + Math.round(ev.dmg * 100) + '%');
       bits.push('移速 ×' + ev.speed);
-      D.text(bits.join(' · '), W / 2, 182, 12, C.text, 'center', true, 3);
-      D.text(D.eatHint(p.stage), W / 2, 202, 11, ev.color, 'center', false, 3);
-      c.globalAlpha = 1;
+      t = { title: '晋升 · ' + ev.name, sub: bits.join(' · ') + (D.eatHint(p.stage) ? ' · ' + D.eatHint(p.stage) : ''), col: ev.color, a: Math.min(1, g.evolveT * 2) };
     }
-    if (g.eliteAlert > 0 && g.mode === 'battle') {
-      c.globalAlpha = Math.min(1, g.eliteAlert * 2);
-      var ey = g.boss && g.boss.on ? 142 : 106;
-      D.glowText('精英来袭 · ' + g.eliteAlertName, W / 2, ey, 18, C.red, 'center', 12);
-      D.text(g.eliteAlertType === 'brood' ? '它会不停放出蝙蝠，先杀它' : '它会充能后放出一圈弹幕', W / 2, ey + 22, 11, '#ffb3c1', 'center', false, 3);
-      c.globalAlpha = 1;
+    else if (g.furyT > 0) t = { title: '战意爆发 · ' + Math.ceil(g.furyT) + ' 秒', sub: '伤害 +' + Math.round(RW.SHRINE.rewards.filter(function (x) { return x.id === 'fury'; })[0].dmg * 100) + '%', col: '#ffb08a' };
+    else if (g.mode === 'battle' && (D.dirs || 0) >= 3) t = { title: '四面有敌', sub: '红色箭头指着敌群来的方向', col: '#ffc2c2' };
+    else if (g.mode === 'battle' && left <= 10 && left > 0 && !g.final) t = { title: '再守 ' + left + ' 秒', col: D.UIC.parch };
+    if (!t) return;
+    var c = D.ctx, w = 400, x = W / 2 - w / 2, y = 8, h = t.sub || t.prog != null ? 52 : 34;
+    c.globalAlpha = t.a == null ? 1 : t.a;
+    D.woodFrame(x, y, w, h, { style: 'hud', alpha: 0.92 });
+    D.glowText(t.title, W / 2, y + 17, 17, t.col, 'center', 8);
+    if (t.sub) D.text(t.sub.length > 34 ? t.sub.slice(0, 33) + '…' : t.sub, W / 2, y + 38, 10, C.dim, 'center');
+    if (t.prog != null) { c.fillStyle = '#2a2016'; c.fillRect(x + 40, y + h - 6, w - 80, 3); c.fillStyle = '#ffd27a'; c.fillRect(x + 40, y + h - 6, (w - 80) * t.prog, 3); }
+    c.globalAlpha = 1;
+  };
+  // 右侧教程卷轴：第一波，按时间依次讲四件事（不进画面中央）
+  D.tutorialScroll = function (g) {
+    if (g.wave !== 1 || g.mode !== 'battle' || g.wt > 30) return;
+    var K = RW.keyLabel, steps = [
+      ['自动迎敌', '武器会攻击近处的敌人。'],
+      ['闪身避险', '按 ' + K('dash') + ' 冲刺，可短暂避开伤害。'],
+      ['建起箭塔', '按 1，在脚下建箭塔。'],
+      ['回身护火', '警示亮起时，先回守圣火。']
+    ];
+    if (g.shrines && g.shrines.length) steps.push(['占领祭坛', '站进蓝圈，每波都有奖励。']);
+    var k = Math.min(steps.length - 1, Math.floor(g.wt / 6)), st = steps[k], c = D.ctx;
+    var x = W - 232, y = 96 + D.MINI.h + 10, w = 220, h = 62;
+    c.globalAlpha = Math.min(1, (30 - g.wt) / 2);
+    D.woodFrame(x, y, w, h, { style: 'hud', alpha: 0.95 });
+    c.fillStyle = '#d9c49a'; c.fillRect(x + 8, y + 8, 3, h - 16);   // 卷轴轴线
+    D.text(st[0], x + 18, y + 18, 13, D.UIC.parch, 'left', true);
+    D.text((k + 1) + ' / ' + steps.length, x + w - 10, y + 18, 9, C.faint, 'right');
+    D.text(st[1], x + 18, y + 42, 11, C.text, 'left');
+    c.globalAlpha = 1;
+  };
+  // 信息卡：离英雄最近的建筑或圣火（圣火旁 90、建筑旁 70 以内），弹在右下技能栏上方
+  D.infoCard = function (g) {
+    if (g.mode !== 'battle' || g.player.dead) return;
+    var p = g.player, best = null, bd = 70 * 70, i;
+    for (i = 0; i < g.towers.length; i++) {
+      var tw = g.towers[i]; if (!tw.on) continue;
+      var d2 = (tw.x - p.x) * (tw.x - p.x) + (tw.y - p.y) * (tw.y - p.y);
+      if (d2 < bd) { bd = d2; best = tw; }
     }
-    if (g.core.alert > 2.2 && g.mode === 'battle') D.text('圣火正在受到攻击！', W / 2, 92, 13, '#ff9ab0', 'center', true, 3);
-    if (g.mode === 'clear') {
-      D.glowText('本波完成', W / 2, 226, 32, C.gold, 'center', 16);
-      D.text('收成 +' + (g.haul || 0) + (g.yieldGold ? '    圣域收成 +' + g.yieldGold : '') + '    地上的金币按 50% 回收', W / 2, 260, 13, C.shard, 'center', false, 3);
+    var co = g.core, card;
+    if (best) {
+      var TD = best.d || RW.TOWERS[best.id], lv = (g.tech && g.tech[best.id]) || 1;
+      var ROLE = { sentry: ['防御塔', '远射来敌，优先近处'], pylon: ['防御塔', '放慢踏入寒意的敌人'], siphon: ['村落建筑', '把圣域暖意换成金币'], barracks: ['驻防建筑', '士兵守住指定地点'] }[best.id] || ['建筑', ''];
+      var acts = best.id === 'barracks' ? RW.keyLabel('cmd:post') + ' 布防 · ' + RW.keyLabel('cmd:troop') + ' 换兵 · ' + RW.keyLabel('cmd:form') + ' 阵型 · ' + RW.keyLabel('cmd:recall') + ' 召回' : '整备时可升级科技';
+      card = { name: TD.name, role: ROLE[0] + ' · Lv' + lv, k: best.hp / (best.maxHp || 1), hp: Math.ceil(best.hp) + '/' + Math.round(best.maxHp || 1), use: ROLE[1], acts: acts, col: TD.color };
+    } else if ((co.x - p.x) * (co.x - p.x) + (co.y - p.y) * (co.y - p.y) < 90 * 90) {
+      card = { name: '圣火', role: '村落之心 · Lv' + (co.lv || 1), k: co.hp / co.maxHp, hp: Math.ceil(co.hp) + '/' + Math.round(co.maxHp), use: '火光未灭，守护未完', acts: '整备时可护火、升级', col: '#FFB547' };
     }
+    if (!card) return;
+    var c = D.ctx, x = W - 244, y = H - 206, w = 232, h = 98;
+    D.woodFrame(x, y, w, h, { style: 'hud', alpha: 0.94 });
+    D.text(card.name, x + 12, y + 16, 14, card.col, 'left', true);
+    D.text(card.role, x + w - 12, y + 16, 10, C.dim, 'right');
+    bar(x + 12, y + 30, w - 24, 11, card.k, '#b8323f', '耐久 ' + card.hp, '#ffe4e8');
+    D.text(card.use, x + 12, y + 58, 11, C.text, 'left');
+    D.text(card.acts, x + 12, y + 80, 9, C.faint, 'left');
   };
   D.eatHint = function (stage) {
     var r = RW.EVO[stage].eatR, names = [];
@@ -1371,8 +1499,8 @@
         var kc = keycap(id);
         if (kc) {   // 桌面：按键提示
           var kw = kc.length > 1 ? 14 + kc.length * 8 : 18;
-          c.fillStyle = 'rgba(10,8,14,0.85)'; D.rr(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.fill();
-          c.strokeStyle = 'rgba(255,255,255,0.3)'; D.rr(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.stroke();
+          c.fillStyle = 'rgba(10,8,14,0.85)'; D.chamfer(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.fill();
+          c.strokeStyle = 'rgba(255,255,255,0.3)'; D.chamfer(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.stroke();
           D.text(kc, b.x, b.y - b.r - 2, 9, C.text, 'center', true);
         }
       } });
@@ -1391,18 +1519,18 @@
     // 快速造塔：造塔键旁边一直显示四个快捷键（点一下也能造），手柄时显示 LB + 十字键
     var PADK = ['←', '↑', '→', '↓'];
     if (!menu && !(g.mut && g.mut.nobuild)) {
-      var qx = B.build.x + B.build.r + 12, qy = H - 44;
-      if (ui.padNav) D.text('LB 造塔菜单 · 十字键选', qx, qy - 14, 9, C.faint, 'left', false, 3);
-      else D.text('快速造塔：按数字键直接建在脚下', qx, qy - 14, 9, C.faint, 'left', false, 3);
+      var qx = W / 2 - 152, qy = H - 40;   // 底部中间：建造栏
+      D.woodFrame(qx - 8, qy - 22, 4 * 67 + 13, 58, { style: 'hud' });
+      D.text('建造', qx, qy - 11, 10, D.UIC.parch, 'left', true);
+      D.text(ui.padNav ? 'LB 菜单 · 十字键选' : '数字键直接建在脚下', qx + 4 * 67 - 3, qy - 11, 8, C.faint, 'right');
       for (var qi = 0; qi < RW.TOWER_ORDER.length; qi++) {
         (function (id, i) {
           var d = RW.TOWERS[id], price = g.buildPrice(id), ok = g.shardCount >= price && g.towerCount() < T.build.max;
           ui.button('bt:' + id, qx + i * 67, qy, 64, 30, '', { disabled: !ok, why: g.towerCount() >= T.build.max ? '建筑已达上限' : '金币不足，需要 ' + price, draw: function (x, y, w, h, pressed) {
             c.globalAlpha = ok ? 0.95 : 0.45;
-            c.fillStyle = pressed ? '#3a2a18' : 'rgba(20,15,11,0.85)'; D.rr(x, y, w, h, 6); c.fill();
-            c.strokeStyle = ok ? d.color : '#4a3a28'; c.lineWidth = 1.2; D.rr(x, y, w, h, 6); c.stroke();
+            D.woodFrame(x, y, w, h, { style: pressed ? 'primary' : 'btn', edge: ok ? undefined : '#4a3a28' });
             var key = ui.padNav ? PADK[i] : String(i + 1);
-            c.fillStyle = ok ? C.gold : '#5a4630'; D.rr(x + 4, y + 6, 18, 18, 4); c.fill();
+            c.fillStyle = ok ? D.UIC.parch : '#5a4630'; D.chamfer(x + 4, y + 6, 18, 18, 4); c.fill();
             D.text(key, x + 13, y + 15, 11, '#1a1206', 'center', true);
             D.text(d.name, x + 26, y + 10, 10, ok ? d.color : C.faint, 'left', true);
             D.shardIcon(x + 30, y + 22, 3.5);
@@ -1415,15 +1543,14 @@
     // 兵营指挥：有兵营时在快速造塔上方显示四个指令（对离你最近的兵营下令）
     var nb = !menu && g.nearestBarracks && g.nearestBarracks();
     if (nb) {
-      var cx0 = B.build.x + B.build.r + 12, cy0 = H - 94, TRp = RW.TROOPS[nb.troop], FMp = RW.FORMATIONS[nb.form];
+      var cx0 = W / 2 - 152, cy0 = H - 98, TRp = RW.TROOPS[nb.troop], FMp = RW.FORMATIONS[nb.form];
       var KL = RW.keyLabel, cmds = [['post', KL('cmd:post'), 'LT', '布防', nb.post ? '已布防' : '到脚下'], ['recall', KL('cmd:recall'), '—', '召回', '回营'], ['troop', KL('cmd:troop'), 'L3', TRp.name, '换兵种'], ['form', KL('cmd:form'), 'R3', FMp.name, '换阵型']];
       for (var ci = 0; ci < cmds.length; ci++) {
         (function (cm, i) {
           ui.button('cmd:' + cm[0], cx0 + i * 67, cy0, 64, 28, '', { draw: function (x, y, w, h, pressed) {
-            c.fillStyle = pressed ? '#3a2a18' : 'rgba(20,15,11,0.82)'; D.rr(x, y, w, h, 6); c.fill();
-            c.strokeStyle = i === 2 ? TRp.color : 'rgba(255,210,122,0.5)'; c.lineWidth = 1.1; D.rr(x, y, w, h, 6); c.stroke();
+            D.woodFrame(x, y, w, h, { style: pressed ? 'primary' : 'hud' });
             var key = ui.padNav ? cm[2] : cm[1];
-            c.fillStyle = '#c9b68a'; D.rr(x + 4, y + 5, 18, 18, 4); c.fill();
+            c.fillStyle = '#c9b68a'; D.chamfer(x + 4, y + 5, 18, 18, 4); c.fill();
             D.text(key, x + 13, y + 14, key.length > 1 ? 8 : 11, '#1a1206', 'center', true);
             D.text(cm[3], x + 26, y + 9, 10, i === 2 ? TRp.color : C.text, 'left', true);
             D.text(cm[4], x + 26, y + 21, 8, C.faint, 'left');
@@ -1439,14 +1566,14 @@
           var y = H - 70;
           ui.button('bt:' + id, 96 + i * 124, y, 118, 58, '', { disabled: !ok, why: g.towerCount() >= T.build.max ? '建筑已达上限' : '金币不足，需要 ' + price, draw: function (x, yy, w, h, pressed) {
             c.globalAlpha = ok ? 0.95 : 0.5;
-            c.fillStyle = pressed ? '#3a2a18' : 'rgba(24,18,12,0.92)'; D.rr(x, yy, w, h, 8); c.fill();
-            c.strokeStyle = d.color; c.lineWidth = 1.5; D.rr(x, yy, w, h, 8); c.stroke();
+            c.fillStyle = pressed ? '#3a2a18' : 'rgba(24,18,12,0.92)'; D.chamfer(x, yy, w, h, 8); c.fill();
+            c.strokeStyle = d.color; c.lineWidth = 1.5; D.chamfer(x, yy, w, h, 8); c.stroke();
             D.text(d.name + ' ' + ['I', 'II', 'III'][g.tech[id] - 1], x + 8, yy + 14, 12, d.color, 'left', true);
             D.text(D.towerBlurb(id), x + 8, yy + 30, 9, C.dim, 'left');
             D.shardIcon(x + 14, yy + 44, 5);
             D.text(String(price), x + 23, yy + 45, 12, ok ? C.shard : C.bad, 'left', true);
             var kc = ui.padNav ? PADK[i] : String(i + 1);   // 大号按键提示
-            c.fillStyle = ok ? C.gold : '#5a4630'; D.rr(x + w - 24, yy + 34, 18, 18, 4); c.fill();
+            c.fillStyle = ok ? C.gold : '#5a4630'; D.chamfer(x + w - 24, yy + 34, 18, 18, 4); c.fill();
             D.text(kc, x + w - 15, yy + 43, 11, '#1a1206', 'center', true);
             c.globalAlpha = 1;
           } });

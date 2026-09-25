@@ -39,18 +39,18 @@
     if (opts.draw) { opts.draw(x, y, w, h, pressed); UI.focusRing(id, x, y, w, h); return; }
     var st = opts.style || 'normal';
     if (pressed) { c.save(); c.translate(x + w / 2, y + h / 2); c.scale(0.96, 0.96); c.translate(-x - w / 2, -y - h / 2); }
-    c.globalAlpha = opts.disabled ? 0.4 : 1;
-    var fill = '#1e1712', stroke = '#6a5234', tc = C.text;
-    if (st === 'primary') { fill = C.cyan; stroke = '#b9fbff'; tc = '#04121a'; }
-    else if (st === 'ad') { fill = '#1f1a08'; stroke = C.gold; tc = C.gold; }
-    else if (st === 'danger') { fill = '#2a0b14'; stroke = C.red; tc = '#ffc2cd'; }
-    else if (st === 'ghost') { fill = 'rgba(0,0,0,0)'; stroke = '#5a4630'; tc = C.dim; }
-    c.fillStyle = fill; D.rr(x, y, w, h, 7); c.fill();
-    c.strokeStyle = stroke; c.lineWidth = 1.5; D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 7); c.stroke();
+    c.globalAlpha = opts.disabled ? 0.45 : 1;
+    // 木框金边按钮：主按钮是亮一档的木板 + 选中黄铜边；特别（ad）是金币黄铜边；危险带裂纹
+    var U = D.UIC, tc = C.text;
+    D.woodFrame(x, y, w, h, { style: st === 'normal' ? 'btn' : st });
+    if (st === 'primary') tc = U.parch;
+    else if (st === 'ad') tc = '#f0d6a0';
+    else if (st === 'danger') tc = '#ffc2b0';
+    else if (st === 'ghost') tc = C.dim;
     var size = opts.size || 15;
     if (opts.sub) {
       D.text(label, x + w / 2, y + h / 2 - 8, size, tc, 'center', true);
-      D.text(opts.sub, x + w / 2, y + h / 2 + 11, 10, st === 'primary' ? '#0b3440' : C.dim, 'center');
+      D.text(opts.sub, x + w / 2, y + h / 2 + 11, 10, st === 'primary' ? '#d8c49a' : C.dim, 'center');
     } else D.text(label, x + w / 2, y + h / 2 + 1, size, tc, 'center', true);
     c.globalAlpha = 1;
     if (pressed) c.restore();
@@ -59,25 +59,21 @@
   // 手柄 / 键盘导航时，当前选中的按钮画一圈金边
   UI.focusRing = function (id, x, y, w, h) {
     if (!UI.padNav || UI.focusId !== id) return;
-    var c = D.ctx, a = 0.65 + 0.35 * Math.sin(UI.t * 8);
-    c.strokeStyle = 'rgba(255,214,120,' + a.toFixed(2) + ')'; c.lineWidth = 3; D.rr(x - 3, y - 3, w + 6, h + 6, 9); c.stroke();
+    D.focusBrackets(x, y, w, h, 0.65 + 0.35 * Math.sin(UI.t * 8));   // 四角 L 形羊皮纸括号
   };
 
   UI.dim = function (a) { var c = D.ctx; c.fillStyle = 'rgba(2,4,10,' + a + ')'; c.fillRect(0, 0, W, H); };
-  UI.panel = function (x, y, w, h, border) {
-    var c = D.ctx;
-    c.fillStyle = 'rgba(24,18,14,0.96)'; D.rr(x, y, w, h, 10); c.fill();
-    c.strokeStyle = border || C.line; c.lineWidth = 1.5; D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 10); c.stroke();
-  };
+  UI.panel = function (x, y, w, h, border) { D.woodFrame(x, y, w, h, { style: 'panel', edge: border }); };
   UI.drawToast = function () {
     if (UI.toastT <= 0 || !UI.toastMsg) return;
     var c = D.ctx; c.font = D.font(13, true);
     var w = Math.min(W - 40, c.measureText(UI.toastMsg).width + 32);
     c.globalAlpha = Math.min(1, UI.toastT * 3);
     var ty = UI.toastY || 8;
-    c.fillStyle = 'rgba(26,20,16,0.96)'; D.rr((W - w) / 2, ty, w, 34, 17); c.fill();
-    c.strokeStyle = C.cyan; c.lineWidth = 1; D.rr((W - w) / 2, ty, w, 34, 17); c.stroke();
+    D.tip = true;   // 提示层（界面审计：不许盖住战场中央）
+    D.woodFrame((W - w) / 2, ty, w, 34, { style: 'hud', alpha: 0.95 });
     D.text(UI.toastMsg, W / 2, ty + 17, 13, C.text, 'center', true);
+    D.tip = false;
     c.globalAlpha = 1;
   };
 
@@ -95,29 +91,33 @@
       }
       c.restore();
     }
-    D.glowText('圣火守护者', W / 2, 120, 60, C.cyan, 'center', 24);
-    D.text('F L A M E   G U A R D I A N', W / 2, 170, 13, '#e8d8b8', 'center', true, 3);
-    D.text('夜色压境，守住村子的圣火。撑过倒计时，整备，再迎下一波。', W / 2, 214, 14, C.text, 'center', true, 3);
+    // 标题页（FG-ART-002 阶段 3，参考概念图 1）：Logo 木牌在上三分之一，菜单是左侧竖排的木框按钮
+    // 文案按 docs/UI_COPY_V1.md 第 4.1 节
+    D.woodFrame(W / 2 - 220, 22, 440, 104, { style: 'panel', alpha: 0.9 });
+    D.glowText('圣火守护者', W / 2, 70, 58, '#FFB547', 'center', 22);
+    D.woodFrame(W / 2 - 100, 112, 200, 26, { style: 'hud' });
+    D.text('FLAME GUARDIAN', W / 2, 125, 12, D.UIC.parch, 'center', true);
+    D.text('长夜围住村庄，你是火旁最后的守护者。', W / 2, 162, 14, C.text, 'center', true, 3);
     var pr = g.prog || {};
-    if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波' + (pr.wins ? ' · 通关 ' + pr.wins + ' 次' : '') + (pr.bestScore ? ' · 最高分 ' + pr.bestScore : ''), W / 2, 244, 13, C.gold, 'center', true, 3);
-    var ri = UI.runInfo, y = 272;
+    D.text(g.best > 0 ? '最佳纪录：守到第 ' + g.best + ' 波' + (pr.wins ? ' · 通关 ' + pr.wins + ' 次' : '') + (pr.bestScore ? ' · 最高分 ' + pr.bestScore : '') : '第一簇火，正等你点亮。', W / 2, 186, 12, g.best > 0 ? C.gold : C.dim, 'center', true, 3);
+    var ri = UI.runInfo, mx = 36, mw = 214, y = 212;
     if (ri) {   // 有没打完的一局：继续是首选
-      UI.button('continueRun', W / 2 - 150, 256, 300, 52, '继续上局', { style: 'primary', size: 20,
-        sub: ri.hero + ' · ' + (ri.daily ? '每日挑战 · ' : '') + (ri.endless ? '无尽 · ' : '') + '第 ' + ri.wave + ' 波前的整备' + (ri.danger ? ' · 危险 ' + ri.danger : '') });
-      UI.button('start', W / 2 - 150, 314, 300, 36, '开始新的一局（会放弃上局）', { size: 13 });
-      y = 358;
-    } else { UI.button('start', W / 2 - 150, 272, 300, 58, '开始守护', { style: 'primary', size: 22 }); y = 340; }
-    UI.button('mute', W / 2 - 150, y, 72, 38, muted ? '声音：关' : '声音：开', { size: 12 });
-    UI.button('music', W / 2 - 74, y, 72, 38, UI.musicOff ? '音乐：关' : '音乐：开', { size: 12 });
-    UI.button('howto', W / 2 + 2, y, 72, 38, '玩法说明', { size: 12 });
-    UI.button('settings', W / 2 + 78, y, 72, 38, '设置', { size: 12 });
+      UI.button('continueRun', mx, y, mw, 52, '继续守护', { style: 'primary', size: 19,
+        sub: ri.hero + ' · ' + (ri.daily ? '每日 · ' : '') + (ri.endless ? '无尽 · ' : '') + '第 ' + ri.wave + ' 波前' + (ri.danger ? ' · 危险 ' + ri.danger : '') });
+      UI.button('start', mx, y + 58, mw, 38, '新的守护', { size: 13, sub: '将放弃上局' });
+      y += 102;
+    } else { UI.button('start', mx, y, mw, 56, '开始守护', { style: 'primary', size: 21 }); y += 62; }
     var dk = UI.dayKey(), ds = RW.dailySetup(dk), db = pr.daily && pr.daily[dk];
-    UI.button('daily', W / 2 - 150, y + 46, 148, 44, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
-    UI.button('records', W / 2 + 2, y + 46, 148, 44, '成就与纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
+    UI.button('daily', mx, y, mw, 42, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
+    UI.button('records', mx, y + 48, mw, 42, '火光纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
+    UI.button('howto', mx, y + 96, mw / 2 - 3, 34, '玩法', { size: 13 });
+    UI.button('settings', mx + mw / 2 + 3, y + 96, mw / 2 - 3, 34, '设置', { size: 13 });
+    if (root.desktop) UI.button('exitGame', mx, y + 136, mw, 34, '退出', { style: 'ghost', size: 13 });
+    UI.button('mute', mx, H - 44, mw / 2 - 3, 30, muted ? '声音：关' : '声音：开', { size: 11, style: 'ghost' });
+    UI.button('music', mx + mw / 2 + 3, H - 44, mw / 2 - 3, 30, UI.musicOff ? '音乐：关' : '音乐：开', { size: 11, style: 'ghost' });
     var K = RW.keyLabel;
-    D.text(K('up') + K('left') + K('down') + K('right') + ' 移动 · 自动攻击 · ' + K('dash') + ' 冲刺 · ' + K('skill0') + '/' + K('skill1') + '/' + K('skill2') + ' 技能 · 1–4 造塔 · Enter 开始 · F11 全屏 · 支持手柄', W / 2, y + 108, 12, C.dim, 'center', false, 3);
-    if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出游戏', { style: 'ghost', size: 13 });
-    D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
+    D.text(K('up') + K('left') + K('down') + K('right') + ' 移动 · 自动攻击 · ' + K('dash') + ' 冲刺 · ' + K('skill0') + '/' + K('skill1') + '/' + K('skill2') + ' 技能 · 1–4 造塔 · Enter 开始 · 支持手柄', W / 2 + 130, H - 38, 11, C.dim, 'center', false, 3);
+    D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2 + 130, H - 18, 10, C.faint, 'center', false, 3);
   };
 
   UI.dayKey = function () {
@@ -148,7 +148,7 @@
       var wl = D.wrap(lines[i][1], 270, 12);
       for (var j = 0; j < wl.length; j++) D.text(wl[j], x0 + 50, y + j * 17, 12, C.text, 'left');
     }
-    UI.button('howtoClose', W / 2 - 100, 436, 200, 44, '知道了', { style: 'primary' });
+    UI.button('howtoClose', W / 2 - 100, 436, 200, 44, '明白', { style: 'primary' });
   };
 
   // ================= 选择英雄 =================
@@ -160,7 +160,7 @@
     if (!RW.CLASSES[UI.heroSel]) UI.heroSel = ids[0];
     D.drawBg(true);
     UI.dim(0.5);
-    D.text('选择英雄', 24, 36, 24, C.text, 'left', true, 3);
+    D.text('选择守火人', 24, 36, 24, C.text, 'left', true, 3);
     D.text('已解锁 ' + nUn + ' / ' + ids.length + ' · 每个英雄自带不同的属性和特性 · 方向键切换，Enter 出发', 24, 60, 11, C.dim, 'left', false, 3);
     for (i = 0; i < ids.length; i++) {
       var col = i % 5, row = (i / 5) | 0;
@@ -170,7 +170,7 @@
     UI.heroDetail(g, UI.heroSel, 468, 24, W - 492, 454);
     var sel = UI.heroSel, ok = RW.isUnlocked(sel, prog);
     UI.button('back', 24, 486, 160, 44, '返回', { style: 'ghost', size: 14 });
-    UI.button('pick:' + sel, 468, 486, W - 492, 44, ok ? '出发 · ' + RW.CLASSES[sel].name + ' · ' + RW.MAPS[UI.runMap].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 17, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
+    UI.button('pick:' + sel, 468, 486, W - 492, 44, ok ? '举火出发' : '尚未相遇', { style: ok ? 'primary' : 'ghost', size: 17, sub: ok ? RW.CLASSES[sel].name + ' · ' + RW.MAPS[UI.runMap].name : '', disabled: !ok, why: '解锁条件：' + RW.CLASSES[sel].unlock.text });
   };
   // 本局设置：危险等级（按英雄解锁）+ 变异器；记在 UI 上，存档一起保存
   UI.runDanger = 0; UI.runMuts = []; UI.runMap = 'village';
@@ -213,8 +213,8 @@
   UI.heroTile = function (g, id) {
     return function (x, y, w, h, pressed) {
       var c = D.ctx, d = RW.CLASSES[id], ok = RW.isUnlocked(id, g.prog), on = UI.heroSel === id;
-      c.fillStyle = pressed ? 'rgba(50,38,26,0.96)' : (on ? 'rgba(40,30,22,0.96)' : 'rgba(18,14,12,0.9)'); D.rr(x, y, w, h, 10); c.fill();
-      c.strokeStyle = on ? d.color : (ok ? '#5a4630' : '#2a2016'); c.lineWidth = on ? 2.5 : 1.2; D.rr(x + 1, y + 1, w - 2, h - 2, 10); c.stroke();
+      c.fillStyle = pressed ? 'rgba(50,38,26,0.96)' : (on ? 'rgba(40,30,22,0.96)' : 'rgba(18,14,12,0.9)'); D.chamfer(x, y, w, h, 10); c.fill();
+      c.strokeStyle = on ? d.color : (ok ? '#5a4630' : '#2a2016'); c.lineWidth = on ? 2.5 : 1.2; D.chamfer(x + 1, y + 1, w - 2, h - 2, 10); c.stroke();
       c.globalAlpha = ok ? 1 : 0.28;
       UI.heroGlyph(id, x + w / 2, y + 36, 0.56);
       c.globalAlpha = 1;
@@ -226,7 +226,7 @@
     var c = D.ctx;
     c.strokeStyle = '#c8b89a'; c.lineWidth = 2.2;
     c.beginPath(); c.arc(x, y - 4, 6, Math.PI, 0); c.stroke();
-    c.fillStyle = '#c8b89a'; D.rr(x - 9, y - 4, 18, 13, 3); c.fill();
+    c.fillStyle = '#c8b89a'; D.chamfer(x - 9, y - 4, 18, 13, 3); c.fill();
     c.fillStyle = '#2a2016'; c.fillRect(x - 1.2, y, 2.4, 5);
   };
   // 属性加成 -> 「强 / 弱」两行文字（英雄和道具共用）
@@ -242,13 +242,13 @@
   };
   UI.heroDetail = function (g, id, x, y, w, h) {
     var c = D.ctx, d = RW.CLASSES[id], ok = RW.isUnlocked(id, g.prog);
-    c.fillStyle = 'rgba(18,14,12,0.92)'; D.rr(x, y, w, h, 12); c.fill();
-    c.strokeStyle = d.color; c.lineWidth = 2; D.rr(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
+    c.fillStyle = 'rgba(18,14,12,0.92)'; D.chamfer(x, y, w, h, 12); c.fill();
+    c.strokeStyle = d.color; c.lineWidth = 2; D.chamfer(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
     UI.heroGlyph(id, x + 60, y + 70, 1);
     D.text(d.name, x + 122, y + 34, 26, d.color, 'left', true);
     c.font = D.font(26, true);
     var nw = c.measureText(d.name).width;
-    c.fillStyle = 'rgba(255,255,255,0.08)'; D.rr(x + 130 + nw, y + 24, 64, 20, 10); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.08)'; D.chamfer(x + 130 + nw, y + 24, 64, 20, 10); c.fill();
     D.text(d.tag, x + 162 + nw, y + 34, 10, C.text, 'center', true);
     D.text('起手：' + RW.WEAPONS[d.weapon].name + ' · 技能：' + RW.SKILLS[d.skill].name, x + 122, y + 64, 11, C.dim, 'left');
     var best = (g.prog && g.prog.heroBest && g.prog.heroBest[id]) || 0, hd = g.prog && g.prog.heroDanger ? g.prog.heroDanger[id] : undefined;
@@ -259,7 +259,7 @@
     yy = Math.max(y + 150, yy + pl.length * 16 + 10);
     var ft = UI.fxText(d.fx);
     if (ft.pros || ft.cons) {
-      c.fillStyle = 'rgba(255,255,255,0.04)'; D.rr(x + 14, yy - 12, w - 28, ft.pros && ft.cons ? 42 : 24, 6); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.04)'; D.chamfer(x + 14, yy - 12, w - 28, ft.pros && ft.cons ? 42 : 24, 6); c.fill();
       if (ft.pros) { D.text('↑ ' + ft.pros, x + 24, yy, 11, C.good, 'left', true); yy += 18; }
       if (ft.cons) { D.text('↓ ' + ft.cons, x + 24, yy, 11, C.bad, 'left', true); yy += 18; }
       yy += 12;
@@ -269,7 +269,7 @@
     var wd = RW.WEAPONS[d.weapon], sd = RW.SKILLS[d.skill], boxes = [['起手武器', wd.name, wd.color, wd.pros], ['主动技能', sd.name, sd.color, sd.pros]];
     for (var bi = 0; bi < boxes.length && yy < y + h - (ok ? 60 : 120); bi++) {
       var bx = boxes[bi], tl = D.wrap(bx[3], w - 60, 11);
-      c.fillStyle = 'rgba(255,255,255,0.04)'; D.rr(x + 14, yy, w - 28, 30 + tl.length * 15, 6); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.04)'; D.chamfer(x + 14, yy, w - 28, 30 + tl.length * 15, 6); c.fill();
       c.fillStyle = bx[2]; c.fillRect(x + 14, yy + 6, 3, 18 + tl.length * 15);
       D.text(bx[0], x + 26, yy + 13, 10, C.dim, 'left');
       D.text(bx[1], x + 86, yy + 13, 13, bx[2], 'left', true);
@@ -278,11 +278,11 @@
     }
     if (!ok) {
       var u = d.unlock, up = RW.unlockProgress(id, g.prog), k = Math.min(1, up.have / up.need), by = y + h - 58;
-      c.fillStyle = 'rgba(0,0,0,0.55)'; D.rr(x + 12, by, w - 24, 46, 8); c.fill();
+      c.fillStyle = 'rgba(0,0,0,0.55)'; D.chamfer(x + 12, by, w - 24, 46, 8); c.fill();
       UI.lockIcon(x + 34, by + 22);
       D.text('解锁条件：' + u.text, x + 56, by + 15, 12, C.gold, 'left', true);
-      c.fillStyle = '#2a2016'; D.rr(x + 56, by + 27, w - 140, 8, 4); c.fill();
-      c.fillStyle = C.gold; D.rr(x + 56, by + 27, Math.max(8, (w - 140) * k), 8, 4); c.fill();
+      c.fillStyle = '#2a2016'; D.chamfer(x + 56, by + 27, w - 140, 8, 4); c.fill();
+      c.fillStyle = C.gold; D.chamfer(x + 56, by + 27, Math.max(8, (w - 140) * k), 8, 4); c.fill();
       D.text(Math.min(up.have, up.need) + ' / ' + up.need, x + w - 24, by + 31, 11, C.text, 'right', true);
     }
   };
@@ -377,7 +377,7 @@
         c.shadowColor = '#ffe066'; c.shadowBlur = 10; c.fillStyle = '#ffd24a'; c.beginPath(); c.arc(24, 6, 9, 0, TAU); c.fill(); c.shadowBlur = 0;
         c.fillStyle = '#b8862a'; D.text('¥', 24, 7, 11, '#8a5a1a', 'center', true); break;
       case 'dice':
-        c.fillStyle = '#f4f0e0'; D.rr(15, -2, 18, 18, 3); c.fill();
+        c.fillStyle = '#f4f0e0'; D.chamfer(15, -2, 18, 18, 3); c.fill();
         c.fillStyle = '#1f5a4a'; [[20, 3], [28, 11], [24, 7]].forEach(function (p) { c.beginPath(); c.arc(p[0], p[1], 1.8, 0, TAU); c.fill(); }); break;
     }
     c.lineCap = 'butt';
@@ -430,11 +430,11 @@
   UI.prosCons = function (x, y, w, pros, cons, note) {
     var c = D.ctx, yy = y, i;
     var pl = D.wrap(pros, w - 30, 12);
-    c.fillStyle = C.good; D.rr(x - 3, yy - 9, 18, 18, 4); c.fill(); D.text('强', x + 6, yy, 11, '#06150c', 'center', true);
+    c.fillStyle = C.good; D.chamfer(x - 3, yy - 9, 18, 18, 4); c.fill(); D.text('强', x + 6, yy, 11, '#06150c', 'center', true);
     for (i = 0; i < pl.length; i++) D.text(pl[i], x + 22, yy + i * 16, 12, '#c9ffd6', 'left');
     yy += Math.max(1, pl.length) * 16 + 6;
     var cl = D.wrap(cons, w - 30, 12);
-    c.fillStyle = C.bad; D.rr(x - 3, yy - 9, 18, 18, 4); c.fill(); D.text('弱', x + 6, yy, 11, '#1a0508', 'center', true);
+    c.fillStyle = C.bad; D.chamfer(x - 3, yy - 9, 18, 18, 4); c.fill(); D.text('弱', x + 6, yy, 11, '#1a0508', 'center', true);
     for (i = 0; i < cl.length; i++) D.text(cl[i], x + 22, yy + i * 16, 12, '#ffc9d1', 'left');
     yy += Math.max(1, cl.length) * 16;
     if (note) { D.text(note, x, yy + 4, 10, C.dim, 'left'); yy += 16; }
@@ -539,19 +539,19 @@
     D.text(String(g.shardCount), W - 94, 31, 28, C.shard, 'left', true);
     // 属性条
     UI.statStrip(g, 74);
-    UI.button('statsHelp', 318, 12, 92, 26, '属性说明', { size: 11, style: 'ghost' });
+    UI.button('statsHelp', 318, 12, 92, 26, '属性', { size: 11, style: 'ghost' });
     // 武器槽
     var y = 128;
     D.text('武器 ' + g.weapons.length + '/' + RW.MAX_SLOTS + ' · 点两次出售（返还 50%）', 16, y, 11, C.dim, 'left');
     for (i = 0; i < RW.MAX_SLOTS; i++) {
       var sx = 16 + i * 66, sy = y + 9;
       var w = g.weapons[i];
-      if (!w) { c.strokeStyle = '#4a3a28'; c.lineWidth = 1; if (c.setLineDash) c.setLineDash([3, 3]); D.rr(sx, sy, 60, 42, 6); c.stroke(); if (c.setLineDash) c.setLineDash([]); continue; }
+      if (!w) { c.strokeStyle = '#4a3a28'; c.lineWidth = 1; if (c.setLineDash) c.setLineDash([3, 3]); D.chamfer(sx, sy, 60, 42, 6); c.stroke(); if (c.setLineDash) c.setLineDash([]); continue; }
       UI.button('wslot:' + i, sx, sy, 60, 42, '', { draw: (function (w, i) {
         return function (x, yy, bw, bh) {
           var sel = UI.sel === 'w:' + i;
-          c.fillStyle = sel ? '#2a0b14' : '#1e1712'; D.rr(x, yy, bw, bh, 6); c.fill();
-          c.strokeStyle = sel ? C.red : (w.ev ? C.gold : w.d.color); c.lineWidth = sel || w.ev ? 2 : 1.5; D.rr(x, yy, bw, bh, 6); c.stroke();
+          c.fillStyle = sel ? '#2a0b14' : '#1e1712'; D.chamfer(x, yy, bw, bh, 6); c.fill();
+          c.strokeStyle = sel ? C.red : (w.ev ? C.gold : w.d.color); c.lineWidth = sel || w.ev ? 2 : 1.5; D.chamfer(x, yy, bw, bh, 6); c.stroke();
           if (sel) { D.text('出售', x + bw / 2, yy + 14, 12, '#ffc2cd', 'center', true); D.text('+' + g.weaponSellValue(w), x + bw / 2, yy + 30, 11, C.shard, 'center', true); }
           else { D.text(w.name || w.d.name, x + bw / 2, yy + 15, (w.name || w.d.name).length > 3 ? 11 : 12, w.ev ? C.gold : w.d.color, 'center', true); D.text(w.ev ? '进化' : ROMAN[w.tier - 1], x + bw / 2, yy + 31, 11, w.ev ? C.gold : C.text, 'center', true); }
         };
@@ -559,8 +559,8 @@
     }
     // 技能 + 圣火
     y = 190;
-    c.fillStyle = '#1e1712'; D.rr(16, y, LW - 32, 62, 6); c.fill();
-    c.strokeStyle = '#4a3a28'; c.lineWidth = 1; D.rr(16, y, LW - 32, 62, 6); c.stroke();
+    c.fillStyle = '#1e1712'; D.chamfer(16, y, LW - 32, 62, 6); c.fill();
+    c.strokeStyle = '#4a3a28'; c.lineWidth = 1; D.chamfer(16, y, LW - 32, 62, 6); c.stroke();
     // 三个技能；带「◂」的是买新技能时会被替换的那一招（最近放过的）
     var sks = g.skills && g.skills.length ? g.skills : (g.skill ? [g.skill] : []), keys = [RW.keyLabel('skill0'), RW.keyLabel('skill1'), RW.keyLabel('skill2')];
     for (var si = 0; si < sks.length && si < 3; si++) {
@@ -574,9 +574,9 @@
     c.fillStyle = '#140e0a'; c.fillRect(118, y + 22, 120, 6);
     c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(118, y + 22, 120 * ck, 6);
     var rc2 = g.coreRepairCost(), uc = g.coreUpgradeCost(), nxt = RW.CORE_LV[(co.lv || 1) + 1], maxed = !nxt;
-    UI.button('repair', 118, y + 32, 124, 26, '维修 +50% · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '圣火是满的' : '金币不足' });
+    UI.button('repair', 118, y + 32, 124, 26, '护火 · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '生命已满' : '金币不足' });
     var needF = g.coreNeedsForm(), cf = RW.CORE_FORMS[co.form];
-    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火已满级' : ((needF ? '选形态并升级 · ' : nxt.note + ' · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
+    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '已满级' : ((needF ? '择形升级 · ' : '升级 · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
     if (cf) D.text(cf.name + ' ' + ['I', 'II', 'III'][(co.formTier || 1) - 1], 396, y + 14, 10, cf.color, 'right', true);
     // 卡片
     // 右栏：4 张货
@@ -595,7 +595,7 @@
     UI.button('reroll', 16, by, 120, 50, '刷新', { sub: rc + ' 金币', disabled: g.shardCount < rc, why: '金币不足，刷新要 ' + rc });
     var adOk = !!adLabel && g.wave >= RW.AD.FIRST_AD_WAVE;   // 桌面版没有广告入口
     if (adOk) UI.button('adReroll', 144, by, 116, 50, adLabel, { style: 'ad', sub: shop.adUsed ? '本轮已用' : '免费刷新 1 次', size: 13, disabled: shop.adUsed, why: '每轮整备只能用一次' });
-    UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '开始第 ' + (g.wave + 1) + ' 波', { style: 'primary', size: adOk ? 15 : 18 });
+    UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '迎战', { style: 'primary', size: adOk ? 15 : 18, sub: '第 ' + (g.wave + 1) + ' 波' });
   };
 
   // 流派套装：同流派武器阶数之和，2 / 4 / 6 层各一档
@@ -628,8 +628,8 @@
         UI.button('evolve:' + i, bx, by, cw, 27, '进化 → ' + ev.name, { style: 'ad', size: 12 });
         continue;
       }
-      c.fillStyle = 'rgba(30,24,18,0.9)'; D.rr(bx, by, cw, 27, 6); c.fill();
-      if (wp.ev) { c.strokeStyle = C.gold; c.lineWidth = 1; D.rr(bx + 0.5, by + 0.5, cw - 1, 26, 6); c.stroke(); D.text(ev.name + ' · ' + ev.note, bx + 8, by + 14, 10, C.gold, 'left', true); continue; }
+      c.fillStyle = 'rgba(30,24,18,0.9)'; D.chamfer(bx, by, cw, 27, 6); c.fill();
+      if (wp.ev) { c.strokeStyle = C.gold; c.lineWidth = 1; D.chamfer(bx + 0.5, by + 0.5, cw - 1, 26, 6); c.stroke(); D.text(ev.name + ' · ' + ev.note, bx + 8, by + 14, 10, C.gold, 'left', true); continue; }
       var hasT = wp.tier >= 3, hasM = g.modCount(ev.mod) > 0;
       D.text(wp.d.name, bx + 8, by + 14, 11, wp.d.color, 'left', true);
       c.font = D.font(11, true);
@@ -642,7 +642,7 @@
 
   UI.statStrip = function (g, y) {
     var s = g.st, c = D.ctx;
-    c.fillStyle = 'rgba(30,24,18,0.9)'; D.rr(10, y, 400, 44, 6); c.fill();
+    c.fillStyle = 'rgba(30,24,18,0.9)'; D.chamfer(10, y, 400, 44, 6); c.fill();
     var items = [
       ['生命', Math.round(s.maxHp), s.maxHp - T.player.hp],
       ['伤害', pct(s.dmg - 1), s.dmg - 1],
@@ -671,20 +671,20 @@
 
   UI.card = function (g, sl, i, x, y, w, h) {
     var c = D.ctx;
-    if (!sl || sl.kind === 'none') { c.strokeStyle = '#3a2e20'; D.rr(x, y, w, h, 8); c.stroke(); return; }
+    if (!sl || sl.kind === 'none') { c.strokeStyle = '#3a2e20'; D.chamfer(x, y, w, h, 8); c.stroke(); return; }
     if (sl.sold) {
-      c.fillStyle = 'rgba(26,20,14,0.6)'; D.rr(x, y, w, h, 8); c.fill();
-      c.strokeStyle = '#3a2e20'; c.lineWidth = 1; D.rr(x, y, w, h, 8); c.stroke();
+      c.fillStyle = 'rgba(26,20,14,0.6)'; D.chamfer(x, y, w, h, 8); c.fill();
+      c.strokeStyle = '#3a2e20'; c.lineWidth = 1; D.chamfer(x, y, w, h, 8); c.stroke();
       D.text(sl.gone ? '已失效' : '已购入', x + w / 2, y + h / 2, 14, C.faint, 'center', true);
       return;
     }
     var info = UI.cardInfo(g, sl);
     var afford = g.shardCount >= sl.price;
-    c.fillStyle = 'rgba(26,20,16,0.96)'; D.rr(x, y, w, h, 8); c.fill();
+    c.fillStyle = 'rgba(26,20,16,0.96)'; D.chamfer(x, y, w, h, 8); c.fill();
     // 品质：道具看表里的 r；武器 / 技能 / 科技按品阶 I→普通 II→精良 III→稀有
     var rare = sl.kind === 'mod' ? (RW.MODS[sl.id].r || 0) : Math.max(0, sl.tier - 1), RQ = RW.RARITY[rare];
-    if (rare >= 1) { c.globalAlpha = 0.07 + rare * 0.02; c.fillStyle = RQ.color; D.rr(x, y, w, h, 8); c.fill(); c.globalAlpha = 1; }
-    c.strokeStyle = sl.locked ? C.gold : (rare ? RQ.color : '#5a4630'); c.lineWidth = sl.locked ? 2 : (rare >= 1 ? 1.4 + rare * 0.3 : 1.2); D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 8); c.stroke();
+    if (rare >= 1) { c.globalAlpha = 0.07 + rare * 0.02; c.fillStyle = RQ.color; D.chamfer(x, y, w, h, 8); c.fill(); c.globalAlpha = 1; }
+    c.strokeStyle = sl.locked ? C.gold : (rare ? RQ.color : '#5a4630'); c.lineWidth = sl.locked ? 2 : (rare >= 1 ? 1.4 + rare * 0.3 : 1.2); D.chamfer(x + 0.5, y + 0.5, w - 1, h - 1, 8); c.stroke();
     D.text(RQ.name, x + w - 108, y + h - 12, 9, rare ? RQ.color : C.faint, 'right', true);
     c.fillStyle = info.color; c.fillRect(x + 1, y + 10, 3, h - 20);
     D.text(info.name, x + 14, y + 16, 16, info.color, 'left', true);
@@ -695,20 +695,20 @@
     var yy = y + 38;
     if (info.stat) { D.text(info.stat, x + 14, y + 34, 10, C.dim, 'left'); yy = y + 52; }
     var pl = D.wrap(info.pros, textW, 11), cl = D.wrap(info.cons, textW, 11);
-    c.fillStyle = C.good; D.rr(x + 12, yy - 7, 14, 14, 3); c.fill(); D.text('强', x + 19, yy, 10, '#06150c', 'center', true);
+    c.fillStyle = C.good; D.chamfer(x + 12, yy - 7, 14, 14, 3); c.fill(); D.text('强', x + 19, yy, 10, '#06150c', 'center', true);
     D.text(pl[0] || '', x + 32, yy, 11, '#c9ffd6', 'left');
     if (pl[1]) D.text(pl[1], x + 32, yy + 13, 11, '#c9ffd6', 'left');
     var cy = yy + (pl[1] ? 29 : 18);
     if (!info.stat && pl[1] && cl[1]) cy -= 2;
-    c.fillStyle = C.bad; D.rr(x + 12, cy - 7, 14, 14, 3); c.fill(); D.text('弱', x + 19, cy, 10, '#1a0508', 'center', true);
+    c.fillStyle = C.bad; D.chamfer(x + 12, cy - 7, 14, 14, 3); c.fill(); D.text('弱', x + 19, cy, 10, '#1a0508', 'center', true);
     D.text(cl[0] || '', x + 32, cy, 11, '#ffc9d1', 'left');
     if (cl[1] && cy + 13 < y + h - 4) D.text(cl[1], x + 32, cy + 13, 11, '#ffc9d1', 'left');
     // 价格与锁定
     UI.button('buy:' + i, x + w - 100, y + 10, 90, 44, '', { disabled: !afford, why: '金币不足，还差 ' + (sl.price - g.shardCount), draw: function (bx, by, bw, bh, pressed) {
       c.globalAlpha = afford ? 1 : 0.45;
-      c.fillStyle = pressed ? '#bdfcff' : (afford ? C.cyan : '#2a2016'); D.rr(bx, by, bw, bh, 7); c.fill();
+      D.woodFrame(bx, by, bw, bh, { style: afford ? 'primary' : 'btn' });   // 买得起：亮一档的木板 + 选中黄铜边
       D.shardIcon(bx + 22, by + bh / 2, 7);
-      D.text(String(sl.price), bx + 36, by + bh / 2 + 1, 18, afford ? '#04121a' : C.text, 'left', true);
+      D.text(String(sl.price), bx + 36, by + bh / 2 + 1, 18, afford ? D.UIC.parch : C.text, 'left', true);
       c.globalAlpha = 1;
     } });
     UI.button('lock:' + i, x + w - 100, y + 60, 44, 28, sl.locked ? '已锁' : '锁定', { style: sl.locked ? 'ad' : 'ghost', size: 11 });
@@ -733,9 +733,9 @@
   UI.blessCard = function (id, i) {
     return function (x, y, w, h, pressed) {
       var c = D.ctx, b = RW.BLESSINGS[id], RQ = RW.RARITY[b.r];
-      c.fillStyle = pressed ? 'rgba(60,46,30,0.98)' : 'rgba(26,20,16,0.97)'; D.rr(x, y, w, h, 12); c.fill();
-      c.globalAlpha = 0.1 + b.r * 0.04; c.fillStyle = RQ.color; D.rr(x, y, w, h, 12); c.fill(); c.globalAlpha = 1;
-      c.strokeStyle = RQ.color; c.lineWidth = 2 + b.r * 0.5; D.rr(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
+      c.fillStyle = pressed ? 'rgba(60,46,30,0.98)' : 'rgba(26,20,16,0.97)'; D.chamfer(x, y, w, h, 12); c.fill();
+      c.globalAlpha = 0.1 + b.r * 0.04; c.fillStyle = RQ.color; D.chamfer(x, y, w, h, 12); c.fill(); c.globalAlpha = 1;
+      c.strokeStyle = RQ.color; c.lineWidth = 2 + b.r * 0.5; D.chamfer(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
       // 圣火徽记
       var cx = x + w / 2, cy = y + 66, fl = 0.9 + 0.1 * Math.sin(UI.t * 5 + i);
       c.fillStyle = 'rgba(255,200,97,0.12)'; c.beginPath(); c.arc(cx, cy, 36, 0, TAU); c.fill();
@@ -755,17 +755,18 @@
     UI.dim(0.78);
     UI.panel(cx - 220, 100, 440, 340, C.red);
     D.glowText('圣火熄灭', cx, 146, 34, C.red, 'center', 14);
-    D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', cx, 186, 13, C.text, 'center');
+    D.text(g.revivesLeft > 0 ? '余烬还暖，仍可再点一次。' : '余烬已冷', cx, 180, 13, C.text, 'center');
+    D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', cx, 198, 10, C.dim, 'center');
     var h = g.lastHits[g.lastHits.length - 1];
-    if (h) D.text('最后一击：' + h.src, cx, 212, 13, '#ffb3c1', 'center', true);
+    if (h) D.text('最后一击：' + h.src, cx, 214, 12, '#ffb3c1', 'center', true);
     var left = g.revivesLeft, all = RW.REKINDLE.times;
-    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '重燃圣火 · 还剩 ' + left + ' / ' + all + ' 次', { style: 'ad', size: 18, sub: '圣火恢复一半，英雄站起来，清空身边的敌人' });
+    UI.button('revive', cx - 190, 244, 380, 70, '重燃圣火', { style: 'ad', size: 18, sub: (adLabel ? adLabel + ' · ' : '') + '剩 ' + left + '/' + all + ' 次 · 恢复半数火光' });
     for (var ri = 0; ri < all; ri++) {   // 三簇小火苗：亮着的是还能用的重燃
       var fx2 = cx - (all - 1) * 14 + ri * 28, on = ri < left;
       D.ctx.fillStyle = on ? '#ffb347' : '#3a2a20'; D.ctx.beginPath(); D.ctx.moveTo(fx2, 226); D.ctx.quadraticCurveTo(fx2 + 8, 236, fx2, 242); D.ctx.quadraticCurveTo(fx2 - 8, 236, fx2, 226); D.ctx.fill();
     }
     if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
-    UI.button('giveup', cx - 190, 352, 380, 52, '结束守护，查看结算', { style: 'ghost', size: 14 });
+    UI.button('giveup', cx - 190, 352, 380, 52, '查看结算', { style: 'ghost', size: 14, sub: '今夜的守护到此为止' });
   };
 
   // ================= 结算 =================
@@ -777,7 +778,7 @@
     var setup = '危险 ' + (r.danger || 0) + (r.mutators && r.mutators.length ? ' · ' + r.mutators.map(function (m) { return RW.MUTATORS[m].name; }).join(' ') : '');
     D.text(head + (r.hero && RW.CLASSES[r.hero] ? ' · ' + RW.CLASSES[r.hero].name : '') + ' · ' + setup, W / 2, 30, 14, C.dim, 'center', true);
     if (victory) D.glowText('圣火长明', W / 2, 70, 40, C.gold, 'center', 22);
-    else D.glowText((r.endless ? '无尽 · ' : '') + '撑到第 ' + r.wave + ' 波', W / 2, 70, 36, r.newBest ? C.gold : C.cyan, 'center', 16);
+    else D.glowText((r.endless ? '长夜第 ' : '守到第 ') + r.wave + ' 波', W / 2, 70, 36, r.newBest ? C.gold : C.cyan, 'center', 16);
     var sub = '得分 ' + r.score + (r.newScore ? '（新纪录）' : '');
     if (victory) sub = '击败灭火者 · 20 波全部守住 · ' + sub;
     else if (r.coreDown) sub = '圣火熄灭了 · ' + sub;
@@ -806,8 +807,8 @@
     if (ach.length) {   // 本局新成就
       var an = ach.map(function (id) { for (var q = 0; q < RW.ACHIEVEMENTS.length; q++) if (RW.ACHIEVEMENTS[q].id === id) return RW.ACHIEVEMENTS[q].name; return id; });
       var al = D.wrap(an.join('、'), LW - 28, 12), ay = 196 + ph + 10, ah = Math.min(H - 16 - ay, 36 + al.length * 17);
-      c.fillStyle = 'rgba(40,32,14,0.95)'; D.rr(LX, ay, LW, ah, 10); c.fill();
-      c.strokeStyle = C.gold; c.lineWidth = 1.5; D.rr(LX + 0.5, ay + 0.5, LW - 1, ah - 1, 10); c.stroke();
+      c.fillStyle = 'rgba(40,32,14,0.95)'; D.chamfer(LX, ay, LW, ah, 10); c.fill();
+      c.strokeStyle = C.gold; c.lineWidth = 1.5; D.chamfer(LX + 0.5, ay + 0.5, LW - 1, ah - 1, 10); c.stroke();
       D.text('新成就 ×' + ach.length, LX + 14, ay + 18, 13, C.gold, 'left', true);
       for (i = 0; i < al.length && ay + 40 + i * 17 < ay + ah - 6; i++) D.text(al[i], LX + 14, ay + 40 + i * 17, 12, '#ffe2a8', 'left', true);
     }
@@ -826,8 +827,8 @@
     var un = r.unlocked || [];
     if (un.length) {   // 新解锁的英雄
       var uy = 320;
-      c.fillStyle = 'rgba(60,44,12,0.95)'; D.rr(RX, uy, RWd, 64, 10); c.fill();
-      c.strokeStyle = C.gold; c.lineWidth = 2; D.rr(RX + 1, uy + 1, RWd - 2, 62, 10); c.stroke();
+      c.fillStyle = 'rgba(60,44,12,0.95)'; D.chamfer(RX, uy, RWd, 64, 10); c.fill();
+      c.strokeStyle = C.gold; c.lineWidth = 2; D.chamfer(RX + 1, uy + 1, RWd - 2, 62, 10); c.stroke();
       for (i = 0; i < Math.min(3, un.length); i++) UI.heroGlyph(un[i], RX + 36 + i * 44, uy + 32, 0.44);
       var names = un.map(function (id) { return RW.CLASSES[id].name; }).join('、'), tx = RX + 36 + Math.min(3, un.length) * 44 - 12;
       c.font = D.font(16, true);
@@ -837,9 +838,9 @@
     var same = (r.hero && RW.CLASSES[r.hero] ? RW.CLASSES[r.hero].name : '') + (r.daily ? ' · 今日挑战' : (r.danger ? ' · 危险 ' + r.danger : ''));
     if (r.canEndless) {
       UI.button('endless', RX, 396, RWd / 2 - 5, 52, '继续无尽', { style: 'ad', size: 17, sub: '从第 ' + (r.wave + 1) + ' 波接着打' });
-      UI.button('retry', RX + RWd / 2 + 5, 396, RWd / 2 - 5, 52, '同设置再来', { style: 'primary', size: 16, sub: same });
-    } else UI.button('retry', RX, 396, RWd, 52, '同设置再来一局', { style: 'primary', size: 18, sub: same });
-    UI.button('again', RX, 456, RWd / 2 - 5, 38, '换英雄 / 设置', { size: 13 });
+      UI.button('retry', RX + RWd / 2 + 5, 396, RWd / 2 - 5, 52, '再守一夜', { style: 'primary', size: 16, sub: same });
+    } else UI.button('retry', RX, 396, RWd, 52, '再守一夜', { style: 'primary', size: 18, sub: same });
+    UI.button('again', RX, 456, RWd / 2 - 5, 38, '重新选择', { size: 13 });
     UI.button('home', RX + RWd / 2 + 5, 456, RWd / 2 - 5, 38, '返回标题', { size: 13 });
     D.text('Enter 同设置再来' + (r.canEndless ? ' · C 继续无尽' : ''), RX + RWd / 2, 508, 10, C.faint, 'center');
   };
@@ -861,7 +862,7 @@
     var c = D.ctx, pr = g.prog || {}, got = pr.ach || {}, i;
     D.drawBg(true);
     UI.dim(0.72);
-    D.text('成就与纪录', 24, 36, 24, C.text, 'left', true, 3);
+    D.text('火光纪录', 24, 36, 24, C.text, 'left', true, 3);
     D.text('成就 ' + RW.countKeys(got) + ' / ' + RW.ACHIEVEMENTS.length + ' · 以后上架时与 Steam 成就一一对应', 24, 60, 11, C.dim, 'left', false, 3);
     // 左栏：累计数据 + 各英雄
     UI.panel(24, 74, 300, 404);
@@ -879,7 +880,7 @@
       D.text(ok ? (hb ? '第 ' + hb + ' 波' : '—') : '未解锁', 130, yy, 11, ok ? C.text : C.faint, 'left');
       for (var k = 0; k < RW.DANGER.length; k++) {
         c.fillStyle = hd != null && k <= hd ? (k >= 4 ? C.red : C.gold) : '#2a2016';
-        D.rr(214 + k * 16, yy - 6, 12, 12, 3); c.fill();
+        D.chamfer(214 + k * 16, yy - 6, 12, 12, 3); c.fill();
       }
     }
     UI.button('recTab', W - 184, 24, 160, 32, UI.recTab === 'history' ? '看成就' : '最近几局', { size: 12 });
@@ -908,8 +909,8 @@
         var F = RW.CORE_FORMS[id];
         UI.button('coreForm:' + id, x0 + i * (cw + gap), 130, cw, 290, '', { disabled: g.shardCount < cost, why: '金币不足，需要 ' + cost, draw: function (x, y, w, h, pressed) {
           var c = D.ctx;
-          c.fillStyle = pressed ? 'rgba(60,46,30,0.98)' : 'rgba(26,20,16,0.97)'; D.rr(x, y, w, h, 12); c.fill();
-          c.strokeStyle = F.color; c.lineWidth = 2.5; D.rr(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
+          c.fillStyle = pressed ? 'rgba(60,46,30,0.98)' : 'rgba(26,20,16,0.97)'; D.chamfer(x, y, w, h, 12); c.fill();
+          c.strokeStyle = F.color; c.lineWidth = 2.5; D.chamfer(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
           var cx = x + w / 2, cy = y + 80, fl = 0.9 + 0.1 * Math.sin(UI.t * 5 + i);
           c.fillStyle = 'rgba(255,255,255,0.06)'; c.beginPath(); c.arc(cx, cy, 44, 0, TAU); c.fill();
           c.fillStyle = F.color; c.beginPath(); c.moveTo(cx, cy - 34 * fl); c.quadraticCurveTo(cx + 22, cy, cx, cy + 26); c.quadraticCurveTo(cx - 22, cy, cx, cy - 34 * fl); c.fill();
@@ -922,7 +923,7 @@
         } });
       })(RW.CORE_FORM_ORDER[i], i);
     }
-    UI.button('formClose', W / 2 - 80, 440, 160, 40, '再想想', { style: 'ghost', size: 14 });
+    UI.button('formClose', W / 2 - 80, 440, 160, 40, '稍后', { style: 'ghost', size: 14 });
   };
 
   // ================= 设置 =================
@@ -949,7 +950,7 @@
     var by = H - 70;
     UI.button('keys', x0 + 20, by, 150, 38, '按键设置', { size: 13 });
     UI.button('optReset', x0 + 180, by, 130, 38, '恢复默认', { size: 13, style: 'ghost' });
-    if (root.desktop) UI.button('fullscreen', x0 + 320, by, 170, 38, '全屏 / 窗口（F11）', { size: 12 });
+    if (root.desktop) UI.button('fullscreen', x0 + 320, by, 170, 38, '切换全屏', { size: 12, sub: 'F11' });
     UI.button('settingsClose', x0 + w - 170, by, 150, 38, '完成', { style: 'primary', size: 15 });
   };
   // 改键：两列列出可改的操作；点「改键」后按下新键（Esc 取消）
@@ -968,7 +969,7 @@
       UI.button('keyset:' + id, x + cw - 100, y, 90, 30, wait ? '按新键…' : '改键', { size: 12, style: wait ? 'ad' : 'normal' });
     }
     var by = H - 70;
-    UI.button('keysReset', x0 + 20, by, 150, 38, '恢复默认按键', { size: 13, style: 'ghost' });
+    UI.button('keysReset', x0 + 20, by, 150, 38, '恢复默认', { size: 13, style: 'ghost' });
     UI.button('keysClose', x0 + w - 170, by, 150, 38, '完成', { style: 'primary', size: 15 });
   };
   // 整备页「属性说明」：每个属性一句话，现在的数值写在前面
@@ -1007,15 +1008,15 @@
     var cx = W / 2;
     UI.panel(cx - 170, 70, 340, 366, C.cyan);
     D.text('暂停', cx, 104, 26, C.text, 'center', true);
-    D.text('第 ' + g.wave + ' 波 · Esc 继续', cx, 132, 12, C.dim, 'center');
+    D.text('火光在这里等你。第 ' + g.wave + ' 波 · Esc 继续', cx, 132, 12, C.dim, 'center');
     UI.button('resume', cx - 140, 150, 280, 48, '继续', { style: 'primary', size: 18 });
     UI.button('mute', cx - 140, 208, 136, 38, muted ? '声音：关' : '声音：开', { size: 13 });
     UI.button('music', cx + 4, 208, 136, 38, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
     UI.button('settings', cx - 140, 254, 136, 38, '设置', { size: 13 });
-    UI.button('retry', cx + 4, 254, 136, 38, '重新开始', { size: 13 });
-    UI.button('toTitle', cx - 140, 300, 280, 44, '退出到标题', { size: 14, sub: UI.runInfo ? '下次从第 ' + UI.runInfo.wave + ' 波前的整备继续' : '第一次整备前退出，本局不保存' });
-    UI.button('quit', cx - 140, 354, 280, 44, '放弃本局，查看结算', { style: 'danger', size: 14 });
-    D.text('重新开始 / 放弃本局都会记一局', cx, 416, 10, C.faint, 'center');
+    UI.button('retry', cx + 4, 254, 136, 38, '重新守护', { size: 13 });
+    UI.button('toTitle', cx - 140, 300, 280, 44, '回到标题', { size: 14, sub: UI.runInfo ? '已存至第 ' + UI.runInfo.wave + ' 波前' : '尚未整备，本局不保存' });
+    UI.button('quit', cx - 140, 354, 280, 44, '结束守护', { style: 'danger', size: 14, sub: '立即查看结算' });
+    D.text('重新守护 / 结束守护都会记一局', cx, 416, 10, C.faint, 'center');
   };
 
   RW.UI = UI;

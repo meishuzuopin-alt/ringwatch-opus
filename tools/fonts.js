@@ -24,16 +24,6 @@ const FACES = [
   { pkg: 'sans', file: 'package/700Bold/NotoSansSC_700Bold.ttf', out: 'fg-sans-700.woff2' }
 ];
 
-// 游戏里可能出现的字：js/ 和 preview.html 里所有非 ASCII 字符，加上全部可打印 ASCII
-function usedChars() {
-  const set = new Set();
-  for (let c = 0x20; c < 0x7f; c++) set.add(String.fromCharCode(c));
-  const files = fs.readdirSync(path.join(root, 'js')).filter(f => f.endsWith('.js')).map(f => path.join(root, 'js', f));
-  files.push(path.join(root, 'preview.html'));
-  for (const f of files) for (const ch of fs.readFileSync(f, 'utf8')) if (ch.codePointAt(0) > 0x7f && !/\s/.test(ch)) set.add(ch);
-  return [...set].sort((a, b) => a.codePointAt(0) - b.codePointAt(0)).join('');
-}
-
 function get(url) {
   return new Promise((res, rej) => https.get(url, r => {
     if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) return get(r.headers.location).then(res, rej);
@@ -65,7 +55,7 @@ async function source(pkg) {
 
 (async () => {
   const subset = require('subset-font');
-  const chars = usedChars();
+  const chars = require('./lib/chars').usedChars(root);
   fs.mkdirSync(out, { recursive: true });
   const tars = {};
   for (const face of FACES) {

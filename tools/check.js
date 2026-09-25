@@ -70,9 +70,7 @@ ok(`游戏文件约 ${(bytes / 1024).toFixed(0)} KB（不含 Electron 运行时�
 console.log('字体与素材');
 {
   const have = new Set(fs.existsSync(path.join(root, 'fonts', 'chars.txt')) ? [...fs.readFileSync(path.join(root, 'fonts', 'chars.txt'), 'utf8')] : []);
-  const miss = new Set();
-  const src = walk(path.join(root, 'js'), '.js').concat([path.join(root, 'preview.html')]);
-  for (const f of src) for (const ch of fs.readFileSync(f, 'utf8')) if (ch.codePointAt(0) > 0x7f && !/\s/.test(ch) && !have.has(ch)) miss.add(ch);
+  const miss = new Set([...require('./lib/chars').usedChars(root)].filter(ch => ch.codePointAt(0) > 0x7f && !have.has(ch)));
   if (miss.size) bad(`字体子集缺 ${miss.size} 个字：${[...miss].slice(0, 30).join('')}${miss.size > 30 ? '…' : ''}　→ 跑 npm run fonts 重新生成`);
   else ok(`字体子集覆盖全部 ${have.size} 个字（fonts/，OFL 授权）`);
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));

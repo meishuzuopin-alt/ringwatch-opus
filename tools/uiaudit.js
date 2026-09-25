@@ -3,6 +3,7 @@
 //   · 文字超出 960×540 的逻辑画面
 //   · 按钮文字比按钮宽（被挤出按钮外）
 //   · 两段不同的文字互相压住（包围盒重叠超过小的那段的 35%）
+//   · 战斗中，提示层（顶部横幅、教程卷轴、飘条，render.js 里用 D.tip 标记）的文字进了画面中央 50%（美术圣经第 6 节）
 // 同时记录战斗画面的绘制调用数和三角形数，每个界面截一张图。有问题时退出码为 1。
 const path = require('path');
 const fs = require('fs');
@@ -29,7 +30,7 @@ function hook() {
       const c = D.ctx; c.font = D.font(size, bold);
       const w = c.measureText(String(s)).width, a = align || 'left';
       const x0 = a === 'center' ? x - w / 2 : (a === 'right' ? x - w : x);
-      rec.texts.push({ s: String(s), x0, x1: x0 + w, y0: y - size / 2, y1: y + size / 2, size, btn: inBtn });
+      rec.texts.push({ s: String(s), x0, x1: x0 + w, y0: y - size / 2, y1: y + size / 2, size, btn: inBtn, tip: !!D.tip });
     }
     return text0.apply(this, arguments);
   };
@@ -54,7 +55,10 @@ function collect() {
   const rec = window.__audit, W = 960, H = 540, issues = [];
   if (!rec.texts.length) issues.push('这一帧没录到文字');
   const T = rec.texts;
+  // 战斗画面里的提示不许进中央 50%：x 240–720，y 135–405
+  const battle = /^(battle|clear|down)$/.test(RW.game.mode);
   for (const t of T) {
+    if (battle && t.tip && t.x1 > W * 0.25 && t.x0 < W * 0.75 && t.y1 > H * 0.25 && t.y0 < H * 0.75) issues.push('提示盖住战场中央：「' + t.s.slice(0, 20) + '」 y ' + Math.round(t.y0) + '–' + Math.round(t.y1));
     if (t.x0 < -1 || t.x1 > W + 1 || t.y0 < -1 || t.y1 > H + 1) issues.push('出屏：「' + t.s.slice(0, 24) + '」 x ' + Math.round(t.x0) + '–' + Math.round(t.x1));
     if (t.btn && t.btn.w > 0 && (t.x1 - t.x0) > t.btn.w - 4) issues.push('按钮装不下：' + t.btn.id + ' 宽 ' + t.btn.w + '，「' + t.s.slice(0, 24) + '」宽 ' + Math.round(t.x1 - t.x0));
   }
@@ -119,6 +123,13 @@ function collect() {
     }));
   }));
   console.log('  战斗画面：' + JSON.stringify(report.perf));
+  // 提示层：Boss 来袭横幅 + 英雄站在兵营旁（信息卡）+ 画面外多个方向有敌人（边缘红箭头）
+  await screen('07b_alerts', () => {
+    const g = RW.game, b = g.towers.find(t => t.on && t.id === 'barracks');
+    if (b) { g.player.x = b.x + 30; g.player.y = b.y; }
+    g.bossAlert = 3;
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; g.spawnEnemy(k % 2 ? 'dasher' : 'mite', g.player.x + Math.cos(a) * 900, g.player.y + Math.sin(a) * 700, false); }
+  }, 1200);
   await screen('08_respawn', () => { const g = RW.game; g.player.hp = 1; g.player.inv = 0; g.player.maxHp = 30; g.hurtPlayer(999, '审计', g.player.x + 5, g.player.y); }, 1500);
   await screen('09_pause', () => { RW.game.respawn(); RW.Main.battle('pause'); }, 800);
   await screen('10_revive', () => { RW.Main.action('resume'); RW.game.hurtCore(1e9, '审计'); }, 1500, () => RW.game.mode === 'revive');
