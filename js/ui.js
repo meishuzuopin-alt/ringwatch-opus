@@ -67,12 +67,13 @@
   UI.drawToast = function () {
     if (UI.toastT <= 0 || !UI.toastMsg) return;
     var c = D.ctx; c.font = D.font(13, true);
-    var w = Math.min(W - 40, c.measureText(UI.toastMsg).width + 32);
+    var w = 320;
     c.globalAlpha = Math.min(1, UI.toastT * 3);
     var ty = UI.toastY || 8;
+    var msg = UI.toastMsg.length > 18 ? UI.toastMsg.slice(0, 17) + '…' : UI.toastMsg;
     D.tip = true;   // 提示层（界面审计：不许盖住战场中央）
-    D.woodFrame((W - w) / 2, ty, w, 34, { style: 'hud', alpha: 0.95 });
-    D.text(UI.toastMsg, W / 2, ty + 17, 13, C.text, 'center', true);
+    D.woodFrame((W - w) / 2, ty, w, 40, { style: 'hud' });
+    D.text(msg, W / 2, ty + 20, 16, C.text, 'center', true);
     D.tip = false;
     c.globalAlpha = 1;
   };
@@ -526,78 +527,18 @@
 
   // ================= 整备商店 =================
   UI.shop = function (g, adLabel) {
-    var c = D.ctx, shop = g.shop, i, LW = 420;   // 左栏宽度：沿用竖屏时的排版
-    D.drawBg(true);
-    UI.dim(0.72);
-    // 头部
-    D.text('波间整备', 16, 28, 22, C.text, 'left', true);
-    var pm = Math.round((g.priceMul() - 1) * 100);
-    D.text('第 ' + g.wave + ' 波已完成 · 物价 +' + pm + '% · 1–4 购买 · R 刷新 · Enter 下一波 · 还能禁用 ' + g.bansLeft + ' 件', 16, 50, 11, C.dim, 'left');
-    var pv = UI.nextPreview(g);
-    D.text(pv.text, 16, 64, 10, pv.boss ? '#ff9ab0' : C.gold, 'left', true);
-    D.shardIcon(W - 110, 30, 11);
-    D.text(String(g.shardCount), W - 94, 31, 28, C.shard, 'left', true);
-    // 属性条
-    UI.statStrip(g, 74);
-    UI.button('statsHelp', 318, 12, 92, 26, '属性', { size: 11, style: 'ghost' });
-    // 武器槽
-    var y = 128;
-    D.text('武器 ' + g.weapons.length + '/' + RW.MAX_SLOTS + ' · 点两次出售（返还 50%）', 16, y, 11, C.dim, 'left');
-    for (i = 0; i < RW.MAX_SLOTS; i++) {
-      var sx = 16 + i * 66, sy = y + 9;
-      var w = g.weapons[i];
-      if (!w) { c.strokeStyle = '#4a3a28'; c.lineWidth = 1; if (c.setLineDash) c.setLineDash([3, 3]); D.chamfer(sx, sy, 60, 42, 6); c.stroke(); if (c.setLineDash) c.setLineDash([]); continue; }
-      UI.button('wslot:' + i, sx, sy, 60, 42, '', { draw: (function (w, i) {
-        return function (x, yy, bw, bh) {
-          var sel = UI.sel === 'w:' + i;
-          c.fillStyle = sel ? '#2a0b14' : '#1e1712'; D.chamfer(x, yy, bw, bh, 6); c.fill();
-          c.strokeStyle = sel ? C.red : (w.ev ? C.gold : w.d.color); c.lineWidth = sel || w.ev ? 2 : 1.5; D.chamfer(x, yy, bw, bh, 6); c.stroke();
-          if (sel) { D.text('出售', x + bw / 2, yy + 14, 12, '#ffc2cd', 'center', true); D.text('+' + g.weaponSellValue(w), x + bw / 2, yy + 30, 11, C.shard, 'center', true); }
-          else { D.text(w.name || w.d.name, x + bw / 2, yy + 15, (w.name || w.d.name).length > 3 ? 11 : 12, w.ev ? C.gold : w.d.color, 'center', true); D.text(w.ev ? '进化' : ROMAN[w.tier - 1], x + bw / 2, yy + 31, 11, w.ev ? C.gold : C.text, 'center', true); }
-        };
-      })(w, i) });
-    }
-    // 技能 + 圣火
-    y = 190;
-    c.fillStyle = '#1e1712'; D.chamfer(16, y, LW - 32, 62, 6); c.fill();
-    c.strokeStyle = '#4a3a28'; c.lineWidth = 1; D.chamfer(16, y, LW - 32, 62, 6); c.stroke();
-    // 三个技能；带「◂」的是买新技能时会被替换的那一招（最近放过的）
-    var sks = g.skills && g.skills.length ? g.skills : (g.skill ? [g.skill] : []), keys = [RW.keyLabel('skill0'), RW.keyLabel('skill1'), RW.keyLabel('skill2')];
-    for (var si = 0; si < sks.length && si < 3; si++) {
-      var sk = sks[si], sy2 = y + 12 + si * 17;
-      D.text(keys[si], 24, sy2, 10, C.faint, 'left', true);
-      D.text(sk.d.name + ' ' + ROMAN[sk.tier - 1] + (sk === g.skill ? ' ◂' : ''), 36, sy2, 11, sk.d.color, 'left', true);
-    }
-    var co = g.core, ck = co.hp / co.maxHp;
-    var fr = g.front;
-    D.text('圣火 Lv' + (co.lv || 1) + '/' + RW.CORE_MAX_LV + (fr ? ' · ' + fr.name : '') + '  ' + Math.ceil(co.hp) + '/' + co.maxHp, 118, y + 14, 10, ck < 0.4 ? C.bad : '#ffd27a', 'left', true);
-    c.fillStyle = '#140e0a'; c.fillRect(118, y + 22, 120, 6);
-    c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(118, y + 22, 120 * ck, 6);
-    var rc2 = g.coreRepairCost(), uc = g.coreUpgradeCost(), nxt = RW.CORE_LV[(co.lv || 1) + 1], maxed = !nxt;
-    UI.button('repair', 118, y + 32, 124, 26, '护火 · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '生命已满' : '金币不足' });
-    var needF = g.coreNeedsForm(), cf = RW.CORE_FORMS[co.form];
-    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '已满级' : ((needF ? '择形升级 · ' : '升级 · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
-    if (cf) D.text(cf.name + ' ' + ['I', 'II', 'III'][(co.formTier || 1) - 1], 396, y + 14, 10, cf.color, 'right', true);
-    // 卡片
-    // 右栏：4 张货
-    for (i = 0; i < 4; i++) {
-      var sl = shop.slots[i];
-      UI.card(g, sl, i, LW + 16, 82 + i * 112, W - LW - 32, 104);
-    }
-    // 圣火之后：键位提示
-    var nx2 = RW.CORE_LV[(g.core.lv || 1) + 1];
-    D.text(nx2 ? '圣火下一级 Lv' + ((g.core.lv || 1) + 1) + '：' + nx2.desc : '圣火已满级：天火照遍全图', 16, 268, 10, nx2 ? '#ffd27a' : C.gold, 'left');
-    UI.setsPanel(g, 16, 280, LW - 32);
-    UI.evolvePanel(g, 16, 360, LW - 32);
-    // 底部操作（左栏）
-    var by = H - 66;
+    var c = D.ctx, shop = g.shop, pv = UI.nextPreview(g);
+    D.drawBg(true); UI.dim(0.72);
+    D.text('波间整备', 24, 34, 28, C.text, 'left', true);
+    D.text('第 ' + g.wave + ' 波完成 · ' + pv.text, 24, 62, 12, pv.boss ? C.bad : C.dim, 'left');
+    D.shardIcon(W - 150, 36, 10); D.text(String(g.shardCount), W - 132, 37, 20, C.shard, 'left', true);
+    UI.button('statsHelp', W - 88, 20, 64, 34, '属性', { size: 14, style: 'ghost' });
+    for (var i = 0; i < 4; i++) UI.card(g, shop.slots[i], i, 24 + i * 232, 92, 216, 240);
     var rc = g.rerollCost();
-    UI.button('reroll', 16, by, 120, 50, '刷新', { sub: rc + ' 金币', disabled: g.shardCount < rc, why: '金币不足，刷新要 ' + rc });
-    var adOk = !!adLabel && g.wave >= RW.AD.FIRST_AD_WAVE;   // 桌面版没有广告入口
-    if (adOk) UI.button('adReroll', 144, by, 116, 50, adLabel, { style: 'ad', sub: shop.adUsed ? '本轮已用' : '免费刷新 1 次', size: 13, disabled: shop.adUsed, why: '每轮整备只能用一次' });
-    UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '迎战', { style: 'primary', size: adOk ? 15 : 18, sub: '第 ' + (g.wave + 1) + ' 波' });
+    UI.button('reroll', 24, H - 64, 136, 48, '刷新', { sub: rc + ' 金币', disabled: g.shardCount < rc, why: '金币不足，刷新要 ' + rc });
+    D.text('1–4 购买 · R 刷新 · 卡片只留关键取舍，完整数值见属性', 176, H - 40, 12, C.dim, 'left');
+    UI.button('next', W - 224, H - 64, 200, 48, '迎战', { style: 'primary', size: 18, sub: '第 ' + (g.wave + 1) + ' 波' });
   };
-
   // 流派套装：同流派武器阶数之和，2 / 4 / 6 层各一档
   UI.setText = function (fx) { var t = UI.fxText(fx); return t.pros + (t.cons ? '，' + t.cons : ''); };
   UI.setsPanel = function (g, x, y, w) {
@@ -671,48 +612,25 @@
 
   UI.card = function (g, sl, i, x, y, w, h) {
     var c = D.ctx;
-    if (!sl || sl.kind === 'none') { c.strokeStyle = '#3a2e20'; D.chamfer(x, y, w, h, 8); c.stroke(); return; }
-    if (sl.sold) {
-      c.fillStyle = 'rgba(26,20,14,0.6)'; D.chamfer(x, y, w, h, 8); c.fill();
-      c.strokeStyle = '#3a2e20'; c.lineWidth = 1; D.chamfer(x, y, w, h, 8); c.stroke();
-      D.text(sl.gone ? '已失效' : '已购入', x + w / 2, y + h / 2, 14, C.faint, 'center', true);
-      return;
+    if (!sl || sl.kind === 'none' || sl.sold) {
+      D.woodFrame(x, y, w, h, { style: 'panel' });
+      D.text(sl && sl.sold ? '已购入' : '空', x + w / 2, y + h / 2, 18, C.dim, 'center', true); return;
     }
-    var info = UI.cardInfo(g, sl);
-    var afford = g.shardCount >= sl.price;
-    c.fillStyle = 'rgba(26,20,16,0.96)'; D.chamfer(x, y, w, h, 8); c.fill();
-    // 品质：道具看表里的 r；武器 / 技能 / 科技按品阶 I→普通 II→精良 III→稀有
+    var info = UI.cardInfo(g, sl), afford = g.shardCount >= sl.price;
     var rare = sl.kind === 'mod' ? (RW.MODS[sl.id].r || 0) : Math.max(0, sl.tier - 1), RQ = RW.RARITY[rare];
-    if (rare >= 1) { c.globalAlpha = 0.07 + rare * 0.02; c.fillStyle = RQ.color; D.chamfer(x, y, w, h, 8); c.fill(); c.globalAlpha = 1; }
-    c.strokeStyle = sl.locked ? C.gold : (rare ? RQ.color : '#5a4630'); c.lineWidth = sl.locked ? 2 : (rare >= 1 ? 1.4 + rare * 0.3 : 1.2); D.chamfer(x + 0.5, y + 0.5, w - 1, h - 1, 8); c.stroke();
-    D.text(RQ.name, x + w - 108, y + h - 12, 9, rare ? RQ.color : C.faint, 'right', true);
-    c.fillStyle = info.color; c.fillRect(x + 1, y + 10, 3, h - 20);
-    D.text(info.name, x + 14, y + 16, 16, info.color, 'left', true);
-    c.font = D.font(16, true);
-    var nw = c.measureText(info.name).width;
-    D.text(info.tag, x + 20 + nw, y + 17, 10, C.dim, 'left');
-    var textW = w - 128;
-    var yy = y + 38;
-    if (info.stat) { D.text(info.stat, x + 14, y + 34, 10, C.dim, 'left'); yy = y + 52; }
-    var pl = D.wrap(info.pros, textW, 11), cl = D.wrap(info.cons, textW, 11);
-    c.fillStyle = C.good; D.chamfer(x + 12, yy - 7, 14, 14, 3); c.fill(); D.text('强', x + 19, yy, 10, '#06150c', 'center', true);
-    D.text(pl[0] || '', x + 32, yy, 11, '#c9ffd6', 'left');
-    if (pl[1]) D.text(pl[1], x + 32, yy + 13, 11, '#c9ffd6', 'left');
-    var cy = yy + (pl[1] ? 29 : 18);
-    if (!info.stat && pl[1] && cl[1]) cy -= 2;
-    c.fillStyle = C.bad; D.chamfer(x + 12, cy - 7, 14, 14, 3); c.fill(); D.text('弱', x + 19, cy, 10, '#1a0508', 'center', true);
-    D.text(cl[0] || '', x + 32, cy, 11, '#ffc9d1', 'left');
-    if (cl[1] && cy + 13 < y + h - 4) D.text(cl[1], x + 32, cy + 13, 11, '#ffc9d1', 'left');
-    // 价格与锁定
-    UI.button('buy:' + i, x + w - 100, y + 10, 90, 44, '', { disabled: !afford, why: '金币不足，还差 ' + (sl.price - g.shardCount), draw: function (bx, by, bw, bh, pressed) {
-      c.globalAlpha = afford ? 1 : 0.45;
-      D.woodFrame(bx, by, bw, bh, { style: afford ? 'primary' : 'btn' });   // 买得起：亮一档的木板 + 选中黄铜边
-      D.shardIcon(bx + 22, by + bh / 2, 7);
-      D.text(String(sl.price), bx + 36, by + bh / 2 + 1, 18, afford ? D.UIC.parch : C.text, 'left', true);
-      c.globalAlpha = 1;
+    D.woodFrame(x, y, w, h, { style: 'panel', edge: rare ? RQ.color : D.UIC.brass });
+    D.text(String(i + 1), x + 18, y + 20, 14, C.dim, 'center', true);
+    D.text(info.name, x + w / 2, y + 48, 18, info.color, 'center', true);
+    D.text(RQ.name + ' · ' + info.tag, x + w / 2, y + 72, 12, rare ? RQ.color : C.dim, 'center');
+    var face = info.pros.length > 30 ? info.pros.slice(0, 29) + '…' : info.pros;
+    var lines = D.wrap(face, w - 32, 14);
+    D.text(lines[0] || '', x + w / 2, y + 108, 14, C.text, 'center');
+    if (lines[1]) D.text(lines[1], x + w / 2, y + 130, 14, C.text, 'center');
+    // 数值与短板移出卡面；聚焦/二次查看交给「属性」页，卡面不超过四行正文。
+    UI.button('buy:' + i, x + 20, y + h - 66, w - 40, 44, '', { disabled: !afford, why: '金币不足，还差 ' + (sl.price - g.shardCount), draw: function (bx, by, bw, bh, pressed) {
+      D.woodFrame(bx, by, bw, bh, { style: afford ? 'primary' : 'btn' });
+      D.shardIcon(bx + 48, by + bh / 2, 7); D.text(String(sl.price), bx + 64, by + bh / 2, 18, afford ? D.UIC.parch : C.dim, 'left', true);
     } });
-    UI.button('lock:' + i, x + w - 100, y + 60, 44, 28, sl.locked ? '已锁' : '锁定', { style: sl.locked ? 'ad' : 'ghost', size: 11 });
-    UI.button('ban:' + i, x + w - 54, y + 60, 44, 28, '禁用', { style: 'ghost', size: 11, disabled: g.bansLeft <= 0, why: '本局禁用次数用完了' });
   };
 
   // ================= 祝福三选一 =================
@@ -948,7 +866,7 @@
       UI.button('set:' + st.id + ':1', x + cw - 38, y, 34, 30, '+', { size: 16, disabled: hi });
     }
     var by = H - 70;
-    UI.button('keys', x0 + 20, by, 150, 38, '按键设置', { size: 13 });
+    UI.button('miniMapToggle', x0 + 20, by, 150, 38, RW.opt.miniMap ? '小地图：常驻' : '小地图：按住 Tab', { size: 12 });
     UI.button('optReset', x0 + 180, by, 130, 38, '恢复默认', { size: 13, style: 'ghost' });
     if (root.desktop) UI.button('fullscreen', x0 + 320, by, 170, 38, '切换全屏', { size: 12, sub: 'F11' });
     UI.button('settingsClose', x0 + w - 170, by, 150, 38, '完成', { style: 'primary', size: 15 });

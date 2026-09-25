@@ -12,7 +12,7 @@
 
   var C = {
     bg: '#06070c', panel: 'rgba(14,12,18,0.9)', line: '#4a3a24', grid: 'rgba(94,242,255,0.09)',
-    text: '#f3ead8', dim: '#9a8f7c', faint: '#5a5040', cyan: '#ffc861', shard: '#ffd76a',
+    text: '#f3ead8', dim: '#A89C86', faint: '#5a5040', cyan: '#ffc861', shard: '#ffd76a',
     gold: '#ffd166', red: '#ff3b5c', good: '#7dff9b', bad: '#ff6b81', violet: '#b58cff', orb: '#7dff9b'
   };
 
@@ -62,10 +62,19 @@
     var c = D.ctx, st = o.style || 'panel', k = h < 34 ? 4 : 6, a0 = c.globalAlpha;
     var hi = st === 'primary', ghost = st === 'ghost';
     if (!ghost) {
+      // HUD 保持干净：纯色、轻阴影，不画菜单用的木纹与铆钉。
+      if (st === 'hud') {
+        c.save(); c.shadowColor = 'rgba(0,0,0,0.55)'; c.shadowBlur = 4; c.shadowOffsetY = 2;
+        c.globalAlpha = a0 * (o.alpha == null ? 0.82 : o.alpha);
+        c.fillStyle = '#22160D'; D.chamfer(x, y, w, h, k); c.fill(); c.restore();
+        c.strokeStyle = '#120B06'; c.lineWidth = 3; D.chamfer(x + 0.5, y + 0.5, w - 1, h - 1, k); c.stroke();
+        c.strokeStyle = UIC.brass; c.lineWidth = 1.5; D.chamfer(x + 1, y + 1, w - 2, h - 2, k); c.stroke();
+        c.globalAlpha = a0; return;
+      }
       var g = c.createLinearGradient(0, y, 0, y + h);
       g.addColorStop(0, hi ? UIC.woodHiA : (st === 'danger' ? '#3e1c15' : UIC.woodA));
       g.addColorStop(1, hi ? UIC.woodHiB : (st === 'danger' ? '#24100c' : UIC.woodB));
-      c.globalAlpha = a0 * (o.alpha == null ? (st === 'hud' ? 0.86 : 0.97) : o.alpha);
+      c.globalAlpha = a0 * (o.alpha == null ? 0.94 : o.alpha);
       c.fillStyle = g; D.chamfer(x, y, w, h, k); c.fill();
       // 木纹：几条随位置固定的横向细纹
       c.save(); D.chamfer(x, y, w, h, k); c.clip();
@@ -1089,7 +1098,7 @@
       c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(sp.x - 30, sp.y, 60, 6);
       c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(sp.x - 30, sp.y, 60 * ck, 6);
       // 顶部横幅 / 复活面板亮着时，别让名字压在上面
-      var topPanel = (g.banner > 0 && (g.mode === 'battle' || g.mode === 'clear')) || g.player.dead || g.mode === 'clear';
+      var topPanel = (g.banner > 0 && (g.mode === 'battle' || g.mode === 'clear')) || (RW.UI && RW.UI.toastT > 0) || g.player.dead || g.mode === 'clear';
       if (!(topPanel && sp.y < 200 && Math.abs(sp.x - W / 2) < 200)) D.text('圣火', sp.x, sp.y - 9, 10, '#ffe2a8', 'center', true, 3);
     }
     // 飘字
@@ -1243,9 +1252,9 @@
   };
 
   // ---------- 小地图：整块甲板一览，白框是当前屏幕 ----------
-  D.MINI = { w: 110, h: Math.round(110 * WD.h / WD.w) };
+  D.MINI = { w: 96, h: 96 };
   // 换地图：小地图按新尺寸重建
-  D.onMap = function () { D.miniTerrain = null; D.MINI.w = WD.w >= WD.h ? 150 : 110; D.MINI.h = Math.round(D.MINI.w * WD.h / WD.w); };
+  D.onMap = function () { D.miniTerrain = null; };
   D.buildMiniTerrain = function () {
     var Gd = RW.GRID, M = RW.MAP, cv = RW.Plat.createOffscreen(Gd.cols, Gd.rows), c = cv.getContext('2d');
     var cols = { '~': '#2f6fa0', 'w': '#2f6fa0', '=': '#8a5a34', '^': '#4a4e56', '#': '#5a5e66', 'T': '#2e5a2a', 'H': '#9a6a44', ',': '#8a7048', '_': '#8a8680', 'C': '#ffd27a', 'S': '#c04040', 'L': '#4a7a34', '.': '#3f6a2e', 'A': '#9fe8ff' };
@@ -1253,7 +1262,11 @@
     D.miniTerrain = cv;
   };
   D.minimap = function (g) {
-    var c = D.ctx, M = D.MINI, x0 = W - M.w - 12, y0 = 86, s = M.w / WD.w, i;   // 右上波次面板下方
+    var held = RW.Plat.keys && RW.Plat.keys.Tab, persistent = !!RW.opt.miniMap;
+    if (!held && !persistent) return;
+    var c = D.ctx, M = D.MINI, mw = held ? 256 : 96, mh = held ? 256 : 96;
+    var x0 = held ? (W - mw) / 2 : W - mw - 12, y0 = held ? (H - mh) / 2 : 64, s = Math.min(mw / WD.w, mh / WD.h), i;
+    M.w = mw; M.h = mh;
     c.fillStyle = 'rgba(4,8,16,0.72)'; c.fillRect(x0, y0, M.w, M.h);
     if (RW.GRID) {
       if (!D.miniTerrain) D.buildMiniTerrain();
@@ -1321,76 +1334,52 @@
     if (label) D.text(label, x + 6, y + h / 2 + 0.5, 10, labelColor || C.text, 'left', true, 2.5);
   }
   D.hud = function (g, ui, menu) {
-    var c = D.ctx, p = g.player, U = D.UIC;
-    // ---- 常驻层 · 左上：火光（火苗串）/ 生命 / 法力 / 位阶 ----
-    D.hudPanel(10, 10, 256, 112);
-    var co = g.core, ck = Math.max(0, co.hp / co.maxHp), hit = co.alert > 0 && Math.sin(g.clock * 14) > 0;
-    // 炉火包盾徽记
-    c.fillStyle = U.ink; D.chamfer(20, 18, 30, 30, 7); c.fill();
-    c.strokeStyle = hit ? U.alert : U.brass; c.lineWidth = 2; D.chamfer(20, 18, 30, 30, 7); c.stroke();
-    D.flame(35, 34, 10, ck < 0.3 ? '#E8702A' : '#FFB547'); D.flame(35, 37, 5, '#fff1c4');
-    D.text(ck < 0.3 ? '火光微弱' : '火光', 58, 24, 10, ck < 0.3 ? '#ff9a7a' : C.dim, 'left', true);
-    D.text(Math.ceil(co.hp) + '/' + Math.round(co.maxHp), 256, 24, 10, C.text, 'right', true);
-    for (var fi = 0; fi < 10; fi++) {   // 10 簇火苗，按火光比例点亮，最后一簇按余量变暗
-      var fk = Math.max(0, Math.min(1, ck * 10 - fi)), fxp = 64 + fi * 19;
-      D.flame(fxp, 41, 7, '#3a2418');
-      if (fk > 0) { c.globalAlpha = 0.35 + 0.65 * fk; D.flame(fxp, 41, 7, co.flash > 0 ? '#ffffff' : (ck < 0.3 ? '#E8702A' : '#FFB547')); c.globalAlpha = 1; }
-    }
+    var c = D.ctx, p = g.player, co = g.core, U = D.UIC;
     var hpk = Math.max(0, p.hp / p.maxHp), mpk = Math.max(0, (p.mp || 0) / (p.maxMp || 1));
-    if (g.cls) D.text(g.cls.name, 256, 58, 10, g.cls.color, 'right', true);
-    bar(22, 64, 234, 13, hpk, hpk < 0.25 ? '#e23b4a' : '#b8323f', (hpk < 0.25 ? '生命垂危 ' : '生命 ') + Math.ceil(p.hp) + '/' + Math.round(p.maxHp), '#ffe4e8');
-    bar(22, 81, 234, 11, mpk, '#2f5fcf', '法力 ' + Math.ceil(p.mp || 0) + '/' + Math.round(p.maxMp || 0), '#dde8ff');
-    var evo = RW.EVO, st = p.stage, next = evo[st + 1];
-    var ek = next ? (p.mass - evo[st].mass) / (next.mass - evo[st].mass) : 1;
-    c.fillStyle = '#140c07'; c.fillRect(22, 97, 234, 3);
-    c.fillStyle = evo[st].color; c.fillRect(22, 97, 234 * Math.min(1, ek), 3);
-    D.text(evo[st].name + (next ? ' → ' + next.name + '  ' + Math.floor(p.mass) + '/' + next.mass : ' · 最终形态'), 22, 110, 9, evo[st].color, 'left', true);
-    // 武器槽（面板下方）
-    var x = 16, y = 128;
-    for (var i = 0; i < g.weapons.length; i++) {
-      var w = g.weapons[i];
-      D.woodFrame(x, y, 34, 28, { style: 'hud', edge: w.ev ? U.select : undefined });
-      var cd = w.d.kind === 'blades' ? 0 : Math.max(0, Math.min(1, w.cd / (w.d.cd[w.tier - 1] / g.st.rate)));
-      if (cd > 0) { c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(x + 2, y + 2 + 24 * (1 - cd), 30, 24 * cd); }
-      D.text((w.name || w.d.name)[0], x + 13, y + 14, 13, w.ev ? U.parch : w.d.color, 'center', true);
-      D.text(['I', 'II', 'III'][w.tier - 1], x + 27, y + 21, 8, C.text, 'center', true);
-      x += 38;
+    // 左上生命组：216×56，仅保留火光、生命、法力和战意。
+    D.hudPanel(10, 10, 216, 56);
+    var ck = Math.max(0, co.hp / co.maxHp);
+    for (var fi = 0; fi < 10; fi++) {
+      var fk = Math.max(0, Math.min(1, ck * 10 - fi)), fx = 22 + fi * 19;
+      D.flame(fx, 25, 6, fk > 0 ? (ck < 0.3 ? '#E8702A' : '#FFB547') : '#3a2418');
     }
-    // ---- 常驻层 · 右上：波次 / 倒计时 / 金币 ----
-    var left = Math.max(0, Math.ceil(g.dur - g.wt)), duel = g.final && !g.won && left <= 0, urgent = g.mode === 'battle' && left <= 10 && !duel;
-    var px = W - 242;
-    D.hudPanel(px, 10, 188, 66);
-    D.text(g.endless ? '无尽 · 第 ' + g.wave + ' 波' : '第 ' + g.wave + ' 波', px + 12, 25, 13, C.text, 'left', true);
-    D.text(g.endless ? '' : '/ ' + RW.RUN.waves + (g.danger ? ' · 危险 ' + g.danger : ''), px + 12, 41, 9, g.danger >= 4 ? '#ffb3c1' : C.dim, 'left');
-    D.text(g.mode === 'clear' ? (g.won ? '守住了' : '清场') : (duel ? '决战' : left + ' 秒'), px + 176, 32, duel ? 18 : 20, duel ? '#ff9a7a' : (urgent ? U.parch : C.text), 'right', true);
-    if (urgent) D.text('守住片刻', px + 176, 50, 9, U.parch, 'right');
-    D.shardIcon(px + 18, 62, 6);
-    D.text('金币 ' + g.shardCount, px + 28, 62, 11, C.shard, 'left', true);
-    D.text('击杀 ' + g.kills + ' · 建筑 ' + g.towerCount() + '/' + T.build.max, px + 176, 64, 8, C.dim, 'right');
-    ui.button('pause', W - 46, 10, 36, 36, '', { draw: function (bx2, by2, bw2, bh2) {
-      D.woodFrame(bx2, by2, bw2, bh2, { style: 'hud' });
-      c.fillStyle = C.text; c.fillRect(bx2 + 12, by2 + 10, 4, 14); c.fillRect(bx2 + 20, by2 + 10, 4, 14);
-      D.text('Esc', bx2 + bw2 / 2, by2 + bh2 + 8, 8, C.faint, 'center');
+    c.fillStyle = '#120B06'; c.fillRect(18, 36, 198, 8);
+    c.fillStyle = hpk < 0.25 ? '#e23b4a' : '#b8323f'; c.fillRect(18, 36, 198 * hpk, 8);
+    c.fillStyle = '#120B06'; c.fillRect(18, 47, 198, 6);
+    c.fillStyle = '#3f73dd'; c.fillRect(18, 47, 198 * mpk, 6);
+    c.fillStyle = '#120B06'; c.fillRect(18, 56, 198, 3);
+    c.fillStyle = g.momTier >= 3 ? '#ff6b36' : '#ffc861'; c.fillRect(18, 56, 198 * Math.min(1, g.mom / T.momentum.max), 3);
+    // 数值只在发生变化后的两秒出现。
+    var sig = Math.ceil(p.hp) + '/' + Math.ceil(p.mp || 0);
+    if (D.vitalSig !== sig) { D.vitalSig = sig; D.vitalUntil = D.t + 2; }
+    if (D.t < (D.vitalUntil || 0)) D.text(Math.ceil(p.hp) + '  ·  ' + Math.ceil(p.mp || 0), 216, 27, 12, C.text, 'right', true, 2);
+
+    // 顶中只留波次与倒计时，无框描边字。
+    var left = Math.max(0, Math.ceil(g.dur - g.wt)), duel = g.final && !g.won && left <= 0;
+    D.text(g.endless ? '无尽 · ' + g.wave : '第 ' + g.wave + ' / ' + RW.RUN.waves + ' 波', W / 2, 16, 12, C.text, 'center', true, 3);
+    D.text(g.mode === 'clear' ? (g.won ? '守住了' : '清场') : (duel ? '决战' : left + ' 秒'), W / 2, 39, 24, left <= 10 ? U.parch : C.text, 'center', true, 4);
+    // 右上金币与暂停，无框。
+    D.shardIcon(W - 92, 21, 8); D.text(String(g.shardCount), W - 78, 22, 20, C.shard, 'left', true, 3);
+    ui.button('pause', W - 42, 8, 32, 32, '', { draw: function (x, y) {
+      c.fillStyle = C.text; c.fillRect(x + 9, y + 4, 4, 24); c.fillRect(x + 19, y + 4, 4, 24);
     } });
-    // 低血警示（画面四周泛红，不是文字）
     if (g.mode === 'battle' && hpk < 0.35 && !p.dead) {
-      var pulse = 0.35 + 0.25 * Math.sin(g.clock * 6);
-      var gr = c.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.6);
-      gr.addColorStop(0, 'rgba(255,30,60,0)'); gr.addColorStop(1, 'rgba(255,30,60,' + pulse.toFixed(2) + ')');
-      c.fillStyle = gr; c.fillRect(0, 0, W, H);
+      var pulse = 0.35 + 0.25 * Math.sin(g.clock * 6), gr = c.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.6);
+      gr.addColorStop(0, 'rgba(255,30,60,0)'); gr.addColorStop(1, 'rgba(255,30,60,' + pulse.toFixed(2) + ')'); c.fillStyle = gr; c.fillRect(0, 0, W, H);
     }
     D.battleButtons(g, ui, menu);
-    // ---- 情境层：信息卡 ----
-    D.infoCard(g);
-    // ---- 提示层 ----
+    // 瞬态严格互斥：横幅（含 toast）＞情境卡＞教程。
     D.tip = true;
-    D.topBanner(g, left);
-    D.tutorialScroll(g);
+    var banner = D.topBanner(g, left, UI.toastT > 0);
+    if (!banner && UI.toastT <= 0) {
+      if (!D.infoCard(g)) D.tutorialScroll(g);
+    }
     D.tip = false;
   };
   // 顶部横幅：一次只显示一条，按优先级取最要紧的
-  D.topBanner = function (g, left) {
+  D.topBanner = function (g, left, toastActive) {
     var p = g.player, co = g.core, t = null;
+    if (toastActive) return true;
     if (p.dead) t = { title: '守火人倒下，等待归来', sub: (p.coreCost ? '圣火分出 ' + p.coreCost + ' 点火光为你续命 · ' : '') + Math.ceil(p.respawnT) + ' 秒后在圣火旁归来', col: '#ffe2a8', prog: 1 - Math.max(0, p.respawnT / (p.respawnMax || 1)) };
     else if (g.bossAlert > 0 && g.mode === 'battle') t = { title: '巨影踏入村庄', sub: RW.ENEMIES.boss.name + ' · 红圈＝砸地，粗红线＝冲撞，半血后狂暴', col: '#ff9ab0', a: Math.min(1, g.bossAlert * 1.5) };
     else if (g.eliteAlert > 0 && g.mode === 'battle') t = { title: '强敌逼近 · ' + g.eliteAlertName, sub: g.eliteAlertType === 'brood' ? '它会不停放出蝙蝠，先杀它' : '它会充能后放出一圈弹幕', col: '#ffb3c1', a: Math.min(1, g.eliteAlert * 2) };
@@ -1414,14 +1403,13 @@
     else if (g.furyT > 0) t = { title: '战意爆发 · ' + Math.ceil(g.furyT) + ' 秒', sub: '伤害 +' + Math.round(RW.SHRINE.rewards.filter(function (x) { return x.id === 'fury'; })[0].dmg * 100) + '%', col: '#ffb08a' };
     else if (g.mode === 'battle' && (D.dirs || 0) >= 3) t = { title: '四面有敌', sub: '红色箭头指着敌群来的方向', col: '#ffc2c2' };
     else if (g.mode === 'battle' && left <= 10 && left > 0 && !g.final) t = { title: '再守 ' + left + ' 秒', col: D.UIC.parch };
-    if (!t) return;
-    var c = D.ctx, w = 400, x = W / 2 - w / 2, y = 8, h = t.sub || t.prog != null ? 52 : 34;
+    if (!t) return false;
+    var c = D.ctx, w = 320, x = W / 2 - 160, y = 64, h = 40;
     c.globalAlpha = t.a == null ? 1 : t.a;
-    D.woodFrame(x, y, w, h, { style: 'hud', alpha: 0.92 });
-    D.glowText(t.title, W / 2, y + 17, 17, t.col, 'center', 8);
-    if (t.sub) D.text(t.sub.length > 34 ? t.sub.slice(0, 33) + '…' : t.sub, W / 2, y + 38, 10, C.dim, 'center');
+    D.woodFrame(x, y, w, h, { style: 'hud' });
+    D.glowText(t.title.length > 18 ? t.title.slice(0, 17) + '…' : t.title, W / 2, y + 20, 16, t.col, 'center', 6);
     if (t.prog != null) { c.fillStyle = '#2a2016'; c.fillRect(x + 40, y + h - 6, w - 80, 3); c.fillStyle = '#ffd27a'; c.fillRect(x + 40, y + h - 6, (w - 80) * t.prog, 3); }
-    c.globalAlpha = 1;
+    c.globalAlpha = 1; return true;
   };
   // 右侧教程卷轴：第一波，按时间依次讲四件事（不进画面中央）
   D.tutorialScroll = function (g) {
@@ -1434,18 +1422,18 @@
     ];
     if (g.shrines && g.shrines.length) steps.push(['占领祭坛', '站进蓝圈，每波都有奖励。']);
     var k = Math.min(steps.length - 1, Math.floor(g.wt / 6)), st = steps[k], c = D.ctx;
-    var x = W - 232, y = 96 + D.MINI.h + 10, w = 220, h = 62;
+    var x = W - 228, y = 112, w = 216, h = 56;
     c.globalAlpha = Math.min(1, (30 - g.wt) / 2);
     D.woodFrame(x, y, w, h, { style: 'hud', alpha: 0.95 });
     c.fillStyle = '#d9c49a'; c.fillRect(x + 8, y + 8, 3, h - 16);   // 卷轴轴线
-    D.text(st[0], x + 18, y + 18, 13, D.UIC.parch, 'left', true);
-    D.text((k + 1) + ' / ' + steps.length, x + w - 10, y + 18, 9, C.faint, 'right');
-    D.text(st[1], x + 18, y + 42, 11, C.text, 'left');
+    D.text(st[0], x + 18, y + 17, 14, D.UIC.parch, 'left', true);
+    D.text((k + 1) + ' / ' + steps.length, x + w - 10, y + 17, 12, C.dim, 'right');
+    D.text(st[1], x + 18, y + 38, 12, C.text, 'left');
     c.globalAlpha = 1;
   };
   // 信息卡：离英雄最近的建筑或圣火（圣火旁 90、建筑旁 70 以内），弹在右下技能栏上方
   D.infoCard = function (g) {
-    if (g.mode !== 'battle' || g.player.dead) return;
+    if (g.mode !== 'battle' || g.player.dead) return false;
     var p = g.player, best = null, bd = 70 * 70, i;
     for (i = 0; i < g.towers.length; i++) {
       var tw = g.towers[i]; if (!tw.on) continue;
@@ -1461,14 +1449,15 @@
     } else if ((co.x - p.x) * (co.x - p.x) + (co.y - p.y) * (co.y - p.y) < 90 * 90) {
       card = { name: '圣火', role: '村落之心 · Lv' + (co.lv || 1), k: co.hp / co.maxHp, hp: Math.ceil(co.hp) + '/' + Math.round(co.maxHp), use: '火光未灭，守护未完', acts: '整备时可护火、升级', col: '#FFB547' };
     }
-    if (!card) return;
-    var c = D.ctx, x = W - 244, y = H - 206, w = 232, h = 98;
+    if (!card) return false;
+    var c = D.ctx, x = W - 228, y = H - 140, w = 216, h = 72;
     D.woodFrame(x, y, w, h, { style: 'hud', alpha: 0.94 });
-    D.text(card.name, x + 12, y + 16, 14, card.col, 'left', true);
-    D.text(card.role, x + w - 12, y + 16, 10, C.dim, 'right');
-    bar(x + 12, y + 30, w - 24, 11, card.k, '#b8323f', '耐久 ' + card.hp, '#ffe4e8');
-    D.text(card.use, x + 12, y + 58, 11, C.text, 'left');
-    D.text(card.acts, x + 12, y + 80, 9, C.faint, 'left');
+    D.text(card.name, x + 12, y + 15, 14, card.col, 'left', true);
+    D.text(card.role, x + w - 12, y + 15, 12, C.dim, 'right');
+    bar(x + 12, y + 25, w - 24, 8, card.k, '#b8323f', '耐久 ' + card.hp, '#ffe4e8');
+    D.text(card.use, x + 12, y + 45, 12, C.text, 'left');
+    D.text(card.acts.length > 26 ? card.acts.slice(0, 25) + '…' : card.acts, x + 12, y + 62, 12, C.dim, 'left');
+    return true;
   };
   D.eatHint = function (stage) {
     var r = RW.EVO[stage].eatR, names = [];
@@ -1481,104 +1470,31 @@
   // 按键提示跟着改键走
   var KEYACT = { dash: 'dash', build: 'build', 'skill:0': 'skill0', 'skill:1': 'skill1', 'skill:2': 'skill2' };
   function keycap(id) { return KEYACT[id] ? RW.keyLabel(KEYACT[id]) : ''; }
-  D.battleButtons = function (g, ui, menu) {
-    var c = D.ctx, B = D.BTN, p = g.player, sk = g.skill;
-    function round(id, b, label, color, k, sub) {
-      ui.button(id, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, '', { draw: function (x, y, w, h, pressed) {
-        c.globalAlpha = 0.9;
-        c.fillStyle = pressed ? 'rgba(80,60,30,0.9)' : 'rgba(24,18,12,0.78)';
-        D.circle(b.x, b.y, b.r); c.fill();
-        c.strokeStyle = k > 0 ? '#6a5234' : color; c.lineWidth = 2.5; D.circle(b.x, b.y, b.r); c.stroke();
-        if (k > 0) {
-          c.fillStyle = 'rgba(0,0,0,0.55)';
-          c.beginPath(); c.moveTo(b.x, b.y); c.arc(b.x, b.y, b.r - 2, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.closePath(); c.fill();
-        }
-        c.globalAlpha = 1;
-        D.text(label, b.x, b.y - (sub ? 5 : 0), b.r > 30 ? 14 : 12, k > 0 ? C.dim : color, 'center', true, 3);
-        if (sub) D.text(sub, b.x, b.y + 11, 9, C.dim, 'center', false, 3);
-        var kc = keycap(id);
-        if (kc) {   // 桌面：按键提示
-          var kw = kc.length > 1 ? 14 + kc.length * 8 : 18;
-          c.fillStyle = 'rgba(10,8,14,0.85)'; D.chamfer(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.fill();
-          c.strokeStyle = 'rgba(255,255,255,0.3)'; D.chamfer(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.stroke();
-          D.text(kc, b.x, b.y - b.r - 2, 9, C.text, 'center', true);
-        }
+  D.battleButtons = function (g, ui) {
+    var c = D.ctx, p = g.player, slots = g.skills && g.skills.length ? g.skills : (g.skill ? [g.skill] : []);
+    var x0 = (W - 448) / 2, y0 = H - 66;
+    D.woodFrame(x0, y0, 448, 56, { style: 'hud' });
+    function slot(id, n, key, name, col, cool, disabled, why) {
+      var x = x0 + 14 + n * 54;
+      ui.button(id, x, y0 + 6, 44, 44, '', { disabled: disabled, why: why, draw: function (bx, by, bw, bh, pressed) {
+        c.fillStyle = pressed ? '#3b2919' : '#18100a'; D.chamfer(bx, by, bw, bh, 4); c.fill();
+        c.strokeStyle = cool > 0 ? '#594a38' : col; c.lineWidth = 1.5; D.chamfer(bx + 0.5, by + 0.5, bw - 1, bh - 1, 4); c.stroke();
+        if (cool > 0) { c.fillStyle = 'rgba(0,0,0,0.62)'; c.fillRect(bx + 2, by + 2, bw - 4, (bh - 4) * Math.min(1, cool)); }
+        c.fillStyle = col; D.chamfer(bx + 4, by + 4, 18, 15, 3); c.fill();
+        D.text(key, bx + 13, by + 12, key.length === 1 ? 11 : 12, '#120B06', 'center', true);
+        D.text(name.length > 3 ? name.slice(0, 3) : name, bx + 22, by + 32, 12, disabled ? C.dim : col, 'center', true, 2);
       } });
     }
+    for (var i = 0; i < 4; i++) {
+      var id = RW.TOWER_ORDER[i], d = RW.TOWERS[id], price = g.buildPrice(id), off = g.shardCount < price || g.towerCount() >= T.build.max;
+      slot('bt:' + id, i, String(i + 1), d.name, d.color, 0, off, off ? '金币不足或建筑已满' : '');
+    }
     var dk = p.dashCd > 0 ? p.dashCd / (T.dash.cd * g.st.cdr) : 0;
-    round('dash', B.dash, '冲刺', C.cyan, dk, dk > 0 ? p.dashCd.toFixed(1) : '');
-    var slots = g.skills && g.skills.length ? g.skills : (sk ? [sk] : []);
-    for (var si = 0; si < slots.length; si++) {
-      (function (s, i) {
-        var b = { x: W - 64 - (slots.length - 1 - i) * 78, y: H - 58, r: 30 };
-        var k = s.cd > 0 ? s.cd / (s.d.cd * g.st.cdr * 0.72) : 0;
-        round('skill:' + i, b, s.d.name, s.d.color, k, s.cd > 0 ? s.cd.toFixed(1) : (s.d.mp || 18) + '');
-      })(slots[si], si);
-    }
-    round('build', B.build, menu ? '收起' : '造塔', C.gold, 0, menu ? '' : g.towerCount() + '/' + T.build.max);
-    // 快速造塔：造塔键旁边一直显示四个快捷键（点一下也能造），手柄时显示 LB + 十字键
-    var PADK = ['←', '↑', '→', '↓'];
-    if (!menu && !(g.mut && g.mut.nobuild)) {
-      var qx = W / 2 - 152, qy = H - 40;   // 底部中间：建造栏
-      D.woodFrame(qx - 8, qy - 22, 4 * 67 + 13, 58, { style: 'hud' });
-      D.text('建造', qx, qy - 11, 10, D.UIC.parch, 'left', true);
-      D.text(ui.padNav ? 'LB 菜单 · 十字键选' : '数字键直接建在脚下', qx + 4 * 67 - 3, qy - 11, 8, C.faint, 'right');
-      for (var qi = 0; qi < RW.TOWER_ORDER.length; qi++) {
-        (function (id, i) {
-          var d = RW.TOWERS[id], price = g.buildPrice(id), ok = g.shardCount >= price && g.towerCount() < T.build.max;
-          ui.button('bt:' + id, qx + i * 67, qy, 64, 30, '', { disabled: !ok, why: g.towerCount() >= T.build.max ? '建筑已达上限' : '金币不足，需要 ' + price, draw: function (x, y, w, h, pressed) {
-            c.globalAlpha = ok ? 0.95 : 0.45;
-            D.woodFrame(x, y, w, h, { style: pressed ? 'primary' : 'btn', edge: ok ? undefined : '#4a3a28' });
-            var key = ui.padNav ? PADK[i] : String(i + 1);
-            c.fillStyle = ok ? D.UIC.parch : '#5a4630'; D.chamfer(x + 4, y + 6, 18, 18, 4); c.fill();
-            D.text(key, x + 13, y + 15, 11, '#1a1206', 'center', true);
-            D.text(d.name, x + 26, y + 10, 10, ok ? d.color : C.faint, 'left', true);
-            D.shardIcon(x + 30, y + 22, 3.5);
-            D.text(String(price), x + 36, y + 22, 9, ok ? C.shard : C.bad, 'left', true);
-            c.globalAlpha = 1;
-          } });
-        })(RW.TOWER_ORDER[qi], qi);
-      }
-    }
-    // 兵营指挥：有兵营时在快速造塔上方显示四个指令（对离你最近的兵营下令）
-    var nb = !menu && g.nearestBarracks && g.nearestBarracks();
-    if (nb) {
-      var cx0 = W / 2 - 152, cy0 = H - 98, TRp = RW.TROOPS[nb.troop], FMp = RW.FORMATIONS[nb.form];
-      var KL = RW.keyLabel, cmds = [['post', KL('cmd:post'), 'LT', '布防', nb.post ? '已布防' : '到脚下'], ['recall', KL('cmd:recall'), '—', '召回', '回营'], ['troop', KL('cmd:troop'), 'L3', TRp.name, '换兵种'], ['form', KL('cmd:form'), 'R3', FMp.name, '换阵型']];
-      for (var ci = 0; ci < cmds.length; ci++) {
-        (function (cm, i) {
-          ui.button('cmd:' + cm[0], cx0 + i * 67, cy0, 64, 28, '', { draw: function (x, y, w, h, pressed) {
-            D.woodFrame(x, y, w, h, { style: pressed ? 'primary' : 'hud' });
-            var key = ui.padNav ? cm[2] : cm[1];
-            c.fillStyle = '#c9b68a'; D.chamfer(x + 4, y + 5, 18, 18, 4); c.fill();
-            D.text(key, x + 13, y + 14, key.length > 1 ? 8 : 11, '#1a1206', 'center', true);
-            D.text(cm[3], x + 26, y + 9, 10, i === 2 ? TRp.color : C.text, 'left', true);
-            D.text(cm[4], x + 26, y + 21, 8, C.faint, 'left');
-          } });
-        })(cmds[ci], ci);
-      }
-    }
-    if (menu) {
-      var ids = RW.TOWER_ORDER;
-      for (var i = 0; i < ids.length; i++) {
-        (function (id, i) {
-          var d = RW.TOWERS[id], price = g.buildPrice(id), ok = g.shardCount >= price && g.towerCount() < T.build.max;
-          var y = H - 70;
-          ui.button('bt:' + id, 96 + i * 124, y, 118, 58, '', { disabled: !ok, why: g.towerCount() >= T.build.max ? '建筑已达上限' : '金币不足，需要 ' + price, draw: function (x, yy, w, h, pressed) {
-            c.globalAlpha = ok ? 0.95 : 0.5;
-            c.fillStyle = pressed ? '#3a2a18' : 'rgba(24,18,12,0.92)'; D.chamfer(x, yy, w, h, 8); c.fill();
-            c.strokeStyle = d.color; c.lineWidth = 1.5; D.chamfer(x, yy, w, h, 8); c.stroke();
-            D.text(d.name + ' ' + ['I', 'II', 'III'][g.tech[id] - 1], x + 8, yy + 14, 12, d.color, 'left', true);
-            D.text(D.towerBlurb(id), x + 8, yy + 30, 9, C.dim, 'left');
-            D.shardIcon(x + 14, yy + 44, 5);
-            D.text(String(price), x + 23, yy + 45, 12, ok ? C.shard : C.bad, 'left', true);
-            var kc = ui.padNav ? PADK[i] : String(i + 1);   // 大号按键提示
-            c.fillStyle = ok ? C.gold : '#5a4630'; D.chamfer(x + w - 24, yy + 34, 18, 18, 4); c.fill();
-            D.text(kc, x + w - 15, yy + 43, 11, '#1a1206', 'center', true);
-            c.globalAlpha = 1;
-          } });
-        })(ids[i], i);
-      }
+    slot('dash', 4, '空格', '冲刺', C.cyan, dk, false, '');
+    var keys = ['Q', 'E', 'R'];
+    for (i = 0; i < 3; i++) {
+      var sk = slots[i];
+      slot('skill:' + i, i + 5, keys[i], sk ? sk.d.name : '空', sk ? sk.d.color : C.dim, sk && sk.cd > 0 ? sk.cd / (sk.d.cd * g.st.cdr * 0.72) : 0, !sk, '尚未获得技能');
     }
   };
   D.towerBlurb = function (id) {
