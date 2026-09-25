@@ -552,7 +552,8 @@
     if (m === 'battle' && this.st.coreRegen > 0) this.core.hp = Math.min(this.core.maxHp, this.core.hp + this.st.coreRegen * DT);
     if (p.hurtT > 0) p.hurtT -= DT;
     if (p.castT > 0) p.castT -= DT;
-    if (m === 'battle' && this.wt < this.dur) this.updateSpawner();
+    // 刷怪：到点停；终局那一波灭火者还活着就继续刷小怪，打 Boss 的时候也不会冷场
+    if (m === 'battle' && (this.wt < this.dur || (this.final && this.boss && this.boss.on && RW.BOSS_WAVES.finalAdds > 0))) this.updateSpawner();
     if ((this.navTick = (this.navTick || 0) + 1) % 10 === 0 || this.navTick === 1) bfs(DIST_PLAYER, cellIdx(p.x, p.y));
     this.updateFocus();
     this.updateMarks();
@@ -680,8 +681,17 @@
     return 'mite';
   };
   G.updateSpawner = function () {
-    var f = this.wt / this.dur, d = this.def;
-    var cut = this.boss && this.boss.on ? RW.BOSS_WAVES.rateCut : 1;
+    var f = Math.min(1, this.wt / this.dur), d = this.def;
+    if (this.wt >= this.dur && this.enemyCount >= RW.BOSS_WAVES.finalAddsCap) return;   // 终局决战：小怪不越刷越多
+    var cut = this.boss && this.boss.on ? RW.BOSS_WAVES.rateCut * (this.wt >= this.dur ? RW.BOSS_WAVES.finalAdds : 1) : 1;
+    // 心流保护：英雄身边一段时间没怪，下一群马上刷在身边的环上
+    var p = this.player, sp = T.spawn, nearN = 0;
+    if (!p.dead) {
+      var cn = this.near(p.x, p.y, sp.idleR);
+      for (var ni = 0; ni < cn && !nearN; ni++) if (this.enemies[this.nbuf[ni]].on) nearN++;
+      this.idleT = nearN ? 0 : (this.idleT || 0) + DT;
+      if (this.idleT > sp.idleKick) { this.idleT = 0; this.kick = true; if (this.spawnAcc < 1) this.spawnAcc = 1; }
+    }
     var swarm = this.mut && this.mut.swarm ? 1 + this.mut.swarm.spawn : 1;
     this.spawnAcc = Math.min(6, this.spawnAcc + (d.r0 + (d.r1 - d.r0) * f) * cut * swarm * DT);
     if (this.bossAt >= 0 && this.wt >= this.bossAt) {
@@ -708,8 +718,9 @@
   };
   G.spawnPoint = function (out, goal) {
     var p = this.player, sp = T.spawn, x = 0, y = 0, co = this.core;
-    var fr = this.front, lv = (co.lv || 1);
-    if (goal) {
+    var fr = this.front, lv = (co.lv || 1), kick = this.kick;
+    this.kick = false;
+    if (goal && !kick) {
       var gw = MAP.gateWeight, north = gw.north, side = gw.side;
       if (fr && fr.gate === 'north') { north = Math.min(0.85, 0.55 + (lv - 1) * 0.08); side = 0.1; }
       else if (fr && fr.gate === 'south') { north = 0.25; side = 0.2; }
@@ -719,7 +730,7 @@
       out.x = gt.x + this.RR(-10, 10); out.y = gt.y + this.RR(-10, 10);
       return;
     }
-    if (fr && lv > 1 && this.R() < 0.42 + (lv - 1) * 0.1) {
+    if (!kick && fr && lv > 1 && this.R() < 0.42 + (lv - 1) * 0.1) {
       for (var n = 0; n < 12; n++) {
         var a0 = this.R() * TAU, r0 = this.RR(70, 160);
         x = fr.x + Math.cos(a0) * r0; y = fr.y + Math.sin(a0) * r0;
@@ -727,7 +738,7 @@
       }
     }
     for (var tries = 0; tries < 20; tries++) {
-      if (this.R() < sp.anywhere) { x = this.RR(AX0 + 24, AX1 - 24); y = this.RR(AY0 + 24, AY1 - 24); }
+      if (!kick && this.R() < sp.anywhere) { x = this.RR(AX0 + 24, AX1 - 24); y = this.RR(AY0 + 24, AY1 - 24); }
       else {
         var a = this.R() * TAU, r = this.RR(sp.ringMin, sp.ringMax);
         x = clampX(p.x + Math.cos(a) * r, 24); y = clampY(p.y + Math.sin(a) * r, 24);
@@ -742,7 +753,8 @@
   };
   var SP = { x: 0, y: 0 };
   G.placeCluster = function (type, c) {
-    var goal = this.R() < (RW.ENEMIES[type].coreBias || 0);
+    // 攻城：危险越高，越多敌人直奔圣火（审计：高危险也几乎打不到圣火，没有压力）
+    var goal = this.R() < (RW.ENEMIES[type].coreBias || 0) + ((this.dg && this.dg.siege) || 0) * (MAP.siegeK != null ? MAP.siegeK : 1);
     this.spawnPoint(SP, goal);
     for (var i = 0; i < c; i++) {
       var mk = take(this.marks);
@@ -776,7 +788,7 @@
     var w = this.wave, g = RW.GROWTH;
     if (d.boss && this.final) d = RW.ENEMIES.tyrant;   // 第 20 波：灭火者
     var dg = this.dg || RW.DANGER[0], mu = this.mut || {};
-    var hpK = dg.hp * (d.boss && dg.boss ? 1 + dg.boss : 1);
+    var hpK = dg.hp * (MAP.hard || 1) * (d.boss && dg.boss ? 1 + dg.boss : 1);   // 地图难度系数：各图通关率拉到同一档
     if (w > RW.RUN.waves) hpK *= Math.pow(1 + RW.RUN.endlessHp, w - RW.RUN.waves);   // 无尽：复利加血
     e.type = type; e.d = d; e.x = x; e.y = y;
     e.vx = e.vy = e.kvx = e.kvy = 0; e.r = d.r;
@@ -786,7 +798,7 @@
     e.speed = d.speed * (1 + Math.min(g.spdCap, g.spdC * (w - 1))) * (d.boss && dg.boss ? 1.15 : 1);
     e.knockRes = d.knockRes; e.flash = 0; e.spawnT = 0.18;
     e.state = 0; e.st = 0; e.cd = d.cdMin ? this.RR(0.6, d.cdMax) : (d.fireCdMin ? this.RR(1, d.fireCdMax) : 0);
-    e.slowT = 0; e.slowAmt = 0; e.bhit = 0; e.chewT = 0; e.tk = 0; e.tref = null; e.shieldT = 0; e.dashHit = -1; e.lkN = 0;
+    e.slowT = 0; e.slowAmt = 0; e.bhit = 0; e.chewT = 0; e.showdown = false; e.exhaust = 0; e.inAura = false; e.tk = 0; e.tref = null; e.shieldT = 0; e.dashHit = -1; e.lkN = 0;
     e.fireT = d.fireCd ? d.fireCd * 0.7 : (d.spawnCd ? d.spawnCd * 0.5 : 0); e.charging = false;
     e.elite = !!d.elite; e.seq = ++this.seq; e.wob = this.R() * TAU;
     e.goalCore = !!goal; e.enraged = false; e.atk = 0; e.sumT = 0; e.ax = x; e.ay = y;
@@ -1459,7 +1471,7 @@
     if (x < AX0 + 20 || x > AX1 - 20 || y < AY0 + 20 || y > AY1 - 20) return false;
     var ch = mapChar(x, y);
     if (!walkable(x, y) || ch === '=' || ch === 'S') return false;
-    var co = this.core, cdx = x - co.x, cdy = y - co.y, cmin = co.r + 22;
+    var co = this.core, cdx = x - co.x, cdy = y - co.y, cmin = T.build.coreClear;
     if (cdx * cdx + cdy * cdy < cmin * cmin) return false;
     for (var i = 0; i < this.towers.length; i++) {
       var tw = this.towers[i];
@@ -1478,7 +1490,10 @@
     if (this.shardCount < price) return '金币不足，需要 ' + price;
     var d = RW.TOWERS[id], back = p.r + d.r + 1;
     var bx = p.x - Math.cos(p.face) * back, by = p.y - Math.sin(p.face) * back;
-    if (!this.canBuildHere(bx, by)) { bx = p.x; by = p.y; if (!this.canBuildHere(bx, by)) return '离其他建筑太近'; }
+    if (!this.canBuildHere(bx, by)) {
+      bx = p.x; by = p.y;
+      if (!this.canBuildHere(bx, by)) return Math.hypot(p.x - this.core.x, p.y - this.core.y) < T.build.coreClear + 20 ? '离圣火太近，走开一点再造' : '这里造不了：离其他建筑太近或不是空地';
+    }
     var tw = take(this.towers);
     if (!tw) return '建筑已达上限';
     tw.id = id; tw.d = d; tw.x = bx; tw.y = by; tw.cd = 0.4; tw.build = T.build.time; tw.pulse = 0; tw.flash = 0;
@@ -1926,6 +1941,7 @@
       if (pl.hp < pl.maxHp && this.mode === 'battle') { pl.hp = Math.min(pl.maxHp, pl.hp + 1); this.lsT = this.clock + 1 / T.lifestealPerSec; this.addNum(pl.x, pl.y - 18, 1, 'heal'); }
     }
     e.hx = kx; e.hy = ky; e.hk = knock;
+    if (e.exhaust > 0) dmg *= 1 + e.exhaust;   // 终局决战：灭火者力竭
     if (e.inAura) {   // 圣域：加护让同伴、建筑、圣火更痛；三阶让所有伤害更痛
       var SA = RW.SANCTUARY;
       if (this.corePerk('bless') && !(source && source.crit)) dmg *= 1 + SA.bless.allyDmg;
@@ -2340,6 +2356,15 @@
     var pdx = p.x - e.x, pdy = p.y - e.y, pl = pdist || 1;
     e.bvx = pdx / pl * e.speed; e.bvy = pdy / pl * e.speed;
     if (!battle) return false;
+    // 终局决战：到点后灭火者直扑圣火；再拖下去就力竭，受到的伤害越来越高
+    if (this.final && this.wt >= this.dur) {
+      var BW = RW.BOSS_WAVES, co = this.core, cx = co.x - e.x, cy = co.y - e.y, cl = Math.sqrt(cx * cx + cy * cy) || 1;
+      if (!e.showdown) { e.showdown = true; this.banner = 2.6; this.bannerText = d.name + '直扑圣火！守住它'; this.emit('bossWarn'); }
+      if (cl > BW.coreStop && (p.dead || pl > 260)) { e.bvx = cx / cl * e.speed * 1.2; e.bvy = cy / cl * e.speed * 1.2; }
+      var over = this.wt - this.dur - BW.showdown, ex = over > 0 ? Math.min(BW.exhaustMax, over * BW.exhaustRate) : 0;
+      if (ex > 0 && !(e.exhaust > 0)) { this.banner = 2.6; this.bannerText = d.name + '力竭：受到的伤害越来越高'; }
+      e.exhaust = ex;
+    }
     if (!e.enraged && e.hp < e.maxHp * d.phase2) {
       e.enraged = true; e.sumT = 0.6; e.state = 0; e.st = 1.0;
       this.flash = Math.max(this.flash, 0.5); this.shake = 1; this.stop(10, true);

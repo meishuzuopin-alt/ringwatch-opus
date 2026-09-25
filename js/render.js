@@ -963,12 +963,42 @@
   };
 
   // ================= 3D 模式的叠加层：飘字、血条、闪白、边缘箭头、小地图 =================
+  // 英雄正前方（屏幕下方 = 世界里 y 更大）一两格内有高的东西，就算被挡住
+  D.heroHidden = function (g, p) {
+    var G = RW.GRID, M = RW.MAP;
+    if (G && M) {
+      var cell = G.cell, c0 = Math.floor(p.x / cell), r0 = Math.floor(p.y / cell);
+      for (var dr = 1; dr <= 2; dr++) for (var dc = -1; dc <= 1; dc++) {
+        var rr = r0 + dr, cc = c0 + dc;
+        if (rr < 0 || cc < 0 || rr >= G.rows || cc >= G.cols) continue;
+        if ('HT#^'.indexOf(M.rows[rr][cc]) >= 0 && Math.abs((cc + 0.5) * cell - p.x) < cell * 0.6 && (rr + 0.5) * cell - p.y < cell * 1.6) return true;
+      }
+    }
+    for (var i = 0; i < g.towers.length; i++) {
+      var tw = g.towers[i];
+      if (tw.on && tw.y > p.y && tw.y - p.y < 70 && Math.abs(tw.x - p.x) < 26) return true;
+    }
+    var co = g.core, cy = co.y - p.y;
+    return co.y > p.y && cy < 80 && Math.abs(co.x - p.x) < 34;
+  };
   D.overlay3D = function (g) {
     var c = D.ctx, W3 = RW.W3, i, sp;
     D.t = g.clock;
     // 让小地图、边缘箭头沿用 2D 的视野矩形
     var b = W3.bounds;
     D.cam.x = b.x0; D.cam.y = b.z0; D.viewW = b.x1 - b.x0; D.viewH = b.z1 - b.z0;
+    // 英雄被前面（更靠镜头）的房屋、树、岩壁或建筑挡住时，画一个透出来的轮廓标记（审计：大地图上常被挡住找不到自己）
+    var hp0 = g.player;
+    if (!hp0.dead && g.mode !== 'title' && D.heroHidden(g, hp0)) {
+      var hs = W3.toScreen(hp0.x, 14, hp0.y);
+      if (hs.ok) {
+        var hc = (g.cls && g.cls.color) || '#ffd27a', pu = 0.75 + 0.25 * Math.sin(D.t * 8);
+        c.globalAlpha = pu; c.strokeStyle = '#ffffff'; c.lineWidth = 2.5; D.circle(hs.x, hs.y, 11); c.stroke();
+        c.strokeStyle = hc; c.lineWidth = 1.5; D.circle(hs.x, hs.y, 14); c.stroke();
+        c.fillStyle = hc; c.beginPath(); c.moveTo(hs.x, hs.y - 20); c.lineTo(hs.x - 6, hs.y - 30); c.lineTo(hs.x + 6, hs.y - 30); c.closePath(); c.fill();
+        c.globalAlpha = 1;
+      }
+    }
     // 建筑血条 / 士兵血条
     for (i = 0; i < g.towers.length; i++) {
       var tw = g.towers[i];
@@ -996,7 +1026,9 @@
       var ck = co.hp / co.maxHp;
       c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(sp.x - 30, sp.y, 60, 6);
       c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(sp.x - 30, sp.y, 60 * ck, 6);
-      D.text('圣火', sp.x, sp.y - 9, 10, '#ffe2a8', 'center', true, 3);
+      // 顶部横幅 / 复活面板亮着时，别让名字压在上面
+      var topPanel = (g.banner > 0 && (g.mode === 'battle' || g.mode === 'clear')) || g.player.dead || g.mode === 'clear';
+      if (!(topPanel && sp.y < 200 && Math.abs(sp.x - W / 2) < 200)) D.text('圣火', sp.x, sp.y - 9, 10, '#ffe2a8', 'center', true, 3);
     }
     // 飘字
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
@@ -1272,9 +1304,10 @@
     // 第一波的操作提示：放在下方，整波都在，不挡中间
     if (g.wave === 1 && g.mode === 'battle' && g.wt < 14) {
       c.globalAlpha = Math.min(1, (14 - g.wt) / 2);
-      D.text('踩金色木箱召唤同伴，两个一样的会合成 · Q / E / R 放技能 · 空格冲刺', W / 2, H - 108, 12, C.text, 'center', false, 3);
-      D.text('按 1–4 直接在脚下造塔（左下角有价格）· 守住中央的圣火', W / 2, H - 90, 12, C.shard, 'center', false, 3);
-      if (g.shrines && g.shrines.length) D.text('发蓝光的是祭坛：站进圈里占领，每波每座都有奖励（看小地图）', W / 2, H - 72, 12, '#b8f2ff', 'center', false, 3);
+      // 放在底部按钮行上方，不压冲刺 / 技能键帽
+      D.text('踩金色木箱召唤同伴，两个一样的会合成 · ' + RW.keyLabel('skill0') + ' / ' + RW.keyLabel('skill1') + ' / ' + RW.keyLabel('skill2') + ' 放技能 · ' + RW.keyLabel('dash') + ' 冲刺', W / 2, H - 164, 12, C.text, 'center', false, 3);
+      D.text('按 1–4 直接在脚下造塔（左下角有价格）· 守住中央的圣火', W / 2, H - 146, 12, C.shard, 'center', false, 3);
+      if (g.shrines && g.shrines.length) D.text('发蓝光的是祭坛：站进圈里占领，每波每座都有奖励（看小地图）', W / 2, H - 128, 12, '#b8f2ff', 'center', false, 3);
       c.globalAlpha = 1;
     }
     if (g.evolveT > 0) {
@@ -1311,7 +1344,9 @@
 
   // ---------- 右下：冲刺 + 技能；左下：造塔 ----------
   D.BTN = { dash: { x: W - 316, y: H - 48, r: 28 }, build: { x: 52, y: H - 52, r: 32 } };   // 冲刺放在三个技能键左边，别叠在 Q 上
-  var KEYCAP = { dash: '空格', build: 'B', 'skill:0': 'Q', 'skill:1': 'E', 'skill:2': 'R' };
+  // 按键提示跟着改键走
+  var KEYACT = { dash: 'dash', build: 'build', 'skill:0': 'skill0', 'skill:1': 'skill1', 'skill:2': 'skill2' };
+  function keycap(id) { return KEYACT[id] ? RW.keyLabel(KEYACT[id]) : ''; }
   D.battleButtons = function (g, ui, menu) {
     var c = D.ctx, B = D.BTN, p = g.player, sk = g.skill;
     function round(id, b, label, color, k, sub) {
@@ -1327,11 +1362,12 @@
         c.globalAlpha = 1;
         D.text(label, b.x, b.y - (sub ? 5 : 0), b.r > 30 ? 14 : 12, k > 0 ? C.dim : color, 'center', true, 3);
         if (sub) D.text(sub, b.x, b.y + 11, 9, C.dim, 'center', false, 3);
-        if (KEYCAP[id]) {   // 桌面：按键提示
-          var kw = KEYCAP[id].length > 1 ? 30 : 18;
+        var kc = keycap(id);
+        if (kc) {   // 桌面：按键提示
+          var kw = kc.length > 1 ? 14 + kc.length * 8 : 18;
           c.fillStyle = 'rgba(10,8,14,0.85)'; D.rr(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.fill();
           c.strokeStyle = 'rgba(255,255,255,0.3)'; D.rr(b.x - kw / 2, b.y - b.r - 10, kw, 15, 4); c.stroke();
-          D.text(KEYCAP[id], b.x, b.y - b.r - 2, 9, C.text, 'center', true);
+          D.text(kc, b.x, b.y - b.r - 2, 9, C.text, 'center', true);
         }
       } });
     }
@@ -1374,7 +1410,7 @@
     var nb = !menu && g.nearestBarracks && g.nearestBarracks();
     if (nb) {
       var cx0 = B.build.x + B.build.r + 12, cy0 = H - 94, TRp = RW.TROOPS[nb.troop], FMp = RW.FORMATIONS[nb.form];
-      var cmds = [['post', 'G', 'LT', '布防', nb.post ? '已布防' : '到脚下'], ['recall', 'H', '—', '召回', '回营'], ['troop', 'T', 'L3', TRp.name, '换兵种'], ['form', 'Y', 'R3', FMp.name, '换阵型']];
+      var KL = RW.keyLabel, cmds = [['post', KL('cmd:post'), 'LT', '布防', nb.post ? '已布防' : '到脚下'], ['recall', KL('cmd:recall'), '—', '召回', '回营'], ['troop', KL('cmd:troop'), 'L3', TRp.name, '换兵种'], ['form', KL('cmd:form'), 'R3', FMp.name, '换阵型']];
       for (var ci = 0; ci < cmds.length; ci++) {
         (function (cm, i) {
           ui.button('cmd:' + cm[0], cx0 + i * 67, cy0, 64, 28, '', { draw: function (x, y, w, h, pressed) {

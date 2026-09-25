@@ -12,6 +12,7 @@
 玩家逐条要求见 `docs/PLAYER-LOG.md`。全面优化以那份日志为准；日志后面的条目覆盖前面的。
 全案白皮书见 `docs/WHITEPAPER.md`；同类游戏差评里的痛点与我们的对策见 `docs/PLAYER-VOICE.md`（每个版本前对照一遍）。
 设计储备（负责人贴来的长设计稿逐条对照：已做 / 下一批 / 待拍板 / 不能照做）见 `docs/DESIGN-BACKLOG.md`。
+全局品质审计（逐维度打分、修之前 → 修之后、待办）见 `docs/AUDIT.md`；复查用 `npm run audit:game` 和 `npm run audit:ui`。
 
 | 文件 | 负责什么 |
 |---|---|
@@ -59,6 +60,8 @@ npm run check        # 必跑，几秒：语法 / 入口一致 / 模拟冒烟 / 
 npm run test:flow    # 改了界面或流程时跑（需要 Playwright + Chromium）
 npm run shots        # 改了画面时跑，截图在 shots/art/，前后对比
 npm run balance      # 改了数值时跑：node tools/balance.js [局数] [最高波数]
+npm run audit:game   # 全局品质审计（无头）：节奏、爽感、地图几何、音效覆盖、英雄离散；结果见 docs/AUDIT.md
+npm run audit:ui     # 界面审计：逐个界面查文字出屏 / 按钮装不下 / 文字重叠，并记录绘制开销（CI 会跑）
 npm run music        # 改了音乐时跑：离线渲染每段音乐为 WAV，检查爆音 / 静音
 npm run voice        # 抓同类游戏的 Steam 差评按痛点计数（需要能访问 store.steampowered.com）
 npm run sync         # 汇总三方分支进度与可能冲突的文件

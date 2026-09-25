@@ -37,6 +37,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:flow
       - run: npm run test:cam
+      - run: npm run audit:ui   # 界面审计：文字出屏 / 按钮装不下 / 文字互相压住就失败
       - run: npm run shots
       - name: 上传截图（在本次运行页面底部下载，美术评审用）
         if: always()

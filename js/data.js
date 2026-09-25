@@ -28,11 +28,11 @@
     barracksCmd: { recallNear: 60 },   // 站在兵营这么近的地方按布防键 = 召回
     hitstop: { gap: 0.12, heavy: 3, shellKill: 2, eliteCrit: 2, eliteKill: 8, playerHurt: 5, mine: 3, evolve: 8 },
     shard: { life: 8, blink: 2, recallRate: 0.5, magnetSpeed: 560 },
-    spawn: { telegraph: 0.8, safeDist: 170, ringMin: 260, ringMax: 470, anywhere: 0.15 },
+    spawn: { telegraph: 0.8, safeDist: 170, ringMin: 260, ringMax: 470, anywhere: 0.05, idleR: 420, idleKick: 1.5 },   // idle*：身边 idleR 内没怪超过 idleKick 秒，下一群直接刷在身边（心流不断档）
     biomass: { count: 40, respawn: 14, mass: 1, near: 0.45, nearMin: 110, nearMax: 620 },   // near：刷在战线附近的比例（地图可用 orbNear 覆盖）
     momentum: { near: 160, per: 1, decayDelay: 1.6, decay: 6, tiers: [15, 40, 80], rate: [0.15, 0.3, 0.45], dmg: [0, 0.1, 0.2], speed: [0, 0, 0.1], max: 100 },
     healOrb: { chance: 0.08, near: 160, heal: 2, life: 7 },
-    build: { max: 8, spacing: 34, step: 0.15, time: 0.5 },
+    build: { max: 8, spacing: 34, step: 0.15, time: 0.5, coreClear: 96 },   // coreClear：圣火周围这么近不许造（留出圣火和复活点，塔也不会挡住英雄）
     // 圣火：村子中央的守护目标。它熄灭 = 值守失败（位置由地图里的 C 决定）。
     core: { x: 580, y: 900, r: 30, hp: 260, gunDmg: 6, gunCd: 0.5, gunRange: 170, waveHeal: 0.5, repairCost: 14, repairPart: 0.5, armorCost: 20, armorHp: 50, interceptDist: 110 },
     priceGrowth: 0.06,          // 每波物价 +6%，买数值要赶在曲线前面
@@ -159,9 +159,9 @@
     },
     ranger: {
       name: '弩手', tag: '站桩狙击', color: '#9dff7a', cape: '#3e8a3a', look: { hat: 'hood', prop: 'crossbow' },
-      weapon: 'needle', skill: 'storm', hp: 30, fx: { ranged: 0.2 },
+      weapon: 'needle', skill: 'storm', hp: 38, fx: { ranged: 0.3, armor: 1 },   // 审计：通关率比其他英雄低一大截，加远程伤害、血量，凝神叠得更快
       passive: '凝神：站定射击叠层，每层暴击 +8%，满 5 层弩箭穿透',
-      focus: { still: 40, per: 0.45, max: 5, crit: 0.08, decay: 1.2 },
+      focus: { still: 40, per: 0.3, max: 5, crit: 0.08, decay: 1.2 },
       pros: '起手飞弩 + 追魂箭雨；站稳了暴击高、能穿透',
       cons: '一移动凝神就掉，被围住很难受',
       unlock: { kind: 'free' }
@@ -216,7 +216,7 @@
     },
     merchant: {
       name: '商人', tag: '滚雪球', color: '#ffe066', cape: '#6a3a8a', look: { hat: 'tophat', prop: 'coin' },
-      weapon: 'needle', skill: 'bounty', hp: 26, fx: { harvest: 0.3, interest: 0.1, shopPrice: -0.1, dmg: -0.15 },
+      weapon: 'needle', skill: 'bounty', hp: 26, fx: { harvest: 0.1, interest: 0.05, shopPrice: -0.05, dmg: -0.22 },   // 审计：金币滚雪球太快，各难度通关率都最高
       passive: '生意经：每次整备按手上金币给 10% 利息，商店打九折',
       pros: '赏金让接下来的击杀掉双倍钱，中后期装备最好',
       cons: '伤害 -15%，前几波会比较难熬',
@@ -518,7 +518,11 @@
     charge: { aim: 0.9, time: 0.85, speed: 520, mul: 1.5 },
     phase2: 0.5, summonCd: 8, summon: ['dasher', 'spore', 'spore', 'bomber']
   };
-  RW.BOSS_WAVES = { every: 5, at: 0.2, rateCut: 0.35 };
+  // 终局决战（审计：到点后只剩 Boss 时，弱构筑要打几分钟到几十分钟）：
+  //   finalAdds / finalAddsCap：到点后 Boss 还活着就继续刷小怪，但场上最多 finalAddsCap 只，不会越刷越多
+  //   到点后灭火者直扑圣火，决战打在圣域里（火舌、流星、建筑、士兵都能帮忙）
+  //   再过 showdown 秒灭火者力竭：受到的伤害每秒 +exhaustRate，最多 +exhaustMax（保证决战会结束）
+  RW.BOSS_WAVES = { every: 5, at: 0.2, rateCut: 0.35, finalAdds: 1, finalAddsCap: 36, showdown: 30, exhaustRate: 0.1, exhaustMax: 5, coreStop: 170 };
   // 终局 Boss：沿用巨像的招式（type 仍是 boss），数值更高、更大、召唤更多
   (function () {
     var b = RW.ENEMIES.boss, t = {};
@@ -533,7 +537,7 @@
   // 全表只跟这一张走：血、怪伤、物价、开局金币、收成。改这里，战斗和商店一起变。
   RW.SHEET = {
     // 血量 1 + 0.18k + 0.06k²：第 10 波 7.5 倍、第 20 波 26 倍（白皮书 6.1）
-    hpA: 0.18, hpB: 0.06, hpC9: 0, dmgC: 0.05, spdC: 0.012, spdCap: 0.22, priceC: 0.06,
+    hpA: 0.18, hpB: 0.06, hpC9: 0.02, dmgC: 0.05, spdC: 0.012, spdCap: 0.22, priceC: 0.06,
     startGold: 14, harvestBase: 6, harvestPer: 30
   };
   RW.SHEET.hp = function (w) {
@@ -678,13 +682,14 @@
   RW.RUN = { waves: 20, endlessHp: 0.12 };
 
   // 危险等级：每个英雄独立，通关 n 级解锁 n+1 级；高等级包含低等级的全部规则
+  // siege：额外有这么大比例的敌人从入口直奔圣火
   RW.DANGER = [
     { name: '危险 0', hp: 1.00, dmg: 1.00, note: '标准难度' },
-    { name: '危险 1', hp: 1.12, dmg: 1.10, eliteEarly: 1, note: '敌人更硬；第 3 波就有精英' },
-    { name: '危险 2', hp: 1.25, dmg: 1.20, eliteEarly: 1, price: 0.1, note: '物价 +10%' },
-    { name: '危险 3', hp: 1.40, dmg: 1.30, eliteEarly: 1, price: 0.1, elite: 1, note: '每波多一只精英' },
-    { name: '危险 4', hp: 1.55, dmg: 1.40, eliteEarly: 1, price: 0.1, elite: 1, coreHp: -0.2, note: '圣火最大生命 -20%' },
-    { name: '危险 5', hp: 1.75, dmg: 1.55, eliteEarly: 1, price: 0.1, elite: 1, coreHp: -0.2, boss: 0.25, note: 'Boss 血量 +25%、更快' }
+    { name: '危险 1', hp: 1.18, dmg: 1.10, eliteEarly: 1, siege: 0.08, note: '敌人更硬；第 3 波就有精英；更多敌人冲圣火' },
+    { name: '危险 2', hp: 1.36, dmg: 1.20, eliteEarly: 1, price: 0.1, siege: 0.16, note: '物价 +10%；攻城更凶' },
+    { name: '危险 3', hp: 1.55, dmg: 1.30, eliteEarly: 1, price: 0.1, elite: 1, siege: 0.21, note: '每波多一只精英' },
+    { name: '危险 4', hp: 1.72, dmg: 1.40, eliteEarly: 1, price: 0.1, elite: 1, coreHp: -0.2, siege: 0.23, note: '圣火最大生命 -20%' },
+    { name: '危险 5', hp: 1.88, dmg: 1.55, eliteEarly: 1, price: 0.1, elite: 1, coreHp: -0.2, boss: 0.25, siege: 0.25, note: 'Boss 血量 +25%、更快' }
   ];
   RW.dangerOpen = function (hero, d, prog) {
     if (!d) return true;
@@ -754,8 +759,50 @@
     { id: 'flash', name: '闪光强度', def: 1, min: 0, max: 1, step: 0.25, pct: true, note: '对闪光敏感请调低或关掉' },
     { id: 'fx', name: '特效亮度', def: 1, min: 0.3, max: 1, step: 0.1, pct: true, note: '后期看不清自己时调低' },
     { id: 'nums', name: '伤害数字', def: 2, opts: ['关', '只看暴击和受伤', '全部'] },
-    { id: 'ring', name: '主角脚下光圈', def: 1, opts: ['关', '开'], note: '人多时一眼找到自己' }
+    { id: 'ring', name: '主角脚下光圈', def: 1, opts: ['关', '开'], note: '人多时一眼找到自己' },
+    { id: 'gfx', name: '画质', def: 0, opts: ['自动', '低', '中', '高'], note: '自动：掉帧时依次关泛光、描边、阴影' },
+    { id: 'cam', name: '镜头远近', def: 1, min: 0.85, max: 1.2, step: 0.05, pct: true, note: '调大看得更广' },
+    { id: 'cb', name: '色弱辅助', def: 0, opts: ['关', '开'], note: '危险预警改成蓝 / 黄高对比色' },
+    { id: 'blur', name: '切出窗口时暂停', def: 1, opts: ['关', '开'] }
   ];
+  // 可改键的操作（设置 → 按键）。每个操作第一个键是主键，界面上的键帽跟着主键走；数字 1–4 造塔、Esc 暂停固定不变
+  RW.KEY_ACTIONS = [
+    ['up', '向上走'], ['down', '向下走'], ['left', '向左走'], ['right', '向右走'], ['dash', '冲刺'],
+    ['skill0', '技能 1'], ['skill1', '技能 2'], ['skill2', '技能 3'], ['build', '造塔菜单'],
+    ['cmd:post', '兵营布防'], ['cmd:recall', '兵营召回'], ['cmd:troop', '换兵种'], ['cmd:form', '换阵型'], ['pause', '暂停']
+  ];
+  RW.KEY_DEFAULTS = {
+    up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
+    dash: ['Space', 'ShiftLeft', 'ShiftRight'], skill0: ['KeyQ', 'KeyJ'], skill1: ['KeyE'], skill2: ['KeyR'], build: ['KeyB'],
+    'cmd:post': ['KeyG'], 'cmd:recall': ['KeyH'], 'cmd:troop': ['KeyT'], 'cmd:form': ['KeyY'], pause: ['KeyP']
+  };
+  RW.keysDefault = function () { var o = {}; for (var k in RW.KEY_DEFAULTS) o[k] = RW.KEY_DEFAULTS[k].slice(); return o; };
+  RW.keys = RW.keysDefault();
+  // 键码 → 屏幕上显示的名字
+  RW.keyName = function (code) {
+    if (!code) return '—';
+    var N = { Space: '空格', ShiftLeft: '左Shift', ShiftRight: '右Shift', ControlLeft: '左Ctrl', ControlRight: '右Ctrl', AltLeft: '左Alt', AltRight: '右Alt',
+      ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Tab: 'Tab', Enter: 'Enter', Backquote: '`', Minus: '-', Equal: '=',
+      BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backslash: '\\', CapsLock: 'Caps' };
+    if (N[code]) return N[code];
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^Numpad/.test(code)) return '小键盘' + code.slice(6);
+    return code;
+  };
+  RW.keyLabel = function (action) { var l = RW.keys[action]; return RW.keyName(l && l[0]); };
+  RW.keyAction = function (code) { for (var k in RW.keys) if (RW.keys[k].indexOf(code) >= 0) return k; return null; };
+  // 改键：新键设为这个操作的主键；别的操作原来占着这个键的，把它的主键换成本操作的旧主键（互换，不会有操作没键）
+  RW.rebind = function (action, code) {
+    var mine = RW.keys[action], old = mine[0];
+    for (var k in RW.keys) {
+      if (k === action) continue;
+      var i = RW.keys[k].indexOf(code);
+      if (i === 0) RW.keys[k][0] = old; else if (i > 0) RW.keys[k].splice(i, 1);
+    }
+    var j = mine.indexOf(code); if (j > 0) mine.splice(j, 1);
+    mine[0] = code;
+  };
   // 属性说明：整备页「属性说明」面板用。玩家常抱怨「这个数到底管什么」「叠加后算多少」，这里一句话讲清楚
   RW.STAT_DESC = {
     dmg: '所有武器、技能的伤害倍率，和近战 / 远程 / 法术加成相乘',

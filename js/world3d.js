@@ -47,12 +47,20 @@
   // ================= 地形 =================
   function buildTerrain() {
     var G = RW.GRID, M = RW.MAP, C = G.cell, cols = G.cols, rows = G.rows;
-    var gb = new GB(), water = new GB(), R = rnd(12345), lamps = [];
+    // 地形按 CHUNK×CHUNK 格切块：大地图上只画镜头里的那几块（审计：整图一块时每帧 60 多万三角形）
+    var CHUNK = 12, chunks = {}, list = [];
+    function chunkAt(c, r) {
+      var key = Math.floor(c / CHUNK) + ',' + Math.floor(r / CHUNK);
+      if (!chunks[key]) { chunks[key] = new GB(); list.push(chunks[key]); }
+      return chunks[key];
+    }
+    var gb = null, water = new GB(), R = rnd(12345), lamps = [];
     function ch(c, r) { if (c < 0 || r < 0 || c >= cols || r >= rows) return '#'; return M.rows[r][c]; }
     function isWater(k) { return k === '~' || k === 'w' || k === '='; }
     var WY = -14, BED = -40;
     for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
       var k = ch(c, r), x0 = c * C, z0 = r * C, x1 = x0 + C, z1 = z0 + C, cx = x0 + C / 2, cz = z0 + C / 2, h = h2(c, r);
+      gb = chunkAt(c, r);
       if (isWater(k)) {
         // 河床 + 水面
         gb.quad([x0, BED, z1], [x1, BED, z1], [x1, BED, z0], [x0, BED, z0], shade(PAL.bed, 0.9 + h * 0.2));
@@ -120,12 +128,15 @@
       while (ch(c + w, r) === 'H') w++;
       while (ch(c, r + hh) === 'H') hh++;
       for (var yy = 0; yy < hh; yy++) for (var xx = 0; xx < w; xx++) seen[(r + yy) * cols + c + xx] = 1;
-      house(gb, c * C, r * C, w * C, hh * C, (c + r) % 2 === 0, lamps);
+      house(chunkAt(c, r), c * C, r * C, w * C, hh * C, (c + r) % 2 === 0, lamps);
     }
     // 地图外的一圈暗色森林（远景）
     var W = cols * C, H = rows * C;
     var skirt = PAL.skirt;
+    gb = new GB(); list.push(gb);
     gb.quad([-900, -3, H + 900], [W + 900, -3, H + 900], [W + 900, -3, -900], [-900, -3, -900], skirt);
+    var sides = [new GB(), new GB(), new GB(), new GB()];
+    list.push(sides[0], sides[1], sides[2], sides[3]);
     var R2 = rnd(777);
     for (var i = 0; i < 160; i++) {
       var side = i % 4, tx, tz;
@@ -133,9 +144,9 @@
       else if (side === 1) { tx = W + 40 + R2() * 260; tz = R2() * H; }
       else if (side === 2) { tx = R2() * W; tz = -40 - R2() * 200; }
       else { tx = R2() * W; tz = H + 40 + R2() * 260; }
-      tree(gb, tx, tz, 1.1 + R2() * 0.8, i * 11);
+      tree(sides[side], tx, tz, 1.1 + R2() * 0.8, i * 11);
     }
-    return { land: gb, water: water, lamps: lamps };
+    return { lands: list, water: water, lamps: lamps };
   }
   function fence(gb, x0, z0, x1, z1) {
     var n = 3;
@@ -543,10 +554,10 @@
   W3.setMap = function () {
     var M = RW.MAP;
     if (!M || W3.mapId === M.id) return false;
-    GL.removeStatic(W3.land); GL.removeStatic(W3.water);
+    (W3.lands || []).forEach(function (m) { GL.removeStatic(m); }); GL.removeStatic(W3.water);
     applyBiome(M.biome);
     var t = buildTerrain();
-    W3.land = GL.upload(t.land, { static: true });
+    W3.lands = t.lands.filter(function (b) { return b.v.length > 0; }).map(function (b) { return GL.upload(b, { static: true }); });
     W3.water = GL.upload(t.water, { static: true, water: true });
     W3.lamps = t.lamps;
     // 房屋格（圣域收成的光点从这里飘起）
@@ -584,7 +595,7 @@
   W3.updateCamera = function (g, dt, orbit, aspect) {
     var p = g.player, WD = T.WORLD, ct = W3.camT;
     var lv = (g.core && g.core.lv) || 1, open = W3.openK(g);
-    CAM.dist = 860 + open * 640;   // 圣域越大，镜头越高越广
+    CAM.dist = (860 + open * 640) * ((RW.opt && RW.opt.cam) || 1);   // 圣域越大，镜头越高越广；设置里还能再调远近
     CAM.pitch = (50 - open * 10) * Math.PI / 180;
     var tx, tz;
     if (orbit) { tx = T.core.x + Math.cos(W3.t * 0.12) * 120; tz = T.core.y - 120 + Math.sin(W3.t * 0.12) * 80; }
@@ -651,6 +662,14 @@
     if (fx.bloom) fx.bloom = false; else if (fx.outline) fx.outline = false; else if (fx.shadow) fx.shadow = false;
     console.warn('帧率偏低，自动降低画质', JSON.stringify(fx));
   }
+  // 设置：画质（0 自动：掉帧时逐级关特效；1 低 / 2 中 / 3 高：固定不变）
+  W3.setQuality = function (q) {
+    var fx = GL.fx;
+    if (!fx) return;
+    if (!q) { perf.locked = false; fx.shadow = fx.outline = fx.bloom = true; return; }
+    perf.locked = true;
+    fx.shadow = q >= 2; fx.outline = q >= 2; fx.bloom = q >= 3;
+  };
   W3.blobShadow = function () { return GL.fx.shadow ? 0.45 : 1; };   // 有真阴影时，脚下的圆影只做接触阴影
 
   W3.draw = function (g, viewport, dt, orbit) {
@@ -968,7 +987,9 @@
 
   // ---------- 特效：子弹、敌方弹、预警、爆炸、光效、粒子、夜晚灯光 ----------
   var colCache = {};
-  function C(h) { return colCache[h] || (colCache[h] = hex(h)); }
+  // 色弱辅助：预警用的几种红换成蓝 / 黄这组红绿色弱也分得清的高对比色（审计：红色预警压在绿草地上）
+  var CB_MAP = { '#ff3b5c': '#3d7bff', '#ff2a5a': '#3d7bff', '#ff1a3a': '#2f5bff', '#ff4a4a': '#5a8cff', '#ff3a10': '#ffd400', '#ff8a3a': '#ffe34d', '#ff3b8c': '#4d7cff', '#3a0010': '#000a3a', '#3a0020': '#000a3a' };
+  function C(h) { if (RW.opt && RW.opt.cb && CB_MAP[h]) h = CB_MAP[h]; return colCache[h] || (colCache[h] = hex(h)); }
   function drawFx(g, env) {
     var t = W3.t, i, k;
     // 夜晚灯光

@@ -13,6 +13,8 @@
     "voice": "node tools/steam-voice.js",
     "test:flow": "node tools/flowtest.js shots/flow",
     "test:cam": "node tools/camtest.js",
+    "audit:game": "node tools/audit.js",
+    "audit:ui": "node tools/uiaudit.js shots/audit",
     "test:play": "node tools/playtest.js shots/play 2",
     "shots": "node tools/shots.js shots/art",
     "test": "npm run check && npm run test:flow",

@@ -10,12 +10,13 @@
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: 0 };
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts, map: UI.runMap }, opt: RW.opt }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts, map: UI.runMap }, opt: RW.opt, keys: RW.keys }); }
   // 设置生效：音量三条总线、特效亮度（其余由渲染层直接读 RW.opt）
   function applyOpt() {
     var o = RW.opt;
     S.setVolumes(o.vol, o.music, o.sfx);
     if (RW.GL) RW.GL.addK = o.fx;
+    if (RW.W3 && RW.W3.setQuality) RW.W3.setQuality(o.gfx | 0);
   }
   // 局中存档：整备时写，结算时清；标题页据此显示「继续上局」
   function saveRunNow() { var sv = g.saveRun(); if (sv) { P.save(RUN_KEY, sv); UI.runInfo = runInfoOf(sv); } }
@@ -47,6 +48,8 @@
     }
     var od = RW.optDefaults(), so = save.opt || {};
     for (var ok in od) RW.opt[ok] = typeof so[ok] === 'number' ? so[ok] : od[ok];
+    // 改过的按键：只收认识的操作和字符串键码，坏档回到默认
+    if (save.keys) for (var ka in RW.keys) { var kl = save.keys[ka]; if (kl && kl.length && kl.every(function (x) { return typeof x === 'string'; })) RW.keys[ka] = kl.slice(0, 4); }
     applyOpt();
     muted = !!save.muted;
     S.setMuted(muted);
@@ -56,6 +59,8 @@
     P.onPointer(onPointer);
     P.onKey = onKey;
     P.onHide(function () { if (inBattle()) { paused = true; resetStick(); } });
+    // 设置：切出窗口（失去焦点）时自动暂停
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('blur', function () { if (RW.opt.blur && inBattle() && !paused) { paused = true; resetStick(); } });
     last = P.now();
     P.raf(frame);
   }
@@ -124,11 +129,12 @@
   function getInput() {
     if (js.active) { inputBuf.mx = js.mx; inputBuf.my = js.my; return inputBuf; }
     if (pad.move) { inputBuf.mx = pad.mx; inputBuf.my = pad.my; return inputBuf; }
-    var k = P.keys, x = 0, y = 0;
-    if (k.KeyA || k.ArrowLeft) x -= 1;
-    if (k.KeyD || k.ArrowRight) x += 1;
-    if (k.KeyW || k.ArrowUp) y -= 1;
-    if (k.KeyS || k.ArrowDown) y += 1;
+    var k = P.keys, x = 0, y = 0, K = RW.keys;
+    function held(a) { var l = K[a]; for (var i = 0; i < l.length; i++) if (k[l[i]]) return true; return false; }
+    if (held('left')) x -= 1;
+    if (held('right')) x += 1;
+    if (held('up')) y -= 1;
+    if (held('down')) y += 1;
     var l = Math.sqrt(x * x + y * y) || 1;
     inputBuf.mx = x / l; inputBuf.my = y / l;
     return inputBuf;
@@ -137,6 +143,11 @@
     S.unlock();
     UI.padNav = false;
     if (overlay) {
+      if (overlay === 'keys') {   // 改键：等玩家按下新键
+        if (UI.keyWait) { if (code !== 'Escape') { RW.rebind(UI.keyWait, code); persist(); } UI.keyWait = null; S.play({ type: 'ui' }); }
+        else if (code === 'Escape' || code === 'Enter') action('keysClose');
+        return;
+      }
       if (overlay === 'form') {
         if (/^Digit[123]$/.test(code)) action('coreForm:' + RW.CORE_FORM_ORDER[+code.slice(5) - 1]);
         else if (code === 'Escape') action('formClose');
@@ -145,21 +156,15 @@
       if (code === 'Escape' || code === 'Enter') action(overlay === 'settings' ? 'settingsClose' : 'statsClose');
       return;
     }
-    if (code === 'Escape' || code === 'KeyP') {
+    var ka = RW.keyAction(code);
+    if (code === 'Escape' || ka === 'pause') {
       if (inBattle()) { paused = !paused; resetStick(); }
       return;
     }
     if (inBattle() && !paused) {
-      if (code === 'Space' || code === 'ShiftLeft' || code === 'ShiftRight') { battleButton('dash'); return; }
-      if (code === 'KeyQ' || code === 'KeyJ') { battleButton('skill:0'); return; }
-      if (code === 'KeyE') { battleButton('skill:1'); return; }
-      if (code === 'KeyR') { battleButton('skill:2'); return; }
-      if (code === 'KeyB') { battleButton('build'); return; }
       if (/^Digit[1-4]$/.test(code)) { battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
-      if (code === 'KeyG') { battleButton('cmd:post'); return; }
-      if (code === 'KeyH') { battleButton('cmd:recall'); return; }
-      if (code === 'KeyT') { battleButton('cmd:troop'); return; }
-      if (code === 'KeyY') { battleButton('cmd:form'); return; }
+      if (ka === 'dash' || ka === 'build' || (ka && ka.indexOf('cmd:') === 0)) { battleButton(ka); return; }
+      if (ka && ka.indexOf('skill') === 0) { battleButton('skill:' + ka.slice(5)); return; }
     }
     if (code === 'Enter' || code === 'Space') {
       if (showHow) { showHow = false; return; }
@@ -276,7 +281,7 @@
     if (best) { UI.focusId = best.id; if (g.mode === 'pick' && best.id.indexOf('hero:') === 0) action(best.id); else S.play({ type: 'ui' }); }
   }
   function padBack() {
-    if (overlay) action(overlay === 'settings' ? 'settingsClose' : (overlay === 'form' ? 'formClose' : 'statsClose'));
+    if (overlay) action(overlay === 'settings' ? 'settingsClose' : (overlay === 'form' ? 'formClose' : (overlay === 'keys' ? 'keysClose' : 'statsClose')));
     else if (showHow) action('howtoClose');
     else if (paused) action('resume');
     else if (g.mode === 'pick') action('back');
@@ -286,6 +291,7 @@
   // ---------- 界面动作 ----------
   function action(id) {
     var parts = id.split(':'), cmd = parts[0], arg = parts[1];
+    if (cmd === 'keyset') arg = parts.slice(1).join(':');   // 操作名里本身带冒号（cmd:post）
     if (cmd !== 'wslot') UI.sel = null;
     S.play({ type: 'ui' });
     switch (cmd) {
@@ -326,6 +332,10 @@
       case 'settings': overlay = 'settings'; break;
       case 'settingsClose': overlay = ''; persist(); break;
       case 'statsHelp': overlay = 'stats'; break;
+      case 'keys': overlay = 'keys'; UI.keyWait = null; break;
+      case 'keysClose': overlay = 'settings'; UI.keyWait = null; persist(); break;
+      case 'keyset': UI.keyWait = arg; break;
+      case 'keysReset': RW.keys = RW.keysDefault(); UI.keyWait = null; persist(); break;
       case 'statsClose': overlay = ''; break;
       case 'optReset': RW.opt = RW.optDefaults(); applyOpt(); persist(); break;
       case 'set':
@@ -374,7 +384,7 @@
       case 'giveup': g.finishRun(); break;
       case 'exitGame': if (root.desktop) root.desktop.quit(); break;
       case 'fullscreen': if (root.desktop) root.desktop.toggleFullscreen(); break;
-      case 'reroll': if (!g.reroll(false)) UI.toast('晶屑不足'); break;
+      case 'reroll': if (!g.reroll(false)) UI.toast('金币不足，刷新要 ' + g.rerollCost()); break;
       case 'adReroll':
         P.showReward('reroll', function (r) {
           g.shop.adUsed = true; g.reroll(true);
@@ -464,9 +474,11 @@
       case 'records': UI.records(g); break;
     }
     if (overlay === 'settings') UI.settingsPanel();
+    else if (overlay === 'keys') UI.keysPanel();
     else if (overlay === 'stats') UI.statsPanel(g);
     else if (overlay === 'form') UI.formPanel(g);
     UI.pressed = pressed;
+    UI.toastY = /^(battle|clear|down|revive|bless)$/.test(g.mode) ? 84 : 8;   // 战斗时避开顶部的波次面板
     UI.drawToast();
   }
 

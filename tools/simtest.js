@@ -88,7 +88,7 @@ ok(RW.SHEET.hp(20) > RW.SHEET.hp(10) && RW.SHEET.hp(10) > RW.SHEET.hp(5), '怪�
   g.nextWave();
   ok(g.wave === RW.RUN.waves + 1 && !g.final && g.endless, '进入第 21 波无尽');
   var e = g.spawnEnemy('mite', g.core.x + 300, g.core.y, false);
-  ok(e && Math.abs(e.maxHp / (RW.ENEMIES.mite.hp * g.hpMul(21)) - (1 + RW.RUN.endlessHp)) < 1e-6, '无尽第 21 波血量再 ×' + (1 + RW.RUN.endlessHp));
+  ok(e && Math.abs(e.maxHp / (RW.ENEMIES.mite.hp * g.hpMul(21) * (RW.MAP.hard || 1)) - (1 + RW.RUN.endlessHp)) < 1e-6, '无尽第 21 波血量再 ×' + (1 + RW.RUN.endlessHp));
   g.kills += 5;
   g.finishRun();
   ok(g.prog.runs === 1, '通关后接无尽再结算：局数不重复加');
@@ -451,6 +451,44 @@ RW.MAP_ORDER.forEach(function (mid, mi) {
   g.mode = 'shop'; var sv = g.saveRun(); var h = newGame('knight', {}, 96); h.loadRun(JSON.parse(JSON.stringify(sv)));
   var htw = h.towers.filter(function (t) { return t.on && t.id === 'barracks'; })[0];
   ok(htw && htw.troop === 'archer' && htw.form === tw.form && htw.post && Math.abs(htw.post.x - tw.post.x) < 1e-6, '局中存档：兵种、阵型、布防点都还原');
+})();
+// 18. 审计修复：攻城比例、终局决战、心流保护、圣火旁禁建、改键
+(function () {
+  ok(RW.DANGER.every(function (d, i) { return i === 0 || (d.siege > 0 && d.hp > RW.DANGER[i - 1].hp); }), '危险 1–5：敌人更硬，而且更多敌人直奔圣火');
+  RW.MAP_ORDER.forEach(function (m) { ok(RW.MAPS[m].hard > 0 && RW.MAPS[m].siegeK > 0, m + '：有地图难度系数'); });
+  // 圣火旁禁建
+  var g = newGame('mage', {}, 101); g.startWave(3); run(g, 20); g.shardCount = 999;
+  g.player.x = g.core.x + 20; g.player.y = g.core.y + 50;
+  var r = g.buildTower('sentry');
+  ok(r !== 'ok' && /圣火/.test(r), '圣火旁不能造塔：' + r);
+  g.player.x = g.core.x + 200; ok(g.buildTower('sentry') === 'ok', '走开一点就能造');
+  // 心流保护：身边没怪一会儿，下一群直接刷到身边
+  var h = newGame('mage', {}, 102); h.startWave(4); run(h, 30);
+  for (var i = 0; i < h.enemies.length; i++) if (h.enemies[i].on) h.killEnemy(h.enemies[i], null, 'silent');
+  h.spawnAcc = 0; h.idleT = 0; var k0 = false;
+  for (var f = 0; f < 200 && !k0; f++) { h.update({ mx: 0, my: 0 }); for (var m = 0; m < h.marks.length; m++) if (h.marks[m].on && Math.hypot(h.marks[m].x - h.player.x, h.marks[m].y - h.player.y) < RW.TUNE.spawn.ringMax + 40) k0 = true; }
+  ok(k0, '身边空了 ' + RW.TUNE.spawn.idleKick + ' 秒内就有新的一群刷在身边');
+  // 终局决战：到点后 Boss 直扑圣火，再拖就力竭
+  var q = newGame('mage', {}, 103); q.player.hp = q.player.maxHp = 1e9; q.core.hp = q.core.maxHp = 1e9;
+  q.startWave(RW.RUN.waves); q.wt = q.bossAt; run(q, 90);
+  var b = q.boss; ok(b && b.on, '终局刷出灭火者');
+  if (b) {
+    b.hp = b.maxHp = 1e9; q.player.x = q.core.x + 800 > 2200 ? q.core.x - 800 : q.core.x + 800; q.player.y = q.core.y;
+    b.x = q.core.x; b.y = q.core.y - 700 > 40 ? q.core.y - 700 : q.core.y + 700;
+    q.wt = q.dur + 1; var d0 = Math.hypot(b.x - q.core.x, b.y - q.core.y); run(q, 240);
+    ok(Math.hypot(b.x - q.core.x, b.y - q.core.y) < d0 - 150, '到点后灭火者往圣火走');
+    q.wt = q.dur + RW.BOSS_WAVES.showdown + 10; run(q, 2);
+    ok(b.exhaust > 0.5, '再拖下去灭火者力竭：受伤 ×' + (1 + b.exhaust).toFixed(1));
+    for (i = 0; i < q.enemies.length; i++) if (q.enemies[i].on && q.enemies[i] !== b) q.killEnemy(q.enemies[i], null, 'silent');
+    var cnt = 0; q.wt = q.dur + 5; run(q, 900); for (i = 0; i < q.enemies.length; i++) if (q.enemies[i].on) cnt++;
+    ok(cnt <= RW.BOSS_WAVES.finalAddsCap + 12, '决战时小怪不会越刷越多（场上 ' + cnt + ' 只）');
+  }
+  // 改键：互换、不丢键
+  var keep = RW.keys; RW.keys = RW.keysDefault();
+  RW.rebind('dash', 'KeyQ');
+  ok(RW.keys.dash[0] === 'KeyQ' && RW.keys.skill0[0] === 'Space' && RW.keyAction('KeyQ') === 'dash', '改键：冲突时两个操作互换主键');
+  ok(RW.KEY_ACTIONS.every(function (a) { return RW.keys[a[0]] && RW.keys[a[0]].length; }), '改键后每个操作都还有键');
+  RW.keys = keep;
 })();
 RW.loadMap('village');
 

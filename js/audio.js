@@ -518,6 +518,14 @@
       case 'lock': case 'ui': case 'placing': if (this.ok('ui', 0.03)) this.bell(980, 0.04, 0.03); break;
       case 'deny': if (this.ok('deny', 0.08)) this.impact(0.22); break;
       case 'die': if (this.ok('die')) { this.impact(0.95); this.bell(196, 0.8, 0.07, 0.1); this.bell(155, 1.1, 0.06, 0.35); } break;
+      // 审计补上的反馈音：战意升档 / 掉档、专注满、回血、兵营指令、重燃提示、失败结算
+      case 'momTier': if (this.ok('mtier', 0.3)) { var tk = a || 1; this.impact(0.35 + 0.15 * tk); for (var mz = 0; mz <= tk; mz++) this.bell(392 * Math.pow(2, (mz * 4) / 12), 0.22 + mz * 0.06, 0.05, mz * 0.07); } break;
+      case 'momDown': if (this.ok('mdown', 0.6)) this.whoosh(0.22, 0.05, 900, 300); break;
+      case 'focusMax': if (this.ok('focus', 0.5)) { this.bell(1320, 0.12, 0.04); this.bell(1760, 0.2, 0.035, 0.06); } break;
+      case 'heal': if (this.ok('heal', 0.3)) this.bell(880, 0.18, 0.03); break;
+      case 'command': if (this.ok('cmd', 0.15)) { this.swell(220, 330, 0.22, 0.06); this.bell(440, 0.2, 0.045, 0.08); } break;
+      case 'reviveOffer': if (this.ok('roffer', 1)) { this.swell(70, 140, 1, 0.12); this.bell(147, 1.2, 0.07, 0.3); } break;
+      case 'result': if (this.ok('result', 2)) { this.impact(0.6); var dn = [392, 330, 262, 196]; for (var rz = 0; rz < dn.length; rz++) this.bell(dn[rz], 0.9, 0.06, rz * 0.2); } break;
       case 'revive': if (this.ok('rev')) { this.bell(392, 0.16, 0.06); this.bell(523, 0.2, 0.06, 0.12); this.bell(784, 0.55, 0.07, 0.26); } break;
     }
   };

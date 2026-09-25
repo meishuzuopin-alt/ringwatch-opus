@@ -114,7 +114,8 @@
     var dk = UI.dayKey(), ds = RW.dailySetup(dk), db = pr.daily && pr.daily[dk];
     UI.button('daily', W / 2 - 150, y + 46, 148, 44, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
     UI.button('records', W / 2 + 2, y + 46, 148, 44, '成就与纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
-    D.text('WASD 移动 · 自动攻击 · 空格冲刺 · Q/E/R 技能 · B 造塔 · Enter 开始 · F11 全屏 · 支持手柄', W / 2, y + 108, 12, C.dim, 'center', false, 3);
+    var K = RW.keyLabel;
+    D.text(K('up') + K('left') + K('down') + K('right') + ' 移动 · 自动攻击 · ' + K('dash') + ' 冲刺 · ' + K('skill0') + '/' + K('skill1') + '/' + K('skill2') + ' 技能 · 1–4 造塔 · Enter 开始 · F11 全屏 · 支持手柄', W / 2, y + 108, 12, C.dim, 'center', false, 3);
     if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出游戏', { style: 'ghost', size: 13 });
     D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
   };
@@ -128,17 +129,18 @@
     UI.dim(0.85);
     UI.panel(W / 2 - 360, 40, 720, 460, C.cyan);
     D.text('玩法说明', W / 2, 72, 20, C.cyan, 'center', true);
+    var K = RW.keyLabel, mv = K('up') + K('left') + K('down') + K('right');
     var lines = [
-      ['移动', 'WASD / 方向键；也可以按住鼠标拖动。'],
-      ['攻击', '武器自动瞄准最近的敌人，你只管走位。'],
-      ['金币', '敌人死亡掉落。8 秒后消失，靠近才能捡到。'],
-      ['波次', '撑过倒计时，场上的敌人全部清掉，进入整备。'],
-      ['战意', '在身边击杀会攒战意，攒满进入狂热：攻速、伤害、移速都涨。逃跑会掉。'],
-      ['造塔', '按 B 再按 1–4，花金币在脚下建箭塔 / 寒霜塔 / 聚金桩 / 兵营。'],
-      ['技能', '空格冲刺（短暂无敌），Q 放技能。整备时可以换技能、升技能。'],
-      ['整备', '买武器 / 道具 / 技能 / 建筑科技。同流派武器凑层数有套装加成；III 阶武器配上对应道具能进化。'],
+      ['移动', mv + ' / 方向键；也可以按住鼠标拖动。武器自动瞄准最近的敌人，你只管走位。'],
+      ['技能', K('dash') + ' 冲刺（短暂无敌），' + K('skill0') + ' / ' + K('skill1') + ' / ' + K('skill2') + ' 放技能。'],
+      ['造塔', '按 1–4 直接在脚下造塔（箭塔 / 寒霜塔 / 聚金桩 / 兵营），' + K('build') + ' 打开造塔菜单。'],
+      ['兵营', K('cmd:post') + ' 让最近的兵营到你脚下布防，' + K('cmd:troop') + ' 换兵种、' + K('cmd:form') + ' 换阵型、' + K('cmd:recall') + ' 召回。'],
+      ['圣火', '圣火亮着，英雄倒下会倒计时复活；圣火熄灭每局能重燃 ' + RW.REKINDLE.times + ' 次。'],
+      ['圣域', '升级圣火，照亮的范围更大：里面的田舍产金、敌人变慢，还会解锁新能力，满级打全图。'],
+      ['战意', '在身边击杀攒战意，攒满进入狂热：攻速、伤害、移速都涨。离开战斗会慢慢掉。'],
+      ['整备', '买武器 / 道具 / 技能 / 科技。同流派武器凑层数有套装；III 阶武器配对应道具能进化。'],
       ['通关', '一局 20 波，第 20 波击败灭火者即通关，可以接着打无尽。晋升和打倒 Boss 时三选一拿祝福。'],
-      ['预警', '红准星＝要刷怪；粉线＝冲锋；黄虚线＝喷刺；橙圈＝爆囊要炸。']
+      ['预警', RW.opt.cb ? '蓝准星＝要刷怪；蓝线＝冲锋；黄虚线＝喷刺；黄圈＝爆囊要炸。' : '红准星＝要刷怪；粉线＝冲锋；黄虚线＝喷刺；橙圈＝爆囊要炸。']
     ];
     for (var i = 0; i < lines.length; i++) {
       var col = i < 5 ? 0 : 1, y = 110 + (i % 5) * 62, x0 = W / 2 - 336 + col * 350;   // 10 条，两列各 5 条
@@ -560,7 +562,7 @@
     c.fillStyle = '#1e1712'; D.rr(16, y, LW - 32, 62, 6); c.fill();
     c.strokeStyle = '#4a3a28'; c.lineWidth = 1; D.rr(16, y, LW - 32, 62, 6); c.stroke();
     // 三个技能；带「◂」的是买新技能时会被替换的那一招（最近放过的）
-    var sks = g.skills && g.skills.length ? g.skills : (g.skill ? [g.skill] : []), keys = ['Q', 'E', 'R'];
+    var sks = g.skills && g.skills.length ? g.skills : (g.skill ? [g.skill] : []), keys = [RW.keyLabel('skill0'), RW.keyLabel('skill1'), RW.keyLabel('skill2')];
     for (var si = 0; si < sks.length && si < 3; si++) {
       var sk = sks[si], sy2 = y + 12 + si * 17;
       D.text(keys[si], 24, sy2, 10, C.faint, 'left', true);
@@ -931,22 +933,43 @@
   UI.settingsPanel = function () {
     UI.btns.length = 0;   // 设置页盖在最上层，下面的按钮不响应
     UI.dim(0.8);
-    var x0 = W / 2 - 280, w = 560, i;
-    UI.panel(x0, 40, w, 460, C.gold);
-    D.text('设置', W / 2, 72, 22, C.text, 'center', true);
+    var x0 = 30, w = W - 60, i, half = Math.ceil(RW.SETTINGS.length / 2), cw = (w - 40) / 2;
+    UI.panel(x0, 16, w, H - 32, C.gold);
+    D.text('设置', W / 2, 42, 20, C.text, 'center', true);
+    // 两列：每行 名字（+ 说明）· − 数值 +
     for (i = 0; i < RW.SETTINGS.length; i++) {
-      var st = RW.SETTINGS[i], v = RW.opt[st.id], y = 106 + i * 40;
-      D.text(st.name, x0 + 28, st.note ? y + 8 : y + 14, 14, C.text, 'left', true);
-      if (st.note) D.text(st.note, x0 + 28, y + 25, 10, C.dim, 'left');
+      var st = RW.SETTINGS[i], v = RW.opt[st.id], col = (i / half) | 0, x = x0 + 20 + col * (cw + 20 - 10), y = 66 + (i % half) * 52;
+      D.text(st.name, x + 8, st.note ? y + 9 : y + 15, 13, C.text, 'left', true);
+      if (st.note) D.text(st.note, x + 8, y + 27, 9, C.dim, 'left');
       var lo = st.opts ? v <= 0 : v <= st.min + 1e-6, hi = st.opts ? v >= st.opts.length - 1 : v >= st.max - 1e-6;
-      UI.button('set:' + st.id + ':-1', x0 + 300, y, 40, 30, '−', { size: 16, disabled: lo });
-      D.text(UI.optText(st, v), x0 + 410, y + 15, 13, C.gold, 'center', true);
-      UI.button('set:' + st.id + ':1', x0 + 480, y, 40, 30, '+', { size: 16, disabled: hi });
+      UI.button('set:' + st.id + ':-1', x + cw - 152, y, 34, 30, '−', { size: 16, disabled: lo });
+      D.text(UI.optText(st, v), x + cw - 78, y + 15, 12, C.gold, 'center', true);
+      UI.button('set:' + st.id + ':1', x + cw - 38, y, 34, 30, '+', { size: 16, disabled: hi });
     }
-    var by = 106 + RW.SETTINGS.length * 40 + 8;
-    UI.button('optReset', x0 + 28, by, 150, 40, '恢复默认', { size: 13, style: 'ghost' });
-    if (root.desktop) UI.button('fullscreen', x0 + 190, by, 150, 40, '全屏 / 窗口（F11）', { size: 12 });
-    UI.button('settingsClose', x0 + w - 178, by, 150, 40, '完成', { style: 'primary', size: 15 });
+    var by = H - 70;
+    UI.button('keys', x0 + 20, by, 150, 38, '按键设置', { size: 13 });
+    UI.button('optReset', x0 + 180, by, 130, 38, '恢复默认', { size: 13, style: 'ghost' });
+    if (root.desktop) UI.button('fullscreen', x0 + 320, by, 170, 38, '全屏 / 窗口（F11）', { size: 12 });
+    UI.button('settingsClose', x0 + w - 170, by, 150, 38, '完成', { style: 'primary', size: 15 });
+  };
+  // 改键：两列列出可改的操作；点「改键」后按下新键（Esc 取消）
+  UI.keysPanel = function () {
+    UI.btns.length = 0;
+    UI.dim(0.85);
+    var x0 = 30, w = W - 60, A = RW.KEY_ACTIONS, half = Math.ceil(A.length / 2), cw = (w - 40) / 2;
+    UI.panel(x0, 16, w, H - 32, C.gold);
+    D.text('按键设置', W / 2, 42, 20, C.text, 'center', true);
+    D.text(UI.keyWait ? '请按下新的按键（Esc 取消）' : '点「改键」再按下新键；和别的操作冲突时会互换。数字 1–4 造塔、Esc 暂停固定不变', W / 2, 66, 11, UI.keyWait ? C.gold : C.dim, 'center');
+    for (var i = 0; i < A.length; i++) {
+      var id = A[i][0], col = (i / half) | 0, x = x0 + 20 + col * (cw + 10), y = 86 + (i % half) * 50, wait = UI.keyWait === id;
+      D.text(A[i][1], x + 8, y + 15, 13, C.text, 'left', true);
+      var ks = RW.keys[id].map(RW.keyName).join(' / ');
+      D.text(ks, x + 130, y + 15, 12, wait ? C.gold : C.shard, 'left', true);
+      UI.button('keyset:' + id, x + cw - 100, y, 90, 30, wait ? '按新键…' : '改键', { size: 12, style: wait ? 'ad' : 'normal' });
+    }
+    var by = H - 70;
+    UI.button('keysReset', x0 + 20, by, 150, 38, '恢复默认按键', { size: 13, style: 'ghost' });
+    UI.button('keysClose', x0 + w - 170, by, 150, 38, '完成', { style: 'primary', size: 15 });
   };
   // 整备页「属性说明」：每个属性一句话，现在的数值写在前面
   UI.statsPanel = function (g) {

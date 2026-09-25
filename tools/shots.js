@@ -84,6 +84,18 @@ fs.mkdirSync(out, { recursive: true });
     await page.waitForTimeout(3500);
     await shot(page, (15 + i) + '_sanct_lv' + lvs[i]);
   }
+  // 实战：第 12 波打了一会儿，满屏敌人 + 建筑 + 士兵（审计：之前的截图几乎看不到敌人，没法评审战斗可读性）
+  await page.evaluate(() => {
+    const g = RW.game;
+    g.core.lv = 5; g.core.form = 'blaze'; g.applyCoreLevel(); g.core.hp = g.core.maxHp = 99999;
+    g.player.hp = g.player.maxHp = 99999; g.shardCount = 999; g.banner = 0;
+    g.startWave(12); g.player.x = g.core.x + 160; g.player.y = g.core.y + 40;
+    g.buildTower('barracks'); g.player.x += 60; g.buildTower('sentry'); g.player.x = g.core.x - 150; g.buildTower('pylon');
+    for (let k = 0; k < 40; k++) { const a = k / 40 * Math.PI * 2, r = 220 + (k % 5) * 30; g.spawnEnemy(k % 7 === 0 ? 'shell' : (k % 5 === 0 ? 'dasher' : 'mite'), g.player.x + Math.cos(a) * r, g.player.y + Math.sin(a) * r, false); }
+    RW.W3.snap = true;
+  });
+  await page.waitForTimeout(4500);
+  await shot(page, '19_combat');
   await page.close();
 
   const p2 = await open('?2d');
