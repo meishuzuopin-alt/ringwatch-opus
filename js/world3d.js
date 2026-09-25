@@ -19,7 +19,7 @@
     bed: hex('#1E2A4A'), water: hex('#5FA8C8'), plank: hex('#9A6943'), plank2: hex('#B47D50'), wood: hex('#7A5234'),
     trunk: hex('#65442F'), leaf: hex('#355C36'), leaf2: hex('#467343'), leaf3: hex('#2C4D31'),
     wall: hex('#D9C4A5'), wallWood: hex('#987453'), roofBlue: hex('#355070'), roofRed: hex('#A8483A'),
-    lamp: hex('#C98A3C'), banner: hex('#1E2A4A'), gold: hex('#FFB547'),
+    lamp: hex('#FFB547'), banner: hex('#1E2A4A'), gold: hex('#FFB547'),
     flower: [hex('#D8C6A4'), hex('#BC8C8B'), hex('#D0BB7E')]
   };
 
@@ -277,9 +277,9 @@
     for (var i = -1; i <= 1; i += 2) {
       var wx = cx + i * bodyW * 0.28;
       gb.box(wx, winY, front + 1, 12, 14, 2.2, PAL.wood);
-      gb.box(wx, winY, front + 2.3, 7.5, 9.5, 0.7, PAL.lamp, 0.35);
+      gb.box(wx, winY, front + 2.3, 7.5, 9.5, 0.7, PAL.lamp, 0.9);
       gb.box(wx, winY, front + 2.8, 1.4, 12, 0.6, PAL.wood);
-      lamps.push({ x: wx, y: winY + 4, z: front + 4, s: 0.55 });
+      lamps.push({ x: wx, y: winY + 4, z: front + 4, s: 0.8 });
     }
     gb.box(cx, 6 + doorH / 2, front + 1.5, 13, doorH, 2.2, PAL.wood);
     gb.box(cx, 6 + doorH / 2, front + 2.8, 8, doorH - 5, 0.7, shade(PAL.wood, 0.72));
@@ -423,7 +423,7 @@
       g.blob(0, 5, 0, 5.5, 5, 5.5, hex('#563383'), 0, 37, 0.08);
       g.blob(1, 11, 0, 6, 5, 6, c, 0, 38, 0.08);
       g.tri([0, 13, 3], [0, 11, 3], [-1, 14, 8], hex('#7B55B7')); g.tri([0, 11, 3], [0, 13, 3], [-1, 14, 8], hex('#7B55B7'));
-      g.tri([0, 11, -3], [0, 13, -3], [-1, 14, -8], hex('#7B55B7')); g.tri([0, 13, -3], [0, 11, -8], [-1, 14, -8], hex('#7B55B7'));
+      g.tri([0, 11, -3], [0, 13, -3], [-1, 14, -8], hex('#7B55B7')); g.tri([0, 13, -3], [0, 11, -3], [-1, 14, -8], hex('#7B55B7'));
       g.box(4.1, 12, 1.4, 0.6, 1, 1, hex('#FF3B3B'), 2); g.box(4.1, 12, -1.4, 0.6, 1, 1, hex('#FF3B3B'), 2);
       g.blob(-5, 8, 0, 5, 5, 5, hex('#442B6B'), 0, 39, 0.06);
       g.box(-5, 13, 0, 1, 3, 1, PAL.wood); g.box(-5, 16, 0, 1.8, 1.8, 1.8, hex('#7B55B7'), 0.3);
@@ -478,6 +478,13 @@
       g.blob(8, 34, -28, 11, 16, 10, s, 0, 54, 0.12); g.blob(12, 16, -30, 10, 9, 10, s2, 0, 55, 0.12);
       g.box(18, 36, 0, 6, 10, 20, spike);
       g.box(10, 44, 12, 8, 2, 2, spike); g.box(8, 30, -14, 8, 2, 2, spike); g.box(-6, 46, 6, 2, 10, 2, spike);
+    });
+    // 精英共用的三枚尖刺：头顶一枚、两侧各一枚，远景也能读出危险外形。
+    M.eliteSpikes = model(function (g) {
+      var c = hex('#7B55B7');
+      g.tri([-3, 24, 0], [3, 24, 0], [0, 38, 0], c); g.tri([0, 24, -3], [0, 24, 3], [0, 38, 0], c);
+      g.tri([-2, 18, 8], [2, 18, 8], [0, 29, 13], c); g.tri([0, 18, 6], [0, 18, 10], [0, 29, 13], c);
+      g.tri([-2, 18, -8], [2, 18, -8], [0, 29, -13], c); g.tri([0, 18, -6], [0, 18, -10], [0, 29, -13], c);
     });
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
     M.sentry = model(function (g) {
@@ -579,7 +586,7 @@
   // Visual-only scale multipliers bring ordinary enemies toward 0.6x hero height,
   // elites toward 1.1x and heavy shells/bosses toward 1.4x without changing hitboxes.
   var ENEMY_RENDER_SCALE = {
-    mite: 2.15, spore: 2.8, shell: 3.4, dasher: 1.45, splitter: 1.75,
+    mite: 2.15, spore: 2.8, shell: 2.0, dasher: 1.45, splitter: 1.75,
     bomber: 1.85, spitter: 1.8, shielder: 1.5, warden: 1.35, brood: 1.9, boss: 1.2
   };
   var TMODEL = { sentry: 'sentry', pylon: 'pylon', siphon: 'siphon', barracks: 'barracks' };
@@ -591,12 +598,12 @@
     var P = {
       day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#C9A27A'), 0.78), ground: shade(hex('#6F9A4E'), 0.7), fog: hex('#B8C7C6'), clear: hex('#8DB1C8'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
         grade: [1.08, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#3A2E3C'), bloom: 0.35, thr: 0.9 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#E8702A'), 0.85), sky: shade(hex('#5A496A'), 0.78), ground: shade(hex('#3A344A'), 0.55), fog: hex('#4A425E'), clear: hex('#28364E'), fogNear: 1300, fogFar: 3000, em: 1.1, lamp: 0.55,
-        grade: [1.04, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#302638'), bloom: 0.6, thr: 0.78 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#5FA8C8'), 0.77), sky: hex('#3F5475'), ground: hex('#30415F'), fog: hex('#223451'), clear: hex('#111A31'), fogNear: 850, fogFar: 2300, em: 1.35, lamp: 0.95,
-        grade: [1.02, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#1E2A4A'), bloom: 0.95, thr: 0.62 },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#5FA8C8'), 0.45), sky: shade(hex('#34213F'), 0.8), ground: shade(hex('#1E2A4A'), 1.2), fog: hex('#291C38'), clear: hex('#11152B'), fogNear: 850, fogFar: 2300, em: 1.3, lamp: 0.8,
-        grade: [1.04, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#241A31'), bloom: 0.85, thr: 0.66 }
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.1, lamp: 0.55,
+        grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#302638'), bloom: 0.6, thr: 0.78 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 850, fogFar: 2300, em: 1.35, lamp: 0.95,
+        grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#1E2A4A'), bloom: 0.95, thr: 0.62 },
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 850, fogFar: 2300, em: 1.3, lamp: 0.8,
+        grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#241A31'), bloom: 0.85, thr: 0.66 }
     };
     var e = P[kind], l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
     return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp,
@@ -882,11 +889,12 @@
       if (em.fly) y = em.fly + Math.sin(t * 8 + e.seq) * 4;
       else y = Math.abs(Math.sin(walkPh)) * (e.elite ? 1 : 2);
       GL.put(mesh, e.x, y, e.y, yaw, s * sq, s / sq, s * sq, tilt, tint[0], tint[1], tint[2], fl);
+      if (e.elite) GL.put(M.eliteSpikes, e.x, y, e.y, yaw, s * sq, s / sq, s * sq, tilt, tint[0], tint[1], tint[2], fl);
       if (e.type === 'spore') GL.put(M.batWing, e.x, y + 1 * s, e.y, yaw, s, s * Math.sin(t * 22 + e.seq) * 1.2, s, 0, 1, 1, 1, fl);
       if (e.type === 'brood') GL.put(M.broodWing, e.x, 26 * s, e.y, yaw, s, s * (0.6 + 0.5 * Math.sin(t * 5 + e.seq)), s, 0, 1, 1, 1, fl);
       // 影子
       GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.3, BLACK, (em.fly ? 0.18 : 0.3) * W3.blobShadow());
-      if (!em.fly) GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#9B62D4') : C('#6B3FA0'), e.elite ? 0.55 : 0.22);
+      if (!em.fly) GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#FF3B3B') : C('#D9363E'), e.elite ? 0.55 : 0.22);
       // 特殊光效
       if (e.type === 'bomber') GL.glow(e.x - Math.cos(yaw) * 5 * s, 16 * s, e.y - Math.sin(yaw) * 5 * s, e.state === 1 ? 14 : 6, e.state === 1 ? hex('#FF3B3B') : hex('#6B3FA0'), 0.9);
       if (e.type === 'shielder') GL.glow(e.x + Math.cos(yaw) * 4 * s, 23 * s, e.y + Math.sin(yaw) * 4 * s, 10, hex('#6fc3ff'), 0.7);
