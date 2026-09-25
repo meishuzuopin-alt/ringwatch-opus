@@ -269,7 +269,7 @@
   // 几何直接由项目代码构造，不依赖外部模型、纹理或训练集输出。
   function finishModel(g, id) {
     var brass = hex('#d6a84f'), pale = hex('#f7e5b7'), teal = hex('#71d4d7');
-    var deep = hex('#355b68'), stone = hex('#d1c3a0'), ink = hex('#302638');
+    var deep = hex('#355b68'), ink = hex('#302638');
     if (id === 'heroLeg') {
       g.box(0.2, 4, 0, 4.5, 1.2, 5.2, brass, 0.15);
       g.box(0.2, 10.5, 0, 4.5, 1, 4.8, deep, 0.1);
@@ -293,7 +293,7 @@
       g.cyl(-0.5, 29.5, 4.2, 1.7, 1.5, 1.2, 5, brass, 0.1);
       g.cyl(-0.5, 29.5, -4.2, 1.7, 1.5, 1.2, 5, brass, 0.1);
     } else if (id === 'hat_halo') {
-      g.cyl(-1.6, 34.5, 0, 6.2, 6.2, 1.2, 10, brass, 0.8);
+      for (var hi = 0; hi < 3; hi++) { var ha = hi * Math.PI * 2 / 3; g.box(-1.6 + Math.cos(ha) * 5, 34.5, Math.sin(ha) * 5, 1.5, 1, 1.5, brass, 0.8); }
       g.blob(4.1, 27, 0, 1.2, 1.7, 1.2, teal, 0.9, 6, 0.05);
     } else if (id === 'hat_cap') {
       g.box(-0.2, 30.5, 0, 5.2, 1, 4.2, brass, 0.12);
@@ -367,8 +367,8 @@
       g.box(-9, 56, 0, 15, 4, 24, deep, 0.12);
       g.blob(19, 47, 0, 3.4, 5, 3.4, teal, 1.1, 6, 0.03);
     } else if (id === 'sentry') {
-      g.roof(0, 88, 0, 11, 16, 10, deep);
-      g.blob(0, 106, 0, 3.2, 5, 3.2, pale, 0.7, 3, 0.04);
+      g.box(0, 114, 0, 5, 3, 5, brass, 0.2);
+      g.blob(0, 105, 0, 3.2, 5, 3.2, pale, 0.7, 3, 0.04);
     } else if (id === 'pylon') {
       g.cyl(0, 54, 0, 13, 13, 2.2, 8, deep, 0.12);
       g.cyl(0, 56.2, 0, 12, 12, 1.2, 8, brass, 0.2);
