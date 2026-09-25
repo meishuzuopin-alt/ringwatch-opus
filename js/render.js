@@ -1149,6 +1149,12 @@
       c.beginPath(); c.arc(x0 + sh.x * s, y0 + sh.y * s, 3, 0, Math.PI * 2); c.fill();
     }
     var co = g.core;
+    if (co.aura && co.aura < 3000) {   // 圣域范围
+      c.save(); c.beginPath(); c.rect(x0, y0, M.w, M.h); c.clip();
+      c.fillStyle = 'rgba(255,210,122,0.10)'; c.strokeStyle = 'rgba(255,210,122,0.55)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(x0 + co.x * s, y0 + co.y * s, co.aura * s, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.restore();
+    }
     c.fillStyle = co.alert > 0 && Math.sin(D.t * 14) > 0 ? '#ff3b5c' : '#ffd27a';
     c.fillRect(x0 + co.x * s - 3.5, y0 + co.y * s - 3.5, 7, 7);
     c.fillStyle = '#ff6b81';
@@ -1287,7 +1293,7 @@
     if (g.core.alert > 2.2 && g.mode === 'battle') D.text('圣火正在受到攻击！', W / 2, 92, 13, '#ff9ab0', 'center', true, 3);
     if (g.mode === 'clear') {
       D.glowText('本波完成', W / 2, 226, 32, C.gold, 'center', 16);
-      D.text('收成 +' + (g.haul || 0) + '    地上的金币按 50% 回收', W / 2, 260, 13, C.shard, 'center', false, 3);
+      D.text('收成 +' + (g.haul || 0) + (g.yieldGold ? '    圣域收成 +' + g.yieldGold : '') + '    地上的金币按 50% 回收', W / 2, 260, 13, C.shard, 'center', false, 3);
     }
   };
   D.eatHint = function (stage) {

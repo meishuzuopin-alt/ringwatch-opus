@@ -4,18 +4,19 @@
   var RW = root.RW;
   var T = RW.TUNE;
   // ---------- 地图：读 js/map.js，生成阻挡网格、敌人入口、祭坛、圣火位置；切图时整套重建 ----------
-  var MAP, MCELL, MC, MR, GRID, GATES, CORE_CELL, ALTARS;
+  var MAP, MCELL, MC, MR, GRID, GATES, CORE_CELL, ALTARS, PROD;
   var A = T.ARENA, P = T.player, DASH = T.dash;
   var AX0, AY0, AX1, AY1;
   var DIST_CORE, DIST_PLAYER, BFSQ;
   var CELL = 40, GC = 1, GR = 1;   // 敌人空间划分的格子
   function applyMap(M) {
     MAP = M; MCELL = M.cell || 40; MC = M.rows[0].length; MR = M.rows.length;
-    GRID = new Uint8Array(MC * MR); GATES = { north: [], side: [], south: [] }; CORE_CELL = 0; ALTARS = [];
+    GRID = new Uint8Array(MC * MR); GATES = { north: [], side: [], south: [] }; CORE_CELL = 0; ALTARS = []; PROD = [];
     var blocked = M.blocked || RW.MAP_BLOCKED;
     for (var r = 0; r < MR; r++) for (var c = 0; c < MC; c++) {
       var ch = M.rows[r][c], i = r * MC + c, cx = c * MCELL + MCELL / 2, cy = r * MCELL + MCELL / 2;
       GRID[i] = blocked.indexOf(ch) >= 0 ? 1 : 0;
+      if (ch === 'H' || !GRID[i]) PROD.push({ x: cx, y: cy, house: ch === 'H' });   // 圣域收成：能走的地块和房屋
       if (ch === 'S') (r < MR / 3 ? GATES.north : (r > MR * 2 / 3 ? GATES.south : GATES.side)).push({ x: cx, y: cy });
       if (ch === 'C') { CORE_CELL = i; T.core.x = cx; T.core.y = cy; }
       if (ch === 'A') ALTARS.push({ x: cx, y: cy });
@@ -557,6 +558,7 @@
     this.updateMarks();
     this.buildGrid();
     if (m === 'battle' && !p.dead) { this.updateWeapons(); this.updateSkill(); }
+    if (m === 'battle') this.updateSanctuary();
     this.updateTowers();
     this.updateSoldiers();
     this.updateChests();
@@ -1518,7 +1520,62 @@
   };
 
   // ---------- 圣火火舌；3 级起按形态变化 ----------
-  G.coreForm = function () { return RW.CORE_FORMS[this.core.form] || null; };
+  var formCache = {};
+  G.coreForm = function () {
+    var co = this.core, F = RW.CORE_FORMS[co.form];
+    if (!F) return null;
+    var tier = co.formTier || 1, key = co.form + tier;
+    if (formCache[key]) return formCache[key];
+    var o = {}, k, tt = F.tiers && F.tiers[tier - 1];
+    for (k in F) if (k !== 'tiers') o[k] = F[k];
+    if (tt) for (k in tt) o[k] = tt[k];
+    o.tier = tier;
+    return (formCache[key] = o);
+  };
+  // 某项圣火能力是否已解锁（按 RW.CORE_LV 里的 perk 所在等级）
+  var PERK_LV = null;
+  G.corePerk = function (id) {
+    if (!PERK_LV) { PERK_LV = {}; for (var i = 1; i < RW.CORE_LV.length; i++) if (RW.CORE_LV[i].perk) PERK_LV[RW.CORE_LV[i].perk] = i; }
+    return PERK_LV[id] != null && (this.core.lv || 1) >= PERK_LV[id];
+  };
+  // 圣域：圣火照亮的一圈。里面的敌人被拖慢、灼烧；建筑、同伴、英雄受到照顾
+  G.inAura = function (x, y) { var co = this.core, dx = x - co.x, dy = y - co.y, r = co.aura || 0; return dx * dx + dy * dy < r * r; };
+  G.updateSanctuary = function () {
+    var co = this.core, SA = RW.SANCTUARY, i, hallow = this.corePerk('hallow'), judge = this.corePerk('form3');
+    var r2 = (co.aura || 0) * (co.aura || 0);
+    co.burnT = (co.burnT || 0) - DT;
+    var burn = judge && co.burnT <= 0, bd = 0;
+    if (burn) { co.burnT = 0.5; bd = (co.gunDmg || T.core.gunDmg) * RW.SHEET.def(this.wave) * SA.judge.burn * 0.5; }
+    for (i = 0; i < this.enemies.length; i++) {
+      var e = this.enemies[i];
+      if (!e.on) continue;
+      var dx = e.x - co.x, dy = e.y - co.y;
+      e.inAura = dx * dx + dy * dy < r2;
+      if (!e.inAura || e.spawnT > 0) continue;
+      if (hallow) { if (e.slowT < 0.15) e.slowT = 0.15; if (!(e.slowAmt >= SA.hallow.slow)) e.slowAmt = SA.hallow.slow; }
+      if (burn) this.hitEnemy(e, bd, 0, 0, 0, this.coreSrc, false);
+    }
+    if (hallow) {
+      var tend = SA.hallow.tend * DT;
+      for (i = 0; i < this.towers.length; i++) { var tw = this.towers[i]; if (tw.on && tw.hp < tw.maxHp && this.inAura(tw.x, tw.y)) tw.hp = Math.min(tw.maxHp, tw.hp + tend); }
+      for (i = 0; i < this.mates.length; i++) { var mt = this.mates[i]; if (mt.on && mt.hp < mt.maxHp && this.inAura(mt.x, mt.y)) mt.hp = Math.min(mt.maxHp, mt.hp + tend); }
+    }
+    var p = this.player;
+    if (this.corePerk('bless') && !p.dead && p.hp < p.maxHp && this.inAura(p.x, p.y)) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * SA.bless.regen * DT);
+  };
+  // 圣域收成：覆盖到的地块与房屋，每波结束结算
+  G.sanctuaryYield = function () {
+    if (!this.corePerk('yield')) return 0;
+    var Y = RW.SANCTUARY.yield, co = this.core, r2 = (co.aura || 0) * (co.aura || 0), cells = 0, houses = 0;
+    for (var i = 0; i < PROD.length; i++) {
+      var c = PROD[i], dx = c.x - co.x, dy = c.y - co.y;
+      if (dx * dx + dy * dy > r2) continue;
+      if (c.house) houses++; else cells++;
+    }
+    var n = cells * Y.perCell + houses * Y.perHouse;
+    if (this.corePerk('sky')) n *= Y.skyMul;
+    return Math.round(n * (this.mut && this.mut.poor ? 1 + this.mut.poor.gold : 1));
+  };
   G.updateCoreGun = function () {
     var co = this.core, CO = T.core, F = this.coreForm(), i;
     if (F && F.regen) co.hp = Math.min(co.maxHp, co.hp + F.regen * DT);
@@ -1540,9 +1597,24 @@
         this.ringFx(co.x, co.y, co.r, reach, 0.6, F.color, 3);
       }
     }
+    // 8 级：流星火雨，砸在射程内随机一个敌人头上
+    if (this.corePerk('rain')) {
+      var RN = RW.SANCTUARY.rain;
+      co.rainT = (co.rainT || 0) - DT;
+      if (co.rainT <= 0) {
+        var pool = [], rc = this.near(co.x, co.y, gr);
+        for (i = 0; i < rc; i++) { var re = this.enemies[this.nbuf[i]]; if (re.on && re.spawnT <= 0 && (re.x - co.x) * (re.x - co.x) + (re.y - co.y) * (re.y - co.y) < gr * gr) pool.push(re); }
+        if (pool.length) {
+          var rt = pool[(this.R() * pool.length) | 0];
+          this.queueBlast(rt.x, rt.y, RN.blast, gd * RN.dmgMul, 0, this.coreSrc, F ? F.color : '#ffb347', '', 90);
+          this.ringFx(rt.x, rt.y, 8, RN.blast * 1.4, 0.5, '#fff1b0', 5); this.burst(rt.x, rt.y, 14, '#ffb347', 220, 2.5, false);
+          co.rainT = this.corePerk('sky') ? RN.skyCd : RN.cd;
+        } else co.rainT = 0.3;
+      }
+    }
     co.cd -= DT;
     if (co.cd > 0) return;
-    var shots = F && F.shots ? F.shots : 1, targets = [], cnt2 = this.near(co.x, co.y, gr);
+    var shots = (F && F.shots ? F.shots : 1) + (this.corePerk('twin') ? RW.SANCTUARY.twin.shots : 0), targets = [], cnt2 = this.near(co.x, co.y, gr);
     if (shots === 1) { var e0 = this.nearest(co.x, co.y, gr); if (e0) targets.push(e0); }
     else {
       // 星火：挑最近的几个不同目标
@@ -1561,7 +1633,8 @@
     for (i = 0; i < targets.length; i++) {
       var e = targets[i], a = Math.atan2(e.y - co.y, e.x - co.x);
       co.ang = a;
-      this.fireBullet(co.x + Math.cos(a) * co.r, co.y + Math.sin(a) * co.r, a, 460, gr / 460 + 0.05, gd, 40, 3, this.coreSrc, 0, col);
+      var tdist = Math.sqrt((e.x - co.x) * (e.x - co.x) + (e.y - co.y) * (e.y - co.y));
+      this.fireBullet(co.x + Math.cos(a) * co.r, co.y + Math.sin(a) * co.r, a, 460, Math.min(gr, tdist + 80) / 460 + 0.05, gd, 40, 3, this.coreSrc, 0, col);
       if (F && F.blast) this.queueBlast(e.x, e.y, F.blast, gd * F.blastK, 0, this.coreSrc, col, '', 60);   // 烈焰：命中处爆燃
     }
     co.cd = gc;
@@ -1748,6 +1821,11 @@
       if (pl.hp < pl.maxHp && this.mode === 'battle') { pl.hp = Math.min(pl.maxHp, pl.hp + 1); this.lsT = this.clock + 1 / T.lifestealPerSec; this.addNum(pl.x, pl.y - 18, 1, 'heal'); }
     }
     e.hx = kx; e.hy = ky; e.hk = knock;
+    if (e.inAura) {   // 圣域：加护让同伴、建筑、圣火更痛；三阶让所有伤害更痛
+      var SA = RW.SANCTUARY;
+      if (this.corePerk('bless') && !(source && source.crit)) dmg *= 1 + SA.bless.allyDmg;
+      if (this.corePerk('form3')) dmg *= 1 + SA.judge.taken;
+    }
     if (e.shieldT > 0) dmg *= 1 - RW.ENEMIES.shielder.reduce;
     var dd = Math.max(1, dmg - e.armor);
     var armored = (e.armor > 0 && dd < dmg * 0.8) || e.shieldT > 0;
@@ -2111,6 +2189,9 @@
     co.hp = Math.min(co.maxHp, Math.max(1, co.maxHp * ratio));
     co.gunDmg = CO.gunDmg + dmg;
     co.gunRange = CO.gunRange + range;
+    co.aura = RW.CORE_LV[Math.min(lv, RW.CORE_LV.length - 1)].aura || 0;
+    var FT = RW.SANCTUARY.formTierAt; co.formTier = lv >= FT[3] ? 3 : (lv >= FT[2] ? 2 : 1);
+    if (this.corePerk('sky')) co.gunRange = RW.SANCTUARY.skyRange;
     co.gunCd = Math.max(0.22, CO.gunCd - cd);
     co.waveHeal = CO.waveHeal + heal;
     var fr = RW.FRONTS[Math.min(lv, RW.FRONTS.length - 1)];
@@ -2133,16 +2214,16 @@
       this.emit('coreForm', form);
     }
     this.shardCount -= c;
-    var before = co.maxHp;
+    var before = co.maxHp, fr0 = this.front;
     co.lv = lv + 1;
     this.applyCoreLevel();
     co.hp = Math.min(co.maxHp, co.hp + (co.maxHp - before));
     this.emit('buy', 'coreLv');
-    if (this.front) {
-      this.banner = 2.4;
-      this.bannerText = '王旗插到' + this.front.name + ' · 跟着光走';
-      this.ringFx(this.front.x, this.front.y, 12, 90, 0.7, '#ffd27a', 5);
-    }
+    // 升级横幅：新能力 + 圣域扩张（王旗换站时一并说）
+    this.banner = 2.4;
+    this.bannerText = '圣火 Lv' + co.lv + ' · ' + next.note + (this.front && this.front !== fr0 && (!fr0 || fr0.name !== this.front.name) ? ' · 王旗插到' + this.front.name : ' · 圣域扩大');
+    this.ringFx(co.x, co.y, co.r, Math.min(co.aura, 1400), 1.1, '#ffd27a', 6);
+    if (this.front) this.ringFx(this.front.x, this.front.y, 12, 90, 0.7, '#ffd27a', 5);
     return 'ok';
   };
 
@@ -2620,6 +2701,8 @@
     for (var j = 0; j < this.shards.length; j++) { var s = this.shards[j]; if (s.on && !s.tower && !s.mag) { s.mag = true; s.recall = true; s.sp = 60; } }
     var haul = Math.round((T.harvestBase + Math.max(0, this.st.harvest - 1) * T.harvestPer) * (this.mut && this.mut.poor ? 1 + this.mut.poor.gold : 1));
     this.shardCount += haul; this.totalShards += haul; this.haul = haul;
+    var yg = this.sanctuaryYield();   // 圣域收成
+    this.shardCount += yg; this.totalShards += yg; this.yieldGold = yg;
     this.ringFx(this.player.x, this.player.y, 10, 700, 0.8, '#5ef2ff', 3);
     this.emit('waveClear', this.wave);
   };

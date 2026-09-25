@@ -360,6 +360,51 @@ RW.MAP_ORDER.forEach(function (mid, mi) {
   k.revive();
   ok(k.mode === 'battle' && k.core.hp >= k.core.maxHp * 0.5 && !k.player.dead, '重燃：圣火回到一半，英雄站着');
 })();
+// 16. 圣域：圣火 10 级，范围越来越大，每级有新能力，满级火舌覆盖全图
+(function () {
+  var g = newGame('mage', {}, 91);
+  ok(RW.CORE_MAX_LV === 10, '圣火共 10 级');
+  var last = 0, grew = true, costUp = true, pc = 0;
+  for (var i = 1; i <= RW.CORE_MAX_LV; i++) {
+    var L = RW.CORE_LV[i];
+    if (!(L.aura > last)) grew = false; last = L.aura;
+    if (i >= 2) { if (!(L.cost > pc)) costUp = false; pc = L.cost; if (!L.perk || !L.desc) grew = false; }
+  }
+  ok(grew, '每一级圣域都更大，并且都有新能力和说明');
+  ok(costUp, '每一级都比上一级贵（不会轻易满级）');
+  var total = 0; for (i = 2; i <= RW.CORE_MAX_LV; i++) total += RW.CORE_LV[i].cost;
+  ok(total >= 1200, '升满圣火总共要 ' + total + ' 金币（基础价）');
+  g.startWave(1); run(g, 30);
+  ok(g.sanctuaryYield() === 0, '1 级还没有圣域收成');
+  g.shardCount = 99999; g.upgradeCore();
+  var y2 = g.sanctuaryYield();
+  ok(y2 > 0, '2 级起圣域收成：每波 ' + y2 + ' 金币');
+  g.upgradeCore('ward'); g.upgradeCore(); g.upgradeCore();
+  var y5 = g.sanctuaryYield();
+  ok(y5 > y2, '圣域越大收成越多：5 级每波 ' + y5);
+  // 圣域减速：放一只敌人到圣域里
+  var e = g.spawnEnemy ? null : null;
+  for (var k = 0; k < g.enemies.length; k++) if (g.enemies[k].on) { e = g.enemies[k]; break; }
+  if (!e) { run(g, 240); for (k = 0; k < g.enemies.length; k++) if (g.enemies[k].on) { e = g.enemies[k]; break; } }
+  if (e) { e.spawnT = 0; e.x = g.core.x + 60; e.y = g.core.y; g.updateSanctuary(); ok(e.inAura && e.slowT > 0 && e.slowAmt >= RW.SANCTUARY.hallow.slow, '敌人进了圣域被拖慢'); }
+  else ok(false, '没刷出敌人，测不了圣域减速');
+  var f1 = g.coreForm().slow;
+  g.upgradeCore();
+  ok(g.core.formTier === 2 && g.coreForm().slow > f1 && g.coreForm().tier === 2, '6 级：形态进阶到二阶');
+  g.upgradeCore(); g.upgradeCore(); g.upgradeCore();
+  ok(g.core.formTier === 3 && g.corePerk('twin') && g.corePerk('rain') && g.corePerk('form3'), '9 级：形态三阶、双生火舌、流星火雨');
+  ok(g.upgradeCore() === 'ok' && g.core.lv === 10, '升到 10 级');
+  ok(g.core.gunRange >= 99999 && g.core.aura > 3000, '天火：火舌射程与圣域覆盖全图');
+  ok(g.sanctuaryYield() > y5 * 2, '天火：全图收成 ' + g.sanctuaryYield());
+  ok(g.upgradeCore() !== 'ok', '满级后不能再升');
+  // 满级圣火能打到地图角落的敌人
+  if (e && e.on) {
+    e.x = 60; e.y = 60; e.hp = e.maxHp = 1e6; var hp0 = e.hp; run(g, 600);
+    ok(!e.on || e.hp < hp0, '天火打得到地图最远的角落');
+  }
+  var sv = g.saveRun ? g.saveRun() : null;
+  if (sv && g.loadRun) { var h = newGame('mage', {}, 92); h.loadRun(sv); ok(h.core.lv === 10 && h.core.aura === g.core.aura && h.core.formTier === 3, '局中存档：圣火等级、圣域、形态阶都还原'); }
+})();
 RW.loadMap('village');
 
 console.log((failed ? '  ' : '  ✓ ') + passed + ' 项通过' + (failed ? '，' + failed + ' 项失败' : ''));

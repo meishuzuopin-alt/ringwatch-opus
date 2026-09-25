@@ -72,6 +72,18 @@ fs.mkdirSync(out, { recursive: true });
     await page.waitForTimeout(3500);
     await shot(page, (12 + i) + '_core_' + forms[i]);
   }
+  // 圣域：1 / 5 / 8 / 10 级，圣域越大视野越广，满级天火照遍全图
+  const lvs = [1, 5, 8, 10];
+  for (let i = 0; i < lvs.length; i++) {
+    await page.evaluate(lv => {
+      const g = RW.game;
+      g.core.lv = lv; g.core.form = lv >= 3 ? 'blaze' : ''; g.applyCoreLevel(); g.core.hp = g.core.maxHp;
+      g.player.x = g.core.x + 120; g.player.y = g.core.y - 80; g.banner = 0;
+      RW.W3.snap = true;
+    }, lvs[i]);
+    await page.waitForTimeout(3500);
+    await shot(page, (15 + i) + '_sanct_lv' + lvs[i]);
+  }
   await page.close();
 
   const p2 = await open('?2d');

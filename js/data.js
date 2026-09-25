@@ -336,15 +336,35 @@
     merchant: ['bounty', 'fan', 'ring'],
     gambler: ['wager', 'nova', 'fan']
   };
-  // 圣火等级：像主塔一样一档一档加，不再只加血上限
+  // 圣火等级：10 级，越往后越贵、越变态（玩家反馈：圣火不要轻易满级，每级都要有新增益）
+  // hp / dmg / range / cd / heal 是每级在上一级基础上再加的量；aura 是「圣域」半径（像素，绝对值）；
+  // perk 是这一级新解锁的能力（效果数值见 RW.SANCTUARY）；note 写在升级按钮上，desc 写在说明里
   RW.CORE_LV = [
     null,
-    { note: '基础' },
-    { cost: 20, hp: 50, dmg: 2, range: 30, cd: 0.06, heal: 0.05, note: '火舌更远' },
-    { cost: 32, hp: 70, dmg: 2, range: 25, cd: 0.06, heal: 0.05, note: '射得更快' },
-    { cost: 48, hp: 90, dmg: 3, range: 30, cd: 0.05, heal: 0.1, note: '开波回更多' },
-    { cost: 72, hp: 120, dmg: 4, range: 40, cd: 0.05, heal: 0.1, note: '圣火封顶' }
+    { aura: 200, note: '基础', desc: '圣火照亮身边一圈：这就是圣域' },
+    { cost: 22, hp: 50, dmg: 2, range: 30, cd: 0.05, heal: 0.05, aura: 260, perk: 'yield', note: '圣域收成', desc: '圣域里的田舍安心生产：每波结束按圣域覆盖的土地和房屋发金币' },
+    { cost: 36, hp: 70, dmg: 2, range: 30, cd: 0.05, heal: 0.05, aura: 320, perk: 'form', note: '选形态', desc: '圣火选定形态：烈焰 / 守护 / 星火，6 级、9 级再各进阶一次' },
+    { cost: 56, hp: 90, dmg: 3, range: 40, cd: 0.04, heal: 0.05, aura: 390, perk: 'hallow', note: '圣域减速', desc: '敌人踏进圣域就被拖慢；圣域里的建筑和同伴每秒回血' },
+    { cost: 84, hp: 120, dmg: 4, range: 40, cd: 0.04, heal: 0.05, aura: 470, perk: 'bless', note: '圣域加护', desc: '英雄在圣域里每秒回血，同伴和建筑伤害提高' },
+    { cost: 150, hp: 150, dmg: 5, range: 50, cd: 0.03, heal: 0.05, aura: 560, perk: 'form2', note: '形态二阶', desc: '圣火形态进阶：伤害、范围、次数全面变强' },
+    { cost: 215, hp: 190, dmg: 6, range: 60, cd: 0.03, heal: 0.05, aura: 660, perk: 'twin', note: '双生火舌', desc: '火舌每次多射一发，各打不同的敌人' },
+    { cost: 295, hp: 240, dmg: 7, range: 80, cd: 0.02, heal: 0.05, aura: 780, perk: 'rain', note: '流星火雨', desc: '每隔一会儿从天上砸下流星，落在射程内的敌群里' },
+    { cost: 390, hp: 300, dmg: 9, range: 100, cd: 0.02, heal: 0.05, aura: 920, perk: 'form3', note: '形态三阶', desc: '圣火形态终极进阶；圣域里的敌人持续灼烧、受到的伤害提高' },
+    { cost: 520, hp: 400, dmg: 12, range: 0, cd: 0.03, heal: 0.1, aura: 4000, perk: 'sky', note: '天火', desc: '圣域照遍全图：火舌与流星打得到地图上任何地方，收成翻倍' }
   ];
+  RW.CORE_MAX_LV = RW.CORE_LV.length - 1;
+  // 圣域：圣火照亮的范围。镜头、视野、收成、各级能力都跟着它走
+  RW.SANCTUARY = {
+    formTierAt: [0, 3, 6, 9],       // 几级进到形态 I / II / III
+    yield: { perCell: 0.015, perHouse: 0.25, skyMul: 2 },   // 每波收成 = 覆盖的可走地块 × perCell + 覆盖的房屋格 × perHouse
+    hallow: { slow: 0.18, tend: 2 },                       // 圣域内敌人减速 18%；建筑与同伴每秒回 2
+    bless: { regen: 0.015, allyDmg: 0.2 },                 // 英雄每秒回 1.5% 最大生命；同伴与建筑伤害 +20%
+    twin: { shots: 1 },
+    rain: { cd: 2.2, dmgMul: 3, blast: 70, skyCd: 1.2 },   // 流星：伤害 = 火舌伤害 × dmgMul；天火时更频繁
+    judge: { burn: 0.6, taken: 0.2 },                      // 9 级：灼烧每秒 = 火舌伤害 × burn；受到伤害 +20%
+    skyRange: 99999,
+    dim: 0.32                                              // 圣域外的土地压暗多少（还没被圣火照亮）
+  };
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
   RW.FRONTS = [null];
 
@@ -356,9 +376,12 @@
 
   RW.CORE_FORM_AT = 3;
   RW.CORE_FORMS = {
-    blaze: { name: '烈焰圣火', color: '#ff7a2e', note: '火舌伤害 ×1.6，命中处小范围爆燃', dmgMul: 1.6, blast: 46, blastK: 0.5 },
-    ward:  { name: '守护圣火', color: '#8fe8ff', note: '每 1.5 秒一圈守护波：减速敌人，修复身边建筑与同伴，圣火每秒回 2', pulse: 1.5, slow: 0.4, slowT: 1.2, regen: 2, heal: 6, reach: 60 },
-    star:  { name: '星火圣火', color: '#d9a8ff', note: '一次射出 3 道星火，各打不同目标，射程 +40', shots: 3, range: 40, dmgMul: 0.75 }
+    blaze: { name: '烈焰圣火', color: '#ff7a2e', note: '火舌伤害 ×1.6，命中处小范围爆燃', dmgMul: 1.6, blast: 46, blastK: 0.5,
+      tiers: [null, { dmgMul: 2.1, blast: 62, blastK: 0.6, note: '伤害 ×2.1，爆燃更大' }, { dmgMul: 2.8, blast: 84, blastK: 0.75, note: '伤害 ×2.8，爆燃覆盖一片' }] },
+    ward:  { name: '守护圣火', color: '#8fe8ff', note: '每 1.5 秒一圈守护波：减速敌人，修复身边建筑与同伴，圣火每秒回 2', pulse: 1.5, slow: 0.4, slowT: 1.2, regen: 2, heal: 6, reach: 60,
+      tiers: [null, { pulse: 1.2, slow: 0.5, regen: 4, heal: 10, reach: 110, note: '守护波更快更远，回复翻倍' }, { pulse: 1.0, slow: 0.6, regen: 7, heal: 16, reach: 180, note: '守护波每秒一次，覆盖大片圣域' }] },
+    star:  { name: '星火圣火', color: '#d9a8ff', note: '一次射出 3 道星火，各打不同目标，射程 +40', shots: 3, range: 40, dmgMul: 0.75,
+      tiers: [null, { shots: 5, range: 70, dmgMul: 0.85, note: '一次 5 道星火，射程再远' }, { shots: 8, range: 110, dmgMul: 0.95, note: '一次 8 道星火，满屏追敌' }] }
   };
   RW.CORE_FORM_ORDER = ['blaze', 'ward', 'star'];
 
@@ -784,7 +807,7 @@
     { id: 'set_melee', name: '近战宗师', desc: '近战流派达到 6 层', check: function (pr, r) { return (r.setMax.melee || 0) >= 6; } },
     { id: 'set_ranged', name: '远程宗师', desc: '远程流派达到 6 层', check: function (pr, r) { return (r.setMax.ranged || 0) >= 6; } },
     { id: 'set_spell', name: '法术宗师', desc: '法术流派达到 6 层', check: function (pr, r) { return (r.setMax.spell || 0) >= 6; } },
-    { id: 'core_max', name: '烈焰高塔', desc: '圣火升到满级', check: function (pr, r) { return r.coreLv >= RW.CORE_LV.length - 1; } },
+    { id: 'core_max', name: '天火降世', desc: '圣火升到 10 级，天火照遍全图', check: function (pr, r) { return r.coreLv >= RW.CORE_LV.length - 1; } },
     { id: 'legend', name: '传说', desc: '买到一件传说道具', check: function (pr, r) { return r.legendary; } },
     { id: 'rich', name: '富甲一村', desc: '一局累计获得 1000 金币', check: function (pr, r) { return r.gold >= 1000; } },
     { id: 'builder', name: '筑城者', desc: '一局建造 8 座建筑', check: function (pr, r) { return r.built >= 8; } },

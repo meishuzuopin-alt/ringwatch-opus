@@ -530,7 +530,7 @@
     // 头部
     D.text('波间整备', 16, 28, 22, C.text, 'left', true);
     var pm = Math.round((g.priceMul() - 1) * 100);
-    D.text('第 ' + g.wave + ' 波已完成 · 物价 +' + pm + '%', 16, 50, 11, C.dim, 'left');
+    D.text('第 ' + g.wave + ' 波已完成 · 物价 +' + pm + '% · 1–4 购买 · R 刷新 · Enter 下一波 · 还能禁用 ' + g.bansLeft + ' 件', 16, 50, 11, C.dim, 'left');
     var pv = UI.nextPreview(g);
     D.text(pv.text, 16, 64, 10, pv.boss ? '#ff9ab0' : C.gold, 'left', true);
     D.shardIcon(W - 110, 30, 11);
@@ -568,14 +568,14 @@
     }
     var co = g.core, ck = co.hp / co.maxHp;
     var fr = g.front;
-    D.text('圣火 Lv' + (co.lv || 1) + (fr ? ' · 王旗' + fr.name : '') + '  ' + Math.ceil(co.hp) + '/' + co.maxHp, 118, y + 14, 10, ck < 0.4 ? C.bad : '#ffd27a', 'left', true);
+    D.text('圣火 Lv' + (co.lv || 1) + '/' + RW.CORE_MAX_LV + (fr ? ' · ' + fr.name : '') + '  ' + Math.ceil(co.hp) + '/' + co.maxHp, 118, y + 14, 10, ck < 0.4 ? C.bad : '#ffd27a', 'left', true);
     c.fillStyle = '#140e0a'; c.fillRect(118, y + 22, 120, 6);
     c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(118, y + 22, 120 * ck, 6);
     var rc2 = g.coreRepairCost(), uc = g.coreUpgradeCost(), nxt = RW.CORE_LV[(co.lv || 1) + 1], maxed = !nxt;
     UI.button('repair', 118, y + 32, 124, 26, '维修 +50% · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '圣火是满的' : '金币不足' });
     var needF = g.coreNeedsForm(), cf = RW.CORE_FORMS[co.form];
-    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火已满级' : ((needF ? '选形态并升级 · ' : '升级 ' + nxt.note + ' · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
-    if (cf) D.text(cf.name, 396, y + 14, 10, cf.color, 'right', true);
+    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火已满级' : ((needF ? '选形态并升级 · ' : nxt.note + ' · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
+    if (cf) D.text(cf.name + ' ' + ['I', 'II', 'III'][(co.formTier || 1) - 1], 396, y + 14, 10, cf.color, 'right', true);
     // 卡片
     // 右栏：4 张货
     for (i = 0; i < 4; i++) {
@@ -583,7 +583,8 @@
       UI.card(g, sl, i, LW + 16, 82 + i * 112, W - LW - 32, 104);
     }
     // 圣火之后：键位提示
-    D.text('1–4 购买 · R 刷新 · Enter 开始下一波 · 本局还能禁用 ' + g.bansLeft + ' 件', 16, 268, 11, C.faint, 'left');
+    var nx2 = RW.CORE_LV[(g.core.lv || 1) + 1];
+    D.text(nx2 ? '圣火下一级 Lv' + ((g.core.lv || 1) + 1) + '：' + nx2.desc : '圣火已满级：天火照遍全图', 16, 268, 10, nx2 ? '#ffd27a' : C.gold, 'left');
     UI.setsPanel(g, 16, 280, LW - 32);
     UI.evolvePanel(g, 16, 360, LW - 32);
     // 底部操作（左栏）
@@ -908,6 +909,8 @@
           D.text(F.name, cx, y + 150, 20, F.color, 'center', true);
           var nl = D.wrap(F.note, w - 40, 13);
           for (var k = 0; k < nl.length; k++) D.text(nl[k], cx, y + 184 + k * 20, 13, C.text, 'center');
+          // 进阶预告：6 级二阶、9 级三阶
+          for (var ti = 1; F.tiers && ti < F.tiers.length; ti++) D.text(RW.SANCTUARY.formTierAt[ti + 1] + ' 级 ' + ['', 'II', 'III'][ti] + '：' + F.tiers[ti].note, cx, y + 236 + (ti - 1) * 16, 11, '#ffd27a', 'center');
           D.text('按 ' + (i + 1), cx, y + h - 18, 11, C.faint, 'center');
         } });
       })(RW.CORE_FORM_ORDER[i], i);

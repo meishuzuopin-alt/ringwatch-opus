@@ -549,6 +549,9 @@
     W3.land = GL.upload(t.land, { static: true });
     W3.water = GL.upload(t.water, { static: true, water: true });
     W3.lamps = t.lamps;
+    // 房屋格（圣域收成的光点从这里飘起）
+    var cell = M.cell || 40; W3.houses = [];
+    for (var r = 0; r < M.rows.length; r++) for (var c = 0; c < M.rows[r].length; c++) if (M.rows[r][c] === 'H') W3.houses.push({ x: c * cell + cell / 2, y: r * cell + cell / 2 });
     W3.mapId = M.id; W3.snap = true;
     if (RW.Draw && RW.Draw.onMap) RW.Draw.onMap();
     return true;
@@ -572,11 +575,16 @@
   };
 
   // ================= 镜头 =================
+  // 视野开阔度 0..1：跟着圣火等级走，前几级涨得快，后面慢慢涨到全开
+  W3.openK = function (g) {
+    var lv = (g.core && g.core.lv) || 1, mx = RW.CORE_MAX_LV || 5;
+    return Math.sqrt(Math.max(0, Math.min(1, (lv - 1) / (mx - 1))));
+  };
   var CAM = { pitch: 46 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 980 };
   W3.updateCamera = function (g, dt, orbit, aspect) {
     var p = g.player, WD = T.WORLD, ct = W3.camT;
-    var lv = (g.core && g.core.lv) || 1, open = Math.max(0, Math.min(1, (lv - 1) / 4));
-    CAM.dist = 860 + open * 560;
+    var lv = (g.core && g.core.lv) || 1, open = W3.openK(g);
+    CAM.dist = 860 + open * 640;   // 圣域越大，镜头越高越广
     CAM.pitch = (50 - open * 10) * Math.PI / 180;
     var tx, tz;
     if (orbit) { tx = T.core.x + Math.cos(W3.t * 0.12) * 120; tz = T.core.y - 120 + Math.sin(W3.t * 0.12) * 80; }
@@ -652,7 +660,7 @@
     var target = envPreset(W3.envFor(g));
     lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
     var env = W3.env; env.time = W3.t;
-    var open = Math.max(0, Math.min(1, (((g.core && g.core.lv) || 1) - 1) / 4));
+    var open = W3.openK(g);
     env.fogNear += open * 500; env.fogFar += open * 1100;
     W3.updateCamera(g, dt, orbit, viewport[2] / viewport[3]);
     var M = W3.meshes, k;
@@ -863,13 +871,13 @@
   function drawCore(g, M) {
     var co = g.core;
     var lv = co.lv || 1, fl = co.flash > 0 ? 0.4 : 0, F = RW.CORE_FORMS[co.form];
-    var grow = 1 + (lv - 1) * 0.08;   // 每升一级整座神龛长大一点
+    var grow = 1 + (lv - 1) * 0.06;   // 每升一级整座神龛长大一点
     GL.put(M.core, co.x, 0, co.y, 0, grow, grow, grow, 0, 1, 1, 1, fl);
     if (lv >= 2) GL.put(M.coreRing, co.x, 0, co.y, W3.t * 0.05, grow, grow, grow, 0, 1, 1, 1, fl);
     if (F && M['core_' + co.form]) GL.put(M['core_' + co.form], co.x, 0, co.y, co.form === 'star' ? W3.t * 0.6 : 0, grow * 1.3, grow * 1.3, grow * 1.3, 0, 1, 1, 1, fl);
     var t = W3.t, k = co.hp / co.maxHp;
     // 圣火：火焰大小跟着等级和血量走（残血时变矮变暗），颜色跟着形态走
-    var fk = (0.55 + 0.45 * k) * (1 + (lv - 1) * 0.15), top = F ? (co.form === 'star' ? 30 : 20) : 0;
+    var fk = (0.55 + 0.45 * k) * (1 + (lv - 1) * 0.11), top = F ? (co.form === 'star' ? 30 : 20) : 0;
     var base = F ? C(F.color) : hex('#ffb347');
     var fc = co.alert > 0 && Math.sin(t * 14) > 0 ? hex('#ff4a3a') : base;
     GL.glow(co.x, 44 + top, co.y, (30 + Math.sin(t * 9) * 3) * fk, fc, 0.6 + 0.3 * k);
@@ -890,7 +898,23 @@
     }
     GL.ground(true, co.x, 1, co.y, 120 + Math.sin(t * 3) * 6, 0, 0, hex('#ffb347'), 0.22 * W3.env.lamp + 0.08);
     GL.ground(true, co.x, 1.2, co.y, 42, 1, 0.12, k < 0.3 ? hex('#ff3b3b') : hex('#ffd27a'), 0.5);
-    GL.ground(true, co.x, 1.3, co.y, T.core.gunRange, 1, 0.01, hex('#ffd27a'), 0.18);
+    // 圣域：金色边界；圈外的土地还没被照亮，压暗一些（满级「天火」照遍全图就不压了）
+    var SA = RW.SANCTUARY, au = co.aura || 0, sky = au > 3000;
+    if (au > 0 && !sky) {
+      var R0 = 2600;
+      GL.ground(false, co.x, 0.6, co.y, R0, 1, 1 - au / R0, BLACK, SA.dim);
+      GL.ground(true, co.x, 1.3, co.y, au, 1, 0.012, F ? C(F.color) : hex('#ffd27a'), 0.28 + 0.06 * Math.sin(t * 2));
+    }
+    if (!sky && co.gunRange < 3000) GL.ground(true, co.x, 1.3, co.y, co.gunRange || T.core.gunRange, 1, 0.01, hex('#ffd27a'), 0.12);
+    // 圣域收成：被照亮的房屋上方飘起金色的光点（安详生产）
+    if (lv >= 2 && W3.houses) {
+      for (var hi = 0; hi < W3.houses.length; hi++) {
+        var hs = W3.houses[hi], hx = hs.x - co.x, hz = hs.y - co.y;
+        if (hx * hx + hz * hz > au * au || !W3.inView(hs.x, hs.y, 40)) continue;
+        var hp2 = (t * 0.5 + hi * 0.37) % 1;
+        GL.glow(hs.x + Math.sin(hi * 3.1) * 8, 40 + hp2 * 50, hs.y + Math.cos(hi * 2.3) * 8, 6 * (1 - hp2), hex('#ffe08a'), 0.7 * (1 - hp2));
+      }
+    }
   }
   function drawPickups(g, M) {
     var t = W3.t, i;

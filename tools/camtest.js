@@ -33,7 +33,7 @@ const { serve, CHROMIUM_ARGS } = require('./lib/serve');
       }
       return out;
     });
-    for (const lv of [1, 5]) for (const [x, y] of spots) {
+    for (const lv of [1, 5, 10]) for (const [x, y] of spots) {
       await page.evaluate(([lv, x, y]) => {
         const g = RW.game; g.core.lv = lv; g.applyCoreLevel(); g.player.x = x; g.player.y = y; g.player.vx = g.player.vy = 0;
         g.player.hp = g.player.maxHp = 1e6; g.core.hp = g.core.maxHp = 1e7; RW.W3.snap = true;

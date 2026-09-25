@@ -160,8 +160,8 @@ function runOne(seed, weapon, policy, maxWave, danger, map) {
     }
     if (g.mode === 'revive') g.finishRun();
     if (g.mode === 'result') {
-      if (g.won) return { wave: g.wave, cleared: g.wave, stage: g.player.stage, won: true, ev: g.rs.evolved };
-      return { wave: g.wave, cleared: g.wave - 1, stage: g.player.stage, ev: g.rs.evolved, cause: g.deathCause === 'core' ? 'core' : (g.lastHits.length ? g.lastHits[g.lastHits.length - 1].src : '?') };
+      if (g.won) return { wave: g.wave, cleared: g.wave, stage: g.player.stage, won: true, ev: g.rs.evolved, core: g.core.lv };
+      return { wave: g.wave, cleared: g.wave - 1, stage: g.player.stage, ev: g.rs.evolved, core: g.core.lv, cause: g.deathCause === 'core' ? 'core' : (g.lastHits.length ? g.lastHits[g.lastHits.length - 1].src : '?') };
     }
   }
   return { wave: g.wave, cleared: g.wave - 1, stage: g.player.stage };
@@ -176,13 +176,13 @@ var t0 = Date.now();
 // 可选第 5 个参数：只跑指定英雄，逗号分隔
 var heroes = process.argv[5] ? process.argv[5].split(',') : RW.CLASS_ORDER;
 for (var pi = 0; pi < policies.length; pi++) {
-  var pol = policies[pi], stages = {}, causes = {}, dieAt = {}, winAll = 0, evAll = 0;
+  var pol = policies[pi], stages = {}, causes = {}, dieAt = {}, winAll = 0, evAll = 0, cores = {};
   console.log('[' + pol + '] ' + RW.MAPS[mapId].name + ' · 危险 ' + danger + '：平均通过波数（≥10 波占比 / 通关率）');
   for (var wi = 0; wi < heroes.length; wi++) {
     var wid = heroes[wi], sum = 0, c10 = 0, wins = 0, all = [];
     for (var s = 0; s < runs; s++) {
       var r = runOne(1000 + s * 7919 + wi, wid, pol, maxWave, danger, mapId);
-      sum += r.cleared; all.push(r.cleared); stages[r.stage] = (stages[r.stage] || 0) + 1; evAll += r.ev || 0;
+      sum += r.cleared; all.push(r.cleared); stages[r.stage] = (stages[r.stage] || 0) + 1; evAll += r.ev || 0; if (r.core) cores[r.core] = (cores[r.core] || 0) + 1;
       if (r.cause) { causes[r.cause] = (causes[r.cause] || 0) + 1; dieAt[r.wave] = (dieAt[r.wave] || 0) + 1; }
       if (r.cleared >= 10) c10++;
       if (r.won) wins++;
@@ -193,6 +193,7 @@ for (var pi = 0; pi < policies.length; pi++) {
   }
   var tot = runs * heroes.length;
   console.log('    总通关率 ' + Math.round(100 * winAll / tot) + '%　平均进化 ' + (evAll / tot).toFixed(2) + ' 把　最终形态分布 ' + JSON.stringify(stages));
+  console.log('    结束时圣火等级分布 ' + JSON.stringify(cores));
   console.log('    死在第几波 ' + JSON.stringify(dieAt) + '\n    死因 ' + JSON.stringify(causes));
 }
 console.log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
