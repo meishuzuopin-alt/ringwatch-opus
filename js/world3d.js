@@ -12,14 +12,17 @@
   function h2(c, r) { var n = (c * 374761393 + r * 668265263) | 0; n = (n ^ (n >>> 13)) * 1274126177; return ((n ^ (n >>> 16)) >>> 0) / 4294967295; }
 
   // ================= 调色 =================
+  // FG-ART-001 标准色：高饱和亮色只留给圣火、英雄与必要的灯光。
   var PAL = {
-    grass: hex('#6a9a3e'), grass2: hex('#6f9f41'), grassDark: hex('#65943b'),
-    dirt: hex('#b08652'), dirt2: hex('#aa8250'), stone: hex('#aaa498'), stone2: hex('#b3ada1'),
-    rock: hex('#7b7f86'), rock2: hex('#8d9098'), rockDark: hex('#5f636b'), moss: hex('#5f8f3a'),
-    bed: hex('#3d5a6e'), water: hex('#2f8fd0'), plank: hex('#8a5a34'), plank2: hex('#9b6a3f'), wood: hex('#6b4428'),
-    trunk: hex('#6b4a2e'), leaf: hex('#3f7f35'), leaf2: hex('#4d9440'), leaf3: hex('#356b2e'),
-    wall: hex('#e8dcc4'), wallWood: hex('#8a6440'), roofBlue: hex('#3f5f9e'), roofRed: hex('#b5523a'),
-    lamp: hex('#ffcf6b'), banner: hex('#2a2440'), gold: hex('#e0a83a'), flower: [hex('#ffffff'), hex('#ffd6f0'), hex('#fff1a8')]
+    flame: hex('#ffb547'), ember: hex('#e8702a'), night: hex('#1e2a4a'), moon: hex('#5fa8c8'),
+    enemy: hex('#6b3fa0'), enemyDark: hex('#422866'), enemyEye: hex('#ff3b3b'),
+    grass: hex('#6f9a4e'), grass2: hex('#789f58'), grassDark: hex('#587b3f'),
+    dirt: hex('#c9a27a'), dirt2: hex('#b79069'), stone: hex('#aaa69d'), stone2: hex('#beb7aa'),
+    rock: hex('#747887'), rock2: hex('#898b98'), rockDark: hex('#4a5063'), moss: hex('#627f49'),
+    bed: hex('#34445a'), water: hex('#5fa8c8'), plank: hex('#8b6242'), plank2: hex('#9c7350'), wood: hex('#7a5234'),
+    trunk: hex('#69462f'), leaf: hex('#466f3f'), leaf2: hex('#56834a'), leaf3: hex('#385d38'),
+    wall: hex('#c9a27a'), wallWood: hex('#b88c62'), roofBlue: hex('#56647f'), roofRed: hex('#a8483a'),
+    lamp: hex('#ffb547'), banner: hex('#473653'), gold: hex('#d69a3c'), flower: [hex('#e8dfcf'), hex('#ca9aa9'), hex('#dfc780')]
   };
 
   // ================= 地貌 =================
@@ -185,9 +188,10 @@
     var trunk = 52 * s;
     gb.cyl(x, 0, z, 4.4 * s, 2.6 * s, trunk, 6, PAL.trunk);
     var lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3];
-    gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
-    gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
-    if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    // 三团错位树冠，保留原来的最多三颗 blob，不增加批次与最坏面数。
+    gb.blob(x - 10 * s, trunk * 0.92, z - 5 * s, 15 * s, 15 * s, 16 * s, shade(lc, 0.92), 0, seed, 0.22);
+    gb.blob(x + 9 * s, trunk * 1.02, z + 5 * s, 16 * s, 17 * s, 16 * s, lc, 0, seed + 5, 0.22);
+    gb.blob(x + (R() - 0.5) * 4 * s, trunk * 1.28, z - 3 * s, 14 * s, 14 * s, 14 * s, shade(lc, 1.08), 0, seed + 9, 0.25);
   }
   function tufts(gb, x, z, c, r) {
     var R = rnd(c * 977 + r * 131 + 5);
@@ -244,16 +248,21 @@
     if (ch(c, r + 1) !== '=' && ch(c, r + 1) !== '~') { if (left) lantern(gb, x0 + 2, z0 + C + 6, lamps); if (right) lantern(gb, x0 + C - 12, z0 + C + 6, lamps); }
   }
   function house(gb, x0, z0, w, d, blue, lamps) {
-    var cx = x0 + w / 2, cz = z0 + d / 2, wall = blue ? PAL.wall : PAL.wallWood, roof = blue ? PAL.roofBlue : PAL.roofRed;
+    var cx = x0 + w / 2, cz = z0 + d / 2, wall = blue ? PAL.wall : PAL.wallWood, roof = PAL.roofRed;
     var span = Math.min(w, d);
     var wallH = Math.max(52, Math.min(78, span * 0.72));
     var roofH = Math.max(28, Math.min(50, span * 0.4));
     var doorH = 36;
     gb.box(cx, 0, cz, w - 8, 4, d - 6, PAL.stone2);
-    gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall);
-    gb.box(x0 + 7, 4, cz, 3, wallH, d - 10, PAL.wood); gb.box(x0 + w - 7, 4, cz, 3, wallH, d - 10, PAL.wood);
-    gb.box(cx, wallH, cz, w - 10, 4, d - 10, PAL.wood);
-    gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof);
+    // 房屋主体收窄、屋顶外挑，形成远景也清楚的外形。
+    gb.box(cx, 4, cz, w - 18, wallH, d - 18, wall);
+    gb.box(x0 + 10, 4, cz, 4, wallH, d - 14, PAL.wood); gb.box(x0 + w - 10, 4, cz, 4, wallH, d - 14, PAL.wood);
+    gb.box(cx, wallH * 0.55, z0 + d - 8.2, w - 18, 3, 2.2, PAL.wood);
+    gb.box(cx, wallH, cz, w - 12, 5, d - 12, PAL.wood);
+    gb.roof(cx, wallH + 4, cz, w + 8, roofH + 8, d + 8, roof);
+    // 两层屋顶以大块色带表达，不逐片堆几何。
+    gb.box(cx, wallH + 8, z0 + d + 3, w + 10, 4, 5, shade(roof, 0.78));
+    gb.box(cx, wallH + roofH * 0.5, z0 + d - 1, w + 2, 3, 4, shade(roof, 1.08));
     gb.box(cx - w * 0.2, wallH + roofH * 0.45, cz - 4, 7, 20, 7, PAL.rockDark);
     gb.box(cx, 4, z0 + d - 5.5, 12, doorH, 1.4, PAL.wood);
     var winY = 4 + doorH * 0.45;
@@ -331,14 +340,21 @@
     M.prop_coin = model(function (g) { g.blob(2.5, 9, 7, 3.6, 3.8, 3.6, hex('#8a6440'), 0, 5, 0.12); g.box(2.5, 12.6, 7, 1.8, 1.4, 1.8, hex('#5a3a22')); g.cyl(5.5, 15, 7, 2.2, 2.2, 0.8, 8, GOLDC, 0.8); });
     M.prop_dice = model(function (g) { g.box(5, 10, 7, 3.6, 3.6, 3.6, hex('#f4f0e0')); g.box(6.9, 11.2, 7, 0.3, 0.9, 0.9, hex('#1f5a4a')); g.box(4, 14, 8.5, 2.6, 2.6, 2.6, hex('#ffd6d6')); });
     // ---- 敌人 ----
-    M.imp = model(function (g) {
-      var b = hex('#6a3f8e');
-      g.box(-1, 0, 2.2, 2.4, 4, 2.4, b); g.box(-1, 0, -2.2, 2.4, 4, 2.4, b);
-      g.blob(0, 7, 0, 5.5, 4.6, 5, b, 0, 11, 0.2);
-      g.blob(4, 10, 0, 3.4, 3.2, 3.4, hex('#7d4ea3'), 0, 3, 0.15);
-      g.cyl(3, 12.5, 2, 1, 0, 4, 4, hex('#1d1028')); g.cyl(3, 12.5, -2, 1, 0, 4, 4, hex('#1d1028'));
-      g.box(6.8, 10, 1.2, 0.6, 1, 1, hex('#ff3b3b'), 2); g.box(6.8, 10, -1.2, 0.6, 1, 1, hex('#ff3b3b'), 2);
-      g.box(3, 5, 4.5, 4, 1.4, 1.4, b); g.box(3, 5, -4.5, 4, 1.4, 1.4, b);
+    M.imp = model(function (g) { // 杂兵：小、圆、贴地
+      var b = PAL.enemy, d = PAL.enemyDark, eye = PAL.enemyEye;
+      g.blob(-1, 5, 0, 7, 6, 7, b, 0, 11, 0.18);
+      g.blob(3.5, 7, 0, 4.6, 4.2, 4.8, shade(b, 1.08), 0, 3, 0.14);
+      g.box(-2, 0, 3.2, 3, 3, 3, d); g.box(-2, 0, -3.2, 3, 3, 3, d);
+      g.box(7.7, 7.4, 1.5, 0.7, 1.3, 1.3, eye, 2.4); g.box(7.7, 7.4, -1.5, 0.7, 1.3, 1.3, eye, 2.4);
+    });
+    M.elite = model(function (g) { // 精英：高挑，头顶与两边尖刺形成锯齿外形
+      var b = PAL.enemy, d = PAL.enemyDark, eye = PAL.enemyEye;
+      g.box(-1, 0, 3.2, 3.4, 8, 3.4, d); g.box(-1, 0, -3.2, 3.4, 8, 3.4, d);
+      g.cyl(0, 7, 0, 8, 5.5, 18, 7, b);
+      g.blob(3, 25, 0, 6, 6, 6, shade(b, 1.06), 0, 17, 0.12);
+      g.cyl(-2, 28, 0, 2.5, 0, 12, 4, d);
+      g.cyl(-1, 20, 6, 2.2, 0, 10, 4, d); g.cyl(-1, 20, -6, 2.2, 0, 10, 4, d);
+      g.box(8.5, 26, 2, 0.8, 1.5, 1.5, eye, 2.5); g.box(8.5, 26, -2, 0.8, 1.5, 1.5, eye, 2.5);
     });
     M.batBody = model(function (g) { g.blob(0, 0, 0, 3.5, 3, 3, hex('#5a3a8a'), 0, 2, 0.15); g.box(2.8, 0.8, 1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); g.box(2.8, 0.8, -1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); });
     M.batWing = model(function (g) {
@@ -346,15 +362,14 @@
       g.tri([1, 0, 1.5], [-2, 0, 9], [2, 3, 7], c); g.tri([1, 0, 1.5], [2, 3, 7], [-2, 0, 9], c);
       g.tri([1, 0, -1.5], [2, 3, -7], [-2, 0, -9], c); g.tri([1, 0, -1.5], [-2, 0, -9], [2, 3, -7], c);
     });
-    M.brute = model(function (g) {
-      var st = hex('#6d7486'), dk = hex('#454a58');
-      g.box(-1, 0, 4, 5, 7, 5, dk); g.box(-1, 0, -4, 5, 7, 5, dk);
-      g.box(0, 6, 0, 14, 13, 16, st);
-      g.box(0, 6, 0, 14.6, 3, 16.6, hex('#8c5a34'));
-      g.blob(0, 18, 7.5, 5, 4, 4, dk, 0, 3, 0.2); g.blob(0, 18, -7.5, 5, 4, 4, dk, 0, 4, 0.2);
-      g.box(5, 16, 0, 7, 7, 8, dk);
-      g.box(8.6, 18, 2, 0.6, 1.2, 1.4, hex('#ff4a2a'), 2); g.box(8.6, 18, -2, 0.6, 1.2, 1.4, hex('#ff4a2a'), 2);
-      g.box(5, 8, 9.5, 3, 10, 3, dk); g.box(7, 4, 9.5, 10, 4, 4, hex('#5a3a22'));
+    M.brute = model(function (g) { // 重甲：更宽、低重心、厚甲片
+      var b = PAL.enemy, d = PAL.enemyDark, hi = shade(PAL.enemy, 1.12), eye = PAL.enemyEye;
+      g.box(-4, 0, 7, 7, 8, 7, d); g.box(-4, 0, -7, 7, 8, 7, d);
+      g.blob(-2, 9, 0, 18, 12, 17, b, 0, 5, 0.12);
+      g.box(-2, 12, 0, 32, 7, 22, d); g.box(-1, 19, 0, 26, 7, 18, hi);
+      g.blob(10, 17, 0, 9, 8, 9, b, 0, 8, 0.1);
+      g.box(19, 19, 3, 1, 2, 2.2, eye, 2.6); g.box(19, 19, -3, 1, 2, 2.2, eye, 2.6);
+      g.blob(0, 11, 17, 8, 9, 8, d, 0, 3, 0.1); g.blob(0, 11, -17, 8, 9, 8, d, 0, 4, 0.1);
     });
     M.wolf = model(function (g) {
       var f = hex('#6b4a30');
@@ -435,31 +450,36 @@
       g.box(10, 44, 12, 8, 2, 2, lava, 2.2); g.box(8, 30, -14, 8, 2, 2, lava, 2.2); g.box(-6, 46, 6, 2, 10, 2, lava, 2.2);
     });
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
-    M.sentry = model(function (g) {
-      g.box(0, 0, 0, 22, 26, 22, PAL.rock2, 0, PAL.stone);
-      g.box(0, 26, 0, 16, 62, 16, PAL.wallWood);
-      g.box(0, 58, 8.2, 7, 8, 0.8, hex('#1a120c'));
-      g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed);
-      g.box(0, 40, 8.4, 8, 28, 0.8, PAL.banner); g.box(0, 52, 8.9, 4, 6, 0.4, PAL.gold, 0.6);
+    M.sentry = model(function (g) { // 尖顶高塔
+      g.box(0, 0, 0, 28, 12, 28, PAL.stone2, 0, PAL.stone);
+      g.box(0, 12, 0, 18, 60, 18, PAL.wallWood);
+      g.box(0, 48, 9.4, 10, 18, 1, PAL.wood);
+      g.box(0, 66, 0, 31, 5, 31, PAL.wood);
+      g.cyl(0, 71, 0, 20, 0, 31, 4, PAL.roofRed);
+      g.box(0, 102, 0, 2, 12, 2, PAL.wood); g.box(0, 110, 4, 1, 7, 9, PAL.ember);
     });
-    M.pylon = model(function (g) {
-      g.box(0, 0, 0, 20, 10, 20, PAL.rock2, 0, PAL.stone);
-      g.box(0, 10, 0, 10, 70, 10, PAL.rock);
-      g.blob(0, 92, 0, 8, 22, 8, hex('#8fe3ff'), 1.1, 3, 0.15);
-      g.blob(6, 48, 4, 4, 16, 4, hex('#8fe3ff'), 0.9, 5, 0.2); g.blob(-6, 36, -4, 4, 14, 4, hex('#8fe3ff'), 0.9, 6, 0.2);
+    M.pylon = model(function (g) { // 石座上悬浮水晶
+      g.cyl(0, 0, 0, 22, 17, 12, 8, PAL.stone2, 0, PAL.stone);
+      g.box(0, 12, 0, 11, 50, 11, PAL.rock);
+      for (var i = 0; i < 4; i++) { var a = i * Math.PI / 2; g.box(Math.cos(a) * 12, 54, Math.sin(a) * 12, 5, 17, 5, PAL.rockDark); }
+      g.cyl(0, 75, 0, 10, 1, 26, 5, PAL.moon, 1.35);
     });
-    M.siphon = model(function (g) {
-      g.box(0, 0, 0, 16, 6, 16, PAL.stone);
-      g.box(0, 6, 0, 5, 78, 5, PAL.wood);
-      g.box(0, 78, 0, 16, 3, 3, PAL.wood);
-      g.cyl(0, 92, 0, 7, 7, 2, 8, PAL.gold, 1.0);
+    M.siphon = model(function (g) { // 吸能塔：顶部是横向双环和垂落的收集针
+      g.cyl(0, 0, 0, 19, 15, 10, 8, PAL.stone);
+      g.box(0, 10, 0, 7, 67, 7, PAL.wood);
+      g.box(0, 68, 0, 34, 6, 7, PAL.wood);
+      g.cyl(-13, 74, 0, 9, 9, 3, 8, PAL.gold, 0.7); g.cyl(13, 74, 0, 9, 9, 3, 8, PAL.gold, 0.7);
+      g.cyl(0, 72, 0, 5, 0, 18, 5, PAL.ember, 0.8);
     });
-    M.barracks = model(function (g) {
-      g.box(0, 0, 0, 32, 4, 28, PAL.stone2);
-      g.box(0, 4, 0, 28, 48, 24, PAL.wallWood);
-      g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed);
-      g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
-      banner(g, -15, 13, 72);
+    M.barracks = model(function (g) { // 兵营：双坡厚屋顶、双长矛旗标
+      g.box(0, 0, 0, 38, 7, 34, PAL.stone2);
+      g.box(0, 7, 0, 28, 43, 25, PAL.wallWood);
+      g.box(-12, 7, 0, 4, 43, 27, PAL.wood); g.box(12, 7, 0, 4, 43, 27, PAL.wood);
+      g.roof(0, 50, 0, 42, 34, 38, PAL.roofRed);
+      g.box(0, 7, 13, 11, 28, 1, PAL.wood);
+      g.cyl(0, 68, 7, 3, 0, 31, 5, PAL.wood); g.cyl(0, 68, -7, 3, 0, 31, 5, PAL.wood);
+      g.cyl(0, 99, 7, 4, 0, 10, 4, PAL.stone); g.cyl(0, 99, -7, 4, 0, 10, 4, PAL.stone);
+      g.box(0, 82, 0, 15, 10, 2, PAL.ember);
     });
     M.soldier = model(function (g) {
       g.box(0, 0, 1.6, 1.8, 4, 1.8, hex('#5a5f6a')); g.box(0, 0, -1.6, 1.8, 4, 1.8, hex('#5a5f6a'));
@@ -512,10 +532,13 @@
   }
 
   // 敌人类型 → 模型与基础尺寸
+  // 三种外形复用三份几何：杂兵圆、精英高尖、重甲宽矮；碰撞半径仍完全由模拟层决定。
   var EMODEL = {
-    mite: { m: 'imp', base: 8 }, spore: { m: 'batBody', base: 6, fly: 28 }, shell: { m: 'brute', base: 14 }, dasher: { m: 'wolf', base: 10 },
-    splitter: { m: 'sack', base: 12 }, bomber: { m: 'goblin', base: 10 }, spitter: { m: 'archer', base: 9 }, shielder: { m: 'shaman', base: 11 },
-    warden: { m: 'warlock', base: 22 }, brood: { m: 'brood', base: 26 }, boss: { m: 'golem', base: 38 }
+    mite: { m: 'imp', base: 8, shape: 'small' }, spore: { m: 'imp', base: 8, fly: 24, shape: 'small' },
+    shell: { m: 'brute', base: 18, shape: 'heavy' }, dasher: { m: 'elite', base: 14, shape: 'elite' },
+    splitter: { m: 'imp', base: 8, shape: 'small' }, bomber: { m: 'imp', base: 8, shape: 'small' },
+    spitter: { m: 'elite', base: 14, shape: 'elite' }, shielder: { m: 'elite', base: 14, shape: 'elite' },
+    warden: { m: 'elite', base: 14, shape: 'elite' }, brood: { m: 'brute', base: 18, shape: 'heavy' }, boss: { m: 'brute', base: 18, shape: 'heavy' }
   };
   var TMODEL = { sentry: 'sentry', pylon: 'pylon', siphon: 'siphon', barracks: 'barracks' };
 
@@ -524,11 +547,11 @@
     // grade = [饱和度, 对比度, 边缘光, 亮度偏移]；shadowDark = 阴影里保留多少直射光；line = 描边颜色；
     // bloom = 泛光强度，thr = 泛光阈值（越低越多东西发光）
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
+      day: { light: [-0.45, 0.82, 0.36], sun: PAL.flame, sky: shade(PAL.moon, 0.72), ground: shade(PAL.night, 0.52), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
         grade: [1.12, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9 },
       dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6,
         grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(PAL.moon, 0.35), sky: shade(PAL.night, 0.55), ground: shade(PAL.night, 0.28), fog: shade(PAL.night, 0.62), clear: shade(PAL.night, 0.38), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
         grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62 },
       boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9,
         grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66 }
@@ -719,13 +742,13 @@
     }
     // 设置：主角脚下光圈（不受受击闪烁影响，人多时也能一眼找到自己）
     if (RW.opt.ring && g.mode !== 'down') {
-      var rc = C((g.cls || RW.CLASSES.mage).color);
+      var rc = PAL.flame;
       GL.ground(false, p.x, 0.6, p.y, p.r * 2.1 + 7, 1, 0.3, [0.02, 0.02, 0.03], 0.35);
       GL.ground(false, p.x, 0.7, p.y, p.r * 2.1 + 6, 1, 0.16, rc, 0.8);
     }
     if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) return;
     var d = g.cls || RW.CLASSES.mage, look = d.look || { hat: 'wizard', prop: 'staff' };
-    var sc = p.r / 10 * 1.35, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    var sc = p.r / 10 * 1.35 * 2.5, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     var mv = Math.min(1, speed / 120), t = W3.t;
     var sw = mv * 0.6 * Math.sin(t * 14), bob = Math.abs(Math.sin(t * 14)) * mv * 1.5;
     var cx = p.x, cz = p.y, cs = Math.cos(face), sn = Math.sin(face);
@@ -799,6 +822,9 @@
       var e = g.enemies[i];
       if (!e.on || !W3.inView(e.x, e.y, 60)) continue;
       var em = EMODEL[e.type], mesh = M[em.m], s = e.r / em.base * 1.25;
+      // 只改显示比例；坐标、半径、选取和碰撞仍使用 e.r。
+      var silhouetteScale = em.shape === 'small' ? 0.78 : (em.shape === 'elite' ? 1.08 : 1.18);
+      s *= silhouetteScale;
       var sp = e.spawnT > 0 ? 1 - e.spawnT / 0.18 * 0.8 : 1;
       s *= sp;
       var yaw, tilt = 0, y = 0, tint = tintOf(e), fl = flashOf(e);
@@ -839,7 +865,7 @@
     for (var i = 0; i < g.corpses.length; i++) {
       var c = g.corpses[i];
       if (!c.on || !W3.inView(c.x, c.y, 40)) continue;
-      var em = EMODEL[c.type], s = c.r / em.base * 1.25, k = c.life / c.max;
+      var em = EMODEL[c.type], s = c.r / em.base * 1.25 * (em.shape === 'small' ? 0.78 : (em.shape === 'elite' ? 1.08 : 1.18)), k = c.life / c.max;
       var sink = k < 0.3 ? (0.3 - k) / 0.3 : 0;
       var y = c.z - sink * c.r * 1.5 + (em.fly ? 0 : 0);
       GL.put(M[em.m], c.x, y, c.y, c.rot, s * (1 - sink * 0.3), s * (1 - sink * 0.5), s * (1 - sink * 0.3), c.tilt, 0.55, 0.5, 0.55, k > 0.9 ? 0.5 : 0);
