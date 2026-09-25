@@ -6,3 +6,6 @@ shots/
 project.private.config.json
 dist/
 build/
+
+# 由 tools/gen_textures.js 确定性生成，不提交二进制资产
+/assets/textures/*.png

@@ -1,0 +1,459 @@
+{
+  "schema": 1,
+  "generator": "tools/gen_textures.js",
+  "source": "本项目原创代码生成（AI 辅助制作），无第三方图像或素材",
+  "palette": {
+    "warmEarth": "#C9A27A",
+    "roofOchre": "#A8483A",
+    "wood": "#7A5234",
+    "nightBlue": "#1E2A4A",
+    "moonCyan": "#5FA8C8",
+    "sacredGold": "#FFB547",
+    "emberOrange": "#E8702A",
+    "enemyEyeRed": "#FF3B3B"
+  },
+  "skyFormat": "1024×512 竖向渐变与云层合成；相较 2048×1024 等距柱状图，每张节省约 75% 显存，低频天空在当前 960×540 目标下仍足够清晰。",
+  "vramAccounting": "RGBA8；启用 mipmap 的贴图按基础层 × 4/3 估算，色带按无 mipmap 估算。",
+  "totalEstimatedVramBytes": 18295480,
+  "totalEstimatedVramMiB": 17.45,
+  "budgetMiB": 24,
+  "textures": [
+    {
+      "id": "ground_grass",
+      "file": "ground_grass_512.png",
+      "sha256": "e457b03bef09839a5239ca247e1168bf28a052316237e012660734c2529f53c7",
+      "width": 512,
+      "height": 512,
+      "tileable": true,
+      "purpose": "地面主贴图（昼夜共用，由场景光照变色）",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 1398102
+    },
+    {
+      "id": "ground_grass_low",
+      "file": "ground_grass_256.png",
+      "sha256": "c3f54c0715fb6c25b46e63b28aacc14e09c41428a4198e8b2170bc159d85025f",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "低配地面贴图",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "ground_dirt",
+      "file": "ground_dirt_512.png",
+      "sha256": "9f4a4c3d249f27d770e333c77af893bd2f323de470ab04affead33ce77e3fa8e",
+      "width": 512,
+      "height": 512,
+      "tileable": true,
+      "purpose": "地面主贴图（昼夜共用，由场景光照变色）",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 1398102
+    },
+    {
+      "id": "ground_dirt_low",
+      "file": "ground_dirt_256.png",
+      "sha256": "3e188b422636b32ea37082a63343a264bc621bc98829b740b8d0a253e742b0bb",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "低配地面贴图",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "ground_plaza",
+      "file": "ground_plaza_512.png",
+      "sha256": "398ed28b6511057b73d966b0c9baf98584da12ea11a959561e7613c4945967c7",
+      "width": 512,
+      "height": 512,
+      "tileable": true,
+      "purpose": "地面主贴图（昼夜共用，由场景光照变色）",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 1398102
+    },
+    {
+      "id": "ground_plaza_low",
+      "file": "ground_plaza_256.png",
+      "sha256": "e3c044d52d66edf7115e721c4add08db31583c2212a65430a7d362650422d8e2",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "低配地面贴图",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "ground_field",
+      "file": "ground_field_512.png",
+      "sha256": "928635ad27d9704289119b3d70940925b45a5f9add9ba4cb547fbe1cc9c1364b",
+      "width": 512,
+      "height": 512,
+      "tileable": true,
+      "purpose": "地面主贴图（昼夜共用，由场景光照变色）",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 1398102
+    },
+    {
+      "id": "ground_field_low",
+      "file": "ground_field_256.png",
+      "sha256": "afb45ca42631dde77c44924de2b1ab9194a93fbec2a504ee53152b7ddc73c4f2",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "低配地面贴图",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "building_roof",
+      "file": "building_roof_256.png",
+      "sha256": "2d99f2e6f8f34515e704caad3bb56c296d7157daa3a72bf0c95c32866e6485e7",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "建筑表面",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "building_thatch",
+      "file": "building_thatch_256.png",
+      "sha256": "d136bd0ccb191c344762fcbe4a2bbdbc70299127f6051559b3222e08c2b2c80e",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "建筑表面",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "building_wood",
+      "file": "building_wood_256.png",
+      "sha256": "ab2bee56d36ed38a09c7a0c75eb1ea5ceb9d31340fe649bccc117bfc63e8a260",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "建筑表面",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "building_stone",
+      "file": "building_stone_256.png",
+      "sha256": "6ebb06bc4e8efb5e8d98a06c5d6f74a9462dd1c4f8200d746c16c9db8d3c4a21",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "建筑表面",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "building_window",
+      "file": "building_window_256.png",
+      "sha256": "2b0f11aea92dacc6f9635ed2ca89dd8c90fbf66244cc5dd8821b2da4fbc94f9d",
+      "width": 256,
+      "height": 256,
+      "tileable": true,
+      "purpose": "窗格自发光遮罩（RGB 颜色兼强度）",
+      "three": {
+        "wrapS": "RepeatWrapping",
+        "wrapT": "RepeatWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "sky_day",
+      "file": "sky_day_1024x512.png",
+      "sha256": "c2d974a5d36debba10e3b6a23601c8e3726273625e485e6cafda49445b55d5ba",
+      "width": 1024,
+      "height": 512,
+      "tileable": false,
+      "purpose": "竖向天空渐变与低频云层；球穹/背景使用，水平方向内容连续",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 2796203
+    },
+    {
+      "id": "sky_dusk",
+      "file": "sky_dusk_1024x512.png",
+      "sha256": "a9822b066b2c9d0433c72981e3371e9ee8f7008275bec2c4b06cd6205dc54986",
+      "width": 1024,
+      "height": 512,
+      "tileable": false,
+      "purpose": "竖向天空渐变与低频云层；球穹/背景使用，水平方向内容连续",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 2796203
+    },
+    {
+      "id": "sky_night",
+      "file": "sky_night_1024x512.png",
+      "sha256": "fc0bb1fcc10c38021a0f102d4aef5fd509c5efe47caf8a5144ff084128cb313d",
+      "width": 1024,
+      "height": 512,
+      "tileable": false,
+      "purpose": "竖向天空渐变与低频云层；球穹/背景使用，水平方向内容连续",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 2796203
+    },
+    {
+      "id": "ramp_day",
+      "file": "ramp_day_256x8.png",
+      "sha256": "c19f8e112a3e352ebd2740c659bccfd8bfc33fc7af29b31c481b2143cdb79ef4",
+      "width": 256,
+      "height": 8,
+      "tileable": false,
+      "purpose": "白天卡通三段色带",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "NearestFilter",
+        "magFilter": "NearestFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 1,
+        "generateMipmaps": false
+      },
+      "estimatedVramBytes": 10923
+    },
+    {
+      "id": "ramp_night",
+      "file": "ramp_night_256x8.png",
+      "sha256": "93e8a74be96eddc617bb69816d0ff1a5a2f64b86f0f59adf76de645b04fda832",
+      "width": 256,
+      "height": 8,
+      "tileable": false,
+      "purpose": "夜晚卡通三段色带",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "NearestFilter",
+        "magFilter": "NearestFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 1,
+        "generateMipmaps": false
+      },
+      "estimatedVramBytes": 10923
+    },
+    {
+      "id": "ramp_boss",
+      "file": "ramp_boss_256x8.png",
+      "sha256": "68a13d0d8a08dbccb1e66bc1b7aa5dd01e8753b90e2cb81e96159a14b69f2017",
+      "width": 256,
+      "height": 8,
+      "tileable": false,
+      "purpose": "Boss 卡通三段色带",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "NearestFilter",
+        "magFilter": "NearestFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 1,
+        "generateMipmaps": false
+      },
+      "estimatedVramBytes": 10923
+    },
+    {
+      "id": "fx_soft_glow",
+      "file": "fx_soft_glow_256.png",
+      "sha256": "83eb2107f393adb69889f0229f07cab886b0e6219b47e91bb39abc1530aece3d",
+      "width": 256,
+      "height": 256,
+      "tileable": false,
+      "purpose": "圣火/法术柔光斑",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "fx_spark",
+      "file": "fx_spark_128.png",
+      "sha256": "191416e88373a18e1314c484d52628c9bc54c4eebc123f7fc6b57515ae8d82d9",
+      "width": 128,
+      "height": 128,
+      "tileable": false,
+      "purpose": "火星粒子",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 87382
+    },
+    {
+      "id": "fx_danger_ring",
+      "file": "fx_danger_ring_256.png",
+      "sha256": "a5c906f37374f85a65bda9eefad54fc222c4fb34fd10f613367c189d0483518c",
+      "width": 256,
+      "height": 256,
+      "tileable": false,
+      "purpose": "敌眼红危险圈",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    },
+    {
+      "id": "fx_ash_smoke",
+      "file": "fx_ash_smoke_256.png",
+      "sha256": "e06b74119da38e28ad0e7d959abad213a7fee304b45f985c31ce3622bdab57b0",
+      "width": 256,
+      "height": 256,
+      "tileable": false,
+      "purpose": "灰烬烟雾粒子",
+      "three": {
+        "wrapS": "ClampToEdgeWrapping",
+        "wrapT": "ClampToEdgeWrapping",
+        "minFilter": "LinearMipmapLinearFilter",
+        "magFilter": "LinearFilter",
+        "colorSpace": "SRGBColorSpace",
+        "anisotropy": 4,
+        "generateMipmaps": true
+      },
+      "estimatedVramBytes": 349526
+    }
+  ]
+}

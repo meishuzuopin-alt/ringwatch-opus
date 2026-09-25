@@ -6,6 +6,9 @@
   "main": "desktop/main.js",
   "productName": "FlameGuardian",
   "scripts": {
+    "gen:textures": "node tools/gen_textures.js",
+    "prestart": "npm run gen:textures",
+    "start": "npm run dev",
     "dev": "node tools/lib/serve.js 8080",
     "check": "node tools/check.js",
     "test:sim": "node tools/simtest.js",
@@ -25,10 +28,10 @@
     "icon": "node tools/icon.js",
     "desktop": "electron .",
     "desktop:smoke": "electron . --smoke --no-sandbox",
-    "dist": "node tools/icon.js && electron-builder --dir",
-    "dist:win": "node tools/icon.js && electron-builder --win --dir",
-    "dist:linux": "node tools/icon.js && electron-builder --linux --dir",
-    "dist:mac": "node tools/icon.js && electron-builder --mac --dir",
+    "dist": "npm run gen:textures && node tools/icon.js && electron-builder --dir",
+    "dist:win": "npm run gen:textures && node tools/icon.js && electron-builder --win --dir",
+    "dist:linux": "npm run gen:textures && node tools/icon.js && electron-builder --linux --dir",
+    "dist:mac": "npm run gen:textures && node tools/icon.js && electron-builder --mac --dir",
     "sync": "node tools/sync-status.js"
   },
   "devDependencies": {
@@ -56,6 +59,7 @@
       "js/**",
       "vendor/**",
       "fonts/**",
+      "assets/textures/**",
       "package.json"
     ],
     "asar": true,
