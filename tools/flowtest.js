@@ -86,7 +86,14 @@ fs.mkdirSync(out, { recursive: true });
   await page.waitForTimeout(8000);
   await shot('f4_boss');
   // 直接让主角倒下（不靠怪物慢慢打，CI 机器慢时也稳定），等复活页出现
+  // 英雄倒下但圣火还亮着：倒计时复活，不结束
   await page.evaluate(() => { const g = RW.game; g.player.hp = 0; g.lastHits.push({ src: '测试', dmg: 1, wave: g.wave }); g.die(); });
+  await page.waitForTimeout(600); await shot('f4b_respawn');
+  const respawnOk = await page.evaluate(() => RW.game.mode === 'battle' && RW.game.player.dead && RW.game.player.respawnT > 0);
+  await page.evaluate(() => { RW.game.player.respawnT = 0.05; });
+  await until(() => !RW.game.player.dead);
+  // 圣火熄灭才进复活页
+  await page.evaluate(() => { const g = RW.game; g.hurtCore(1e9, '测试'); });
   await until(() => RW.game.mode === 'revive', undefined);
   await page.waitForTimeout(300);
   await shot('f5_revive');
@@ -128,10 +135,10 @@ fs.mkdirSync(out, { recursive: true });
   await page.evaluate(() => { window.__pad.buttons[1] = 1; });
   await until(() => !RW.Main.isPaused()); await page.evaluate(() => { window.__pad.buttons[1] = 0; });
   const padOk = x1 > x0 + 20;
-  console.log('map+form', formOk, 'settings', optOk, 'run save', runSaved, 'resumed', resumed, 'pad move', Math.round(x1 - x0));
+  console.log('respawn', respawnOk, 'map+form', formOk, 'settings', optOk, 'run save', runSaved, 'resumed', resumed, 'pad move', Math.round(x1 - x0));
   console.log('setup', setupOk, 'bless', blessOk, 'evolved', evolved, 'victory [won,score,ach]', victory, 'achievements', achCount, 'daily', daily);
   console.log('towers after build', towers1, 'core after repair/upgrade', coreAfter, 'errors', errors.length ? errors : 'none');
-  if (!setupOk || !blessOk || !evolved || !victory[0] || !daily[0] || !optOk || !runSaved || !resumed || !padOk || !formOk) { console.error('流程断言失败'); process.exitCode = 1; }
+  if (!setupOk || !blessOk || !evolved || !victory[0] || !daily[0] || !optOk || !runSaved || !resumed || !padOk || !formOk || !respawnOk) { console.error('流程断言失败'); process.exitCode = 1; }
   await browser.close(); server.close();
   if (errors.length) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exit(1); });

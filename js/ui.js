@@ -1,4 +1,4 @@
-// 环带值守 · 界面：标题 / 选武器 / 整备商店 / 复活 / 结算 / 暂停
+// 圣火守护者 · 界面：标题 / 选武器 / 整备商店 / 复活 / 结算 / 暂停
 (function (root) {
   var RW = root.RW;
   var T = RW.TUNE, W = T.W, H = T.H, TAU = Math.PI * 2;
@@ -95,8 +95,8 @@
       }
       c.restore();
     }
-    D.glowText('环带值守', W / 2, 120, 64, C.cyan, 'center', 24);
-    D.text('R I N G W A T C H', W / 2, 170, 13, '#e8d8b8', 'center', true, 3);
+    D.glowText('圣火守护者', W / 2, 120, 60, C.cyan, 'center', 24);
+    D.text('F L A M E   G U A R D I A N', W / 2, 170, 13, '#e8d8b8', 'center', true, 3);
     D.text('夜色压境，守住村子的圣火。撑过倒计时，整备，再迎下一波。', W / 2, 214, 14, C.text, 'center', true, 3);
     var pr = g.prog || {};
     if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波' + (pr.wins ? ' · 通关 ' + pr.wins + ' 次' : '') + (pr.bestScore ? ' · 最高分 ' + pr.bestScore : ''), W / 2, 244, 13, C.gold, 'center', true, 3);
@@ -106,7 +106,7 @@
         sub: ri.hero + ' · ' + (ri.daily ? '每日挑战 · ' : '') + (ri.endless ? '无尽 · ' : '') + '第 ' + ri.wave + ' 波前的整备' + (ri.danger ? ' · 危险 ' + ri.danger : '') });
       UI.button('start', W / 2 - 150, 314, 300, 36, '开始新的一局（会放弃上局）', { size: 13 });
       y = 358;
-    } else { UI.button('start', W / 2 - 150, 272, 300, 58, '开始值守', { style: 'primary', size: 22 }); y = 340; }
+    } else { UI.button('start', W / 2 - 150, 272, 300, 58, '开始守护', { style: 'primary', size: 22 }); y = 340; }
     UI.button('mute', W / 2 - 150, y, 72, 38, muted ? '声音：关' : '声音：开', { size: 12 });
     UI.button('music', W / 2 - 74, y, 72, 38, UI.musicOff ? '音乐：关' : '音乐：开', { size: 12 });
     UI.button('howto', W / 2 + 2, y, 72, 38, '玩法说明', { size: 12 });
@@ -751,13 +751,13 @@
     var cx = W / 2;
     UI.dim(0.78);
     UI.panel(cx - 220, 100, 440, 340, C.red);
-    D.glowText('值守中断', cx, 146, 34, C.red, 'center', 14);
+    D.glowText('圣火熄灭', cx, 146, 34, C.red, 'center', 14);
     D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', cx, 186, 13, C.text, 'center');
     var h = g.lastHits[g.lastHits.length - 1];
-    if (h) D.text('致命一击：' + h.src, cx, 212, 13, '#ffb3c1', 'center', true);
-    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '原地复活', { style: 'ad', size: 18, sub: '恢复 60% 生命，清空身边敌人（每局一次）' });
+    if (h) D.text('最后一击：' + h.src, cx, 212, 13, '#ffb3c1', 'center', true);
+    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '重燃圣火', { style: 'ad', size: 18, sub: '圣火恢复一半，英雄站起来，清空身边的敌人（每局一次）' });
     if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
-    UI.button('giveup', cx - 190, 352, 380, 52, '结束值守，查看结算', { style: 'ghost', size: 14 });
+    UI.button('giveup', cx - 190, 352, 380, 52, '结束守护，查看结算', { style: 'ghost', size: 14 });
   };
 
   // ================= 结算 =================
@@ -765,7 +765,7 @@
     var r = g.result, c = D.ctx, i;
     D.drawBg(true);
     UI.dim(0.6);
-    var victory = r.won && !r.endless, head = r.daily ? '每日挑战 ' + r.daily : (victory ? '通关' : (r.endless ? '无尽模式' : '值守结束'));
+    var victory = r.won && !r.endless, head = r.daily ? '每日挑战 ' + r.daily : (victory ? '通关' : (r.endless ? '无尽模式' : '守护结束'));
     var setup = '危险 ' + (r.danger || 0) + (r.mutators && r.mutators.length ? ' · ' + r.mutators.map(function (m) { return RW.MUTATORS[m].name; }).join(' ') : '');
     D.text(head + (r.hero && RW.CLASSES[r.hero] ? ' · ' + RW.CLASSES[r.hero].name : '') + ' · ' + setup, W / 2, 30, 14, C.dim, 'center', true);
     if (victory) D.glowText('圣火长明', W / 2, 70, 40, C.gold, 'center', 22);

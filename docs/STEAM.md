@@ -36,9 +36,9 @@
 - [x] Electron 桌面壳：`npm run desktop` 本地运行，F11 / Alt+Enter 全屏，标题页可退出
 - [x] 打包：Actions →「桌面版打包（Steam 上传用）」→ Run workflow，下载 Windows / macOS / Linux 免安装目录
   - 本地：`npm run dist:win` / `dist:linux` / `dist:mac`，输出在 `dist/`
-- [x] 存档写在用户目录（Windows：`%APPDATA%/Ringwatch/saves/*.json`），方便开 Steam 云存档
+- [x] 存档写在用户目录（Windows：`%APPDATA%/Ringwatch/saves/*.json`，改名后沿用这个目录），方便开 Steam 云存档
 - [ ] 在 Steamworks 为每个平台建 Depot，用 SteamPipe（steamcmd / ContentBuilder）上传对应目录
-- [ ] 启动项：Windows 指向 `Ringwatch.exe`，Linux 指向 `Ringwatch`
+- [ ] 启动项：Windows 指向 `FlameGuardian.exe`，Linux 指向 `FlameGuardian`
 - [ ] Steam 云存档：后台用 Auto-Cloud 同步上面的 saves 目录，不用写代码
 
 ## 四、建议上线前补的功能

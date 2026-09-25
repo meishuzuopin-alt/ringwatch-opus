@@ -1,4 +1,4 @@
-// 环带值守 · 3D 场景：地形与道具（读 js/map.js）、角色/怪物/建筑的低模、特效、镜头、昼夜。
+// 圣火守护者 · 3D 场景：地形与道具（读 js/map.js）、角色/怪物/建筑的低模、特效、镜头、昼夜。
 // 世界坐标：x = 模拟 x，z = 模拟 y，y 朝上。所有模型在本地坐标里面朝 +X，脚底 y = 0。
 (function (root) {
   var RW = root.RW;
@@ -684,6 +684,12 @@
   function drawHero(g, M) {
     var p = g.player;
     if (g.mode === 'revive' || g.mode === 'result') return;
+    if (p.dead) {   // 倒下：圣火旁一圈复活进度
+      var rk2 = 1 - Math.max(0, p.respawnT / (p.respawnMax || 1));
+      GL.ground(true, p.x, 1.2, p.y, 26, 1, 0.12, hex('#ffd27a'), 0.25);
+      GL.ground(true, p.x, 1.3, p.y, 26 * rk2, 0, 0, hex('#ffe7a0'), 0.35);
+      return;
+    }
     // 设置：主角脚下光圈（不受受击闪烁影响，人多时也能一眼找到自己）
     if (RW.opt.ring && g.mode !== 'down') {
       var rc = C((g.cls || RW.CLASSES.mage).color);

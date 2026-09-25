@@ -1,4 +1,4 @@
-// 环带值守 · 渲染：镜头、甲板、实体、光效、小地图、战斗 HUD。全部 Canvas 运行时绘制。
+// 圣火守护者 · 渲染：镜头、甲板、实体、光效、小地图、战斗 HUD。全部 Canvas 运行时绘制。
 (function (root) {
   var RW = root.RW;
   var T = RW.TUNE, A = T.ARENA, WD = T.WORLD, V = T.VIEW, W = T.W, H = T.H, TAU = Math.PI * 2;
@@ -1223,8 +1223,18 @@
       c.fillStyle = C.text; c.fillRect(bx2 + 12, by2 + 10, 4, 14); c.fillRect(bx2 + 20, by2 + 10, 4, 14);
       D.text('Esc', bx2 + bw2 / 2, by2 + bh2 + 8, 8, C.faint, 'center');
     } });
+    // 英雄倒下：圣火还亮着就倒计时复活
+    if (p.dead) {
+      var rk = Math.max(0, p.respawnT / (p.respawnMax || 1));
+      c.fillStyle = 'rgba(8,6,12,0.72)'; D.rr(W / 2 - 170, 118, 340, 70, 10); c.fill();
+      c.strokeStyle = '#ffd27a'; c.lineWidth = 1.5; D.rr(W / 2 - 170, 118, 340, 70, 10); c.stroke();
+      D.text('英雄倒下 · ' + Math.ceil(p.respawnT) + ' 秒后在圣火旁复活', W / 2, 138, 15, '#ffe2a8', 'center', true);
+      c.fillStyle = '#2a2016'; c.fillRect(W / 2 - 140, 154, 280, 7);
+      c.fillStyle = '#ffd27a'; c.fillRect(W / 2 - 140, 154, 280 * (1 - rk), 7);
+      D.text((p.coreCost ? '圣火分出 ' + p.coreCost + ' 点火焰为你续命 · ' : '') + '圣火还亮着，这局就没输', W / 2, 176, 11, C.dim, 'center');
+    }
     // 低血警示
-    if (g.mode === 'battle' && hpk < 0.35) {
+    if (g.mode === 'battle' && hpk < 0.35 && !p.dead) {
       var pulse = 0.35 + 0.25 * Math.sin(g.clock * 6);
       var gr = c.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.6);
       gr.addColorStop(0, 'rgba(255,30,60,0)'); gr.addColorStop(1, 'rgba(255,30,60,' + pulse.toFixed(2) + ')');
@@ -1235,18 +1245,24 @@
     if (g.banner > 0 && (g.mode === 'battle' || (g.mode === 'clear' && g.won))) {
       var k = g.banner / 1.6, al = Math.min(1, k * 3);
       c.globalAlpha = al;
-      c.fillStyle = 'rgba(4,8,16,0.7)'; c.fillRect(0, 196, W, 76);
-      D.glowText(g.bannerText || ('第 ' + g.wave + ' 波'), W / 2, 226, g.bannerText ? 28 : 34, C.cyan, 'center', 16);
+      // 心流：横幅放在上方、半透明，不挡住英雄和身边的怪
+      var grd = c.createLinearGradient(0, 96, W, 96);
+      grd.addColorStop(0, 'rgba(4,8,16,0)'); grd.addColorStop(0.25, 'rgba(4,8,16,0.55)'); grd.addColorStop(0.75, 'rgba(4,8,16,0.55)'); grd.addColorStop(1, 'rgba(4,8,16,0)');
+      c.fillStyle = grd; c.fillRect(0, 96, W, 52);
+      D.glowText(g.bannerText || ('第 ' + g.wave + ' 波'), W / 2, 116, g.bannerText ? 20 : 24, C.cyan, 'center', 12);
       var sub = g.won ? (RW.RUN.waves + ' 波全部守住') : (g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒'));
       if (!g.won && g.final && !g.bannerText) sub = '终局 · 坚守 ' + g.dur + ' 秒并击败灭火者';
       if (g.eliteQ.length) sub += ' · 精英 ×' + g.eliteQ.length;
-      D.text(sub, W / 2, 256, 13, C.dim, 'center');
+      D.text(sub, W / 2, 138, 11, C.dim, 'center');
       c.globalAlpha = 1;
-      if (g.wave === 1) {
-        D.text('踩金色木箱召唤同伴，两个一样的会合成。Q / E / R 放技能', W / 2, 292, 13, C.text, 'center', false, 3);
-        D.text('B 造塔（1–4 选种类），花金币建塔，守住中央的圣火', W / 2, 314, 13, C.shard, 'center', false, 3);
-        if (g.shrines && g.shrines.length) D.text('地图上发蓝光的是祭坛：站进圈里占领，每波每座都有奖励（看小地图）', W / 2, 336, 13, '#b8f2ff', 'center', false, 3);
-      }
+    }
+    // 第一波的操作提示：放在下方，整波都在，不挡中间
+    if (g.wave === 1 && g.mode === 'battle' && g.wt < 14) {
+      c.globalAlpha = Math.min(1, (14 - g.wt) / 2);
+      D.text('踩金色木箱召唤同伴，两个一样的会合成 · Q / E / R 放技能 · 空格冲刺', W / 2, H - 108, 12, C.text, 'center', false, 3);
+      D.text('按 1–4 直接在脚下造塔（左下角有价格）· 守住中央的圣火', W / 2, H - 90, 12, C.shard, 'center', false, 3);
+      if (g.shrines && g.shrines.length) D.text('发蓝光的是祭坛：站进圈里占领，每波每座都有奖励（看小地图）', W / 2, H - 72, 12, '#b8f2ff', 'center', false, 3);
+      c.globalAlpha = 1;
     }
     if (g.evolveT > 0) {
       c.globalAlpha = Math.min(1, g.evolveT * 2);
@@ -1317,6 +1333,30 @@
       })(slots[si], si);
     }
     round('build', B.build, menu ? '收起' : '造塔', C.gold, 0, menu ? '' : g.towerCount() + '/' + T.build.max);
+    // 快速造塔：造塔键旁边一直显示四个快捷键（点一下也能造），手柄时显示 LB + 十字键
+    var PADK = ['←', '↑', '→', '↓'];
+    if (!menu && !(g.mut && g.mut.nobuild)) {
+      var qx = B.build.x + B.build.r + 12, qy = H - 44;
+      if (ui.padNav) D.text('LB 造塔菜单 · 十字键选', qx, qy - 14, 9, C.faint, 'left', false, 3);
+      else D.text('快速造塔：按数字键直接建在脚下', qx, qy - 14, 9, C.faint, 'left', false, 3);
+      for (var qi = 0; qi < RW.TOWER_ORDER.length; qi++) {
+        (function (id, i) {
+          var d = RW.TOWERS[id], price = g.buildPrice(id), ok = g.shardCount >= price && g.towerCount() < T.build.max;
+          ui.button('bt:' + id, qx + i * 67, qy, 64, 30, '', { disabled: !ok, why: g.towerCount() >= T.build.max ? '建筑已达上限' : '金币不足，需要 ' + price, draw: function (x, y, w, h, pressed) {
+            c.globalAlpha = ok ? 0.95 : 0.45;
+            c.fillStyle = pressed ? '#3a2a18' : 'rgba(20,15,11,0.85)'; D.rr(x, y, w, h, 6); c.fill();
+            c.strokeStyle = ok ? d.color : '#4a3a28'; c.lineWidth = 1.2; D.rr(x, y, w, h, 6); c.stroke();
+            var key = ui.padNav ? PADK[i] : String(i + 1);
+            c.fillStyle = ok ? C.gold : '#5a4630'; D.rr(x + 4, y + 6, 18, 18, 4); c.fill();
+            D.text(key, x + 13, y + 15, 11, '#1a1206', 'center', true);
+            D.text(d.name, x + 26, y + 10, 10, ok ? d.color : C.faint, 'left', true);
+            D.shardIcon(x + 30, y + 22, 3.5);
+            D.text(String(price), x + 36, y + 22, 9, ok ? C.shard : C.bad, 'left', true);
+            c.globalAlpha = 1;
+          } });
+        })(RW.TOWER_ORDER[qi], qi);
+      }
+    }
     if (menu) {
       var ids = RW.TOWER_ORDER;
       for (var i = 0; i < ids.length; i++) {
@@ -1331,7 +1371,9 @@
             D.text(D.towerBlurb(id), x + 8, yy + 30, 9, C.dim, 'left');
             D.shardIcon(x + 14, yy + 44, 5);
             D.text(String(price), x + 23, yy + 45, 12, ok ? C.shard : C.bad, 'left', true);
-            D.text(String(i + 1), x + w - 9, yy + 45, 9, C.faint, 'center');
+            var kc = ui.padNav ? PADK[i] : String(i + 1);   // 大号按键提示
+            c.fillStyle = ok ? C.gold : '#5a4630'; D.rr(x + w - 24, yy + 34, 18, 18, 4); c.fill();
+            D.text(kc, x + w - 15, yy + 43, 11, '#1a1206', 'center', true);
             c.globalAlpha = 1;
           } });
         })(ids[i], i);

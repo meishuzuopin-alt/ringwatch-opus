@@ -1,4 +1,4 @@
-// 环带值守 · 核心模拟（无渲染依赖，可在 Node 里无头运行做数值测试）
+// 圣火守护者 · 核心模拟（无渲染依赖，可在 Node 里无头运行做数值测试）
 // 世界坐标：整块甲板 TUNE.WORLD，活动范围 TUNE.ARENA；镜头由渲染层处理。
 (function (root) {
   var RW = root.RW;
@@ -202,7 +202,7 @@
     this.coreSrc = src('圣火之光', '#ffd27a', false);
     this.boss = null; this.bossAlert = 0; this.deathCause = '';
     p.x = CO.x; p.y = CO.y + 80; p.vx = p.vy = p.pvx = p.pvy = 0; p.inv = 0;
-    p.mass = 0; p.stage = 0; p.dashT = 0; p.dashCd = 0; p.trailN = 0; p.trailT = 0;
+    p.mass = 0; p.stage = 0; p.dashT = 0; p.dashCd = 0; p.trailN = 0; p.trailT = 0; p.dead = false; p.respawnT = 0;
     this.weapons = [];
     this.mods = {};
     this.skill = null; this.skills = []; this.retiredSkills = [];
@@ -283,6 +283,7 @@
       if (this._chestT <= 0) { this._chestT = 12; this.seedChests(1); }
     }
     var p = this.player;
+    if (p.dead) return;
     for (var i = 0; i < this.chests.length; i++) {
       var c = this.chests[i];
       if (!c.on) continue;
@@ -534,15 +535,18 @@
       return;
     }
     inp = inp || { mx: 0, my: 0 };
-    if (m === 'battle') this.wt += DT;
-    if (m === 'battle' && inp.dash) this.tryDash(inp);
-    if (m === 'battle' && inp.skill) { this.castSkill(inp.skill - 1); inp.skill = 0; }
-    inp.dash = false; inp.skill = false;
-    this.movePlayer(inp);
     var p = this.player;
+    if (m === 'battle') this.wt += DT;
+    if (p.dead) this.updateRespawn();   // 英雄倒下：圣火还在就倒计时复活，战斗照常进行
+    else {
+      if (m === 'battle' && inp.dash) this.tryDash(inp);
+      if (m === 'battle' && inp.skill) { this.castSkill(inp.skill - 1); inp.skill = 0; }
+      this.movePlayer(inp);
+    }
+    inp.dash = false; inp.skill = false;
     if (p.inv > 0) p.inv -= DT;
     if (p.dashCd > 0) p.dashCd -= DT;
-    if (m === 'battle' && this.st.regen > 0) p.hp = Math.min(p.maxHp, p.hp + this.st.regen * DT);
+    if (m === 'battle' && this.st.regen > 0 && !p.dead) p.hp = Math.min(p.maxHp, p.hp + this.st.regen * DT);
     if (m === 'battle') p.mp = Math.min(p.maxMp || T.player.mp, (p.mp || 0) + T.player.mpRegen * this.st.mpRegen * DT);
     if (m === 'battle' && this.st.coreRegen > 0) this.core.hp = Math.min(this.core.maxHp, this.core.hp + this.st.coreRegen * DT);
     if (p.hurtT > 0) p.hurtT -= DT;
@@ -552,7 +556,7 @@
     this.updateFocus();
     this.updateMarks();
     this.buildGrid();
-    if (m === 'battle') { this.updateWeapons(); this.updateSkill(); }
+    if (m === 'battle' && !p.dead) { this.updateWeapons(); this.updateSkill(); }
     this.updateTowers();
     this.updateSoldiers();
     this.updateChests();
@@ -2260,6 +2264,7 @@
   };
 
   G.hurtPlayer = function (dmg, source, fx, fy) {
+    if (this.player.dead) return;
     var p = this.player;
     if (p.inv > 0 || this.mode !== 'battle') return;
     if (this.st.dodge > 0 && this.R() < this.st.dodge) {   // 闪避：不掉血，短暂无敌
@@ -2296,11 +2301,41 @@
     if (p.hp <= 0) { p.hp = 0; this.die(); }
   };
 
+  // 英雄倒下：圣火还亮着就不结束，倒计时后在圣火旁复活；只有圣火熄灭才进复活 / 结算
   G.die = function () {
+    var p = this.player;
+    this.burst(p.x, p.y, 34, RW.EVO[p.stage].color, 260, 3, true);
+    if (this.deathCause !== 'core' && this.core.hp > 0) {
+      var R = RW.RESPAWN;
+      p.dead = true; p.hp = 0;
+      p.respawnT = p.respawnMax = Math.min(R.max, R.base + R.perWave * (this.wave - 1));
+      p.deadX = p.x; p.deadY = p.y;
+      // 圣火分出自己的火焰把英雄续回来：倒下有代价，但不会因此直接熄灭
+      var co = this.core, cost = Math.min(co.hp - 1, co.maxHp * R.coreCost);
+      if (cost > 0) { co.hp -= cost; p.coreCost = Math.round(cost); } else p.coreCost = 0;
+      this.rs.deaths = (this.rs.deaths || 0) + 1;
+      this.streak = 0; this.mom = 0; this.momTier = 0;
+      this.emit('die', 'respawn');
+      return;
+    }
     this.mode = 'down';
     this.downT = 1.1;
-    this.burst(this.player.x, this.player.y, 34, RW.EVO[this.player.stage].color, 260, 3, true);
     this.emit('die');
+  };
+  // 倒下期间：英雄藏在圣火旁（敌人会压向圣火），倒计时结束原地复活并短暂无敌
+  G.updateRespawn = function () {
+    var p = this.player, co = this.core;
+    p.x = co.x; p.y = co.y + co.r + 30; p.vx = p.vy = p.pvx = p.pvy = 0;
+    p.respawnT -= DT;
+    if (p.respawnT <= 1e-6) this.respawn();
+  };
+  G.respawn = function () {
+    var p = this.player, co = this.core;
+    if (!p.dead) return;
+    p.dead = false; p.hp = Math.ceil(p.maxHp * RW.RESPAWN.hp); p.inv = RW.RESPAWN.inv; p.respawnT = 0;
+    p.x = co.x; p.y = co.y + co.r + 30;
+    this.ringFx(p.x, p.y, 10, 140, 0.5, RW.EVO[p.stage].color, 5);
+    this.emit('revive');
   };
   G.canRevive = function () { return !this.reviveUsed && this.wave >= RW.AD.FIRST_AD_WAVE; };
   G.afterDeath = function () {
@@ -2311,6 +2346,7 @@
     var p = this.player;
     this.reviveUsed = true;
     this.rs.revived = true;
+    p.dead = false; p.respawnT = 0;
     p.hp = Math.ceil(p.maxHp * 0.6); p.inv = 2.2;
     var co = this.core; co.hp = Math.max(co.hp, co.maxHp * 0.5); this.deathCause = '';
     for (var i = 0; i < this.enemies.length; i++) {
@@ -2363,7 +2399,7 @@
     var rs = this.rs;
     return { wave: this.wave, won: this.won, danger: this.danger, bossKills: rs.bossKills, streak: this.bestStreak, mateMax: rs.mateMax, mateStar: rs.mateStar,
       evolved: rs.evolved, setMax: rs.setMax, coreLv: rs.coreLv, legendary: rs.legendary, gold: this.totalShards, built: this.built, bless: rs.bless,
-      revived: rs.revived, mutators: this.mutList.length, daily: this.daily, score: this.runScore(), shrines: rs.shrines || 0, map: this.mapId || 'village' };
+      revived: rs.revived, deaths: rs.deaths || 0, mutators: this.mutList.length, daily: this.daily, score: this.runScore(), shrines: rs.shrines || 0, map: this.mapId || 'village' };
   };
 
   // 局外进度：累计数据只记增量（通关后接无尽再结算不会重复算），返回新解锁的英雄与成就
@@ -2455,6 +2491,7 @@
   };
   G.updateHeals = function () {
     var p = this.player, pr = P.pickup * this.st.pickup + 10;
+    if (p.dead) return;
     for (var i = 0; i < this.heals.length; i++) {
       var h = this.heals[i];
       if (!h.on) continue;
@@ -2500,6 +2537,7 @@
   // ================= 绿球（吃了长质量） =================
   G.updateOrbs = function () {
     var p = this.player, reach = p.r + 12;
+    if (p.dead) return;
     for (var i = 0; i < this.orbs.length; i++) {
       var o = this.orbs[i];
       if (!o.on) continue;
@@ -2550,7 +2588,7 @@
       sh.x += sh.vx * DT; sh.y += sh.vy * DT; sh.vx *= 0.9; sh.vy *= 0.9;
       sh.life -= DT;
       if (sh.life <= 0) { sh.on = false; this.spark(sh.x, sh.y, '#3a8a7a'); continue; }
-      if (this.mode === 'battle' && d2 < pr2) { sh.mag = true; sh.sp = 120; continue; }
+      if (this.mode === 'battle' && d2 < pr2 && !p.dead) { sh.mag = true; sh.sp = 120; continue; }
       var rg = RW.TOWERS.siphon.range * RW.TOWER_TIER.range[this.tech.siphon - 1];
       for (var t = 0; t < this.towers.length; t++) {
         var tt = this.towers[t];
@@ -2572,6 +2610,7 @@
 
   // ================= 波次结束 =================
   G.clearWave = function () {
+    if (this.player.dead) this.respawn();
     this.mode = 'clear';
     this.clearT = 1.6;
     for (var i = 0; i < this.enemies.length; i++) { var e = this.enemies[i]; if (e.on) this.killEnemy(e, null, 'silent'); }

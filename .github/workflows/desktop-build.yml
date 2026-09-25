@@ -13,15 +13,15 @@ jobs:
           - os: windows-latest
             target: --win
             out: dist/win-unpacked
-            name: Ringwatch-windows
+            name: FlameGuardian-windows
           - os: macos-latest
             target: --mac
             out: dist/mac*
-            name: Ringwatch-macos
+            name: FlameGuardian-macos
           - os: ubuntu-latest
             target: --linux
             out: dist/linux-unpacked
-            name: Ringwatch-linux
+            name: FlameGuardian-linux
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

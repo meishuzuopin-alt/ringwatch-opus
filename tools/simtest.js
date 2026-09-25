@@ -328,6 +328,38 @@ RW.MAP_ORDER.forEach(function (mid, mi) {
   g.finishRun();
   ok(g.prog.history.length === 1 && g.prog.history[0].hero === 'mage' && g.prog.history[0].map === 'village', '最近几局记下英雄和地图');
 })();
+// 15. 英雄倒下：圣火还亮着就倒计时复活，不结束；圣火熄灭才结束
+(function () {
+  var g = newGame('mage', {}, 81);
+  g.startWave(6); run(g, 60);
+  var ch0 = g.core.hp;
+  g.player.hp = 1; g.hurtPlayer(999, '测试', g.player.x + 5, g.player.y);
+  ok(g.player.dead && g.mode === 'battle', '英雄倒下，战斗继续');
+  ok(ch0 - g.core.hp >= g.core.maxHp * RW.RESPAWN.coreCost - 1, '倒下的代价：圣火分出火焰续命');
+  var c1 = newGame('mage', {}, 84); c1.startWave(6); run(c1, 60); c1.core.hp = 3;
+  c1.player.hp = 1; c1.hurtPlayer(999, '测试', c1.player.x + 5, c1.player.y);
+  ok(c1.core.hp >= 1 && c1.player.dead && c1.mode === 'battle', '圣火快灭时倒下也不会被代价扣灭');
+  var t = g.player.respawnT;
+  ok(Math.abs(t - Math.min(RW.RESPAWN.max, RW.RESPAWN.base + RW.RESPAWN.perWave * 5)) < 1e-6, '复活倒计时 ' + t.toFixed(1) + ' 秒（随波数变长）');
+  var hp0 = g.player.hp; g.hurtPlayer(50, '测试', 0, 0);
+  ok(g.player.hp === hp0, '倒下期间不再受伤');
+  run(g, Math.ceil(t * 60) + 60);
+  ok(!g.player.dead && g.player.hp > 0 && g.player.inv > 0 && g.mode === 'battle', '倒计时结束在圣火旁复活，短暂无敌');
+  ok(Math.hypot(g.player.x - g.core.x, g.player.y - g.core.y) < 80, '复活在圣火旁边');
+  ok(g.rs.deaths === 1, '记下倒下次数');
+  g.player.hp = 1; g.hurtPlayer(999, '测试', g.player.x + 5, g.player.y);
+  g.clearWave();
+  ok(!g.player.dead, '清场时倒下的英雄直接站起来');
+  var h = newGame('mage', {}, 82);
+  h.startWave(2); h.hurtCore(1e9, '测试');
+  run(h, 120);
+  ok(h.mode === 'result' && h.result && h.result.coreDown, '圣火熄灭（前 3 波）直接结算');
+  var k = newGame('mage', {}, 83);
+  k.startWave(6); k.hurtCore(1e9, '测试'); run(k, 120);
+  ok(k.mode === 'revive', '第 4 波起圣火熄灭时给一次重燃机会');
+  k.revive();
+  ok(k.mode === 'battle' && k.core.hp >= k.core.maxHp * 0.5 && !k.player.dead, '重燃：圣火回到一半，英雄站着');
+})();
 RW.loadMap('village');
 
 console.log((failed ? '  ' : '  ✓ ') + passed + ' 项通过' + (failed ? '，' + failed + ' 项失败' : ''));

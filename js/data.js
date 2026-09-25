@@ -1,4 +1,4 @@
-// 环带值守 · 数据表（v3 奇幻守村）。逻辑只读这里的表，调数值只改这个文件。
+// 圣火守护者 · 数据表（v3 奇幻守村）。逻辑只读这里的表，调数值只改这个文件。
 (function (root) {
   var RW = root.RW || (root.RW = {});
 
@@ -349,6 +349,11 @@
   RW.FRONTS = [null];
 
   // 圣火形态：升到 3 级时三选一，玩法和外形都不同（玩家反馈：圣火不能只有一种形态）
+  // 英雄倒下后复活：圣火还亮着就不算输（玩家反馈：只要圣火没灭英雄就能倒计时复活）
+  // 复活时间 = base + perWave × (波数 − 1)，最多 max 秒；复活后回 hp 比例的生命并无敌 inv 秒
+  // 代价：倒下时圣火扣掉 coreCost × 最大生命（最多扣到剩 1 点，倒下本身不会让圣火熄灭）
+  RW.RESPAWN = { base: 5, perWave: 0.35, max: 12, hp: 0.6, inv: 2.5, coreCost: 0.2 };
+
   RW.CORE_FORM_AT = 3;
   RW.CORE_FORMS = {
     blaze: { name: '烈焰圣火', color: '#ff7a2e', note: '火舌伤害 ×1.6，命中处小范围爆燃', dmgMul: 1.6, blast: 46, blastK: 0.5 },
@@ -753,7 +758,7 @@
 
   // 成就：id 与以后的 Steam 成就一一对应（ACH_ + 大写 id）。check(pr 局外进度, r 本局汇总)
   RW.ACHIEVEMENTS = [
-    { id: 'first_run', name: '初次值守', desc: '完成第一局', check: function (pr) { return pr.runs >= 1; } },
+    { id: 'first_run', name: '初次守护', desc: '完成第一局', check: function (pr) { return pr.runs >= 1; } },
     { id: 'wave5', name: '站稳脚跟', desc: '撑到第 5 波', check: function (pr, r) { return r.wave >= 5; } },
     { id: 'wave10', name: '守夜人', desc: '撑到第 10 波', check: function (pr, r) { return r.wave >= 10; } },
     { id: 'wave15', name: '长夜将尽', desc: '撑到第 15 波', check: function (pr, r) { return r.wave >= 15; } },
@@ -784,11 +789,11 @@
     { id: 'rich', name: '富甲一村', desc: '一局累计获得 1000 金币', check: function (pr, r) { return r.gold >= 1000; } },
     { id: 'builder', name: '筑城者', desc: '一局建造 8 座建筑', check: function (pr, r) { return r.built >= 8; } },
     { id: 'bless5', name: '蒙福', desc: '一局获得 5 个祝福', check: function (pr, r) { return r.bless >= 5; } },
-    { id: 'no_revive', name: '一命通关', desc: '不复活通关', check: function (pr, r) { return r.won && !r.revived; } },
+    { id: 'no_revive', name: '一命通关', desc: '英雄一次都没倒下、也没重燃圣火就通关', check: function (pr, r) { return r.won && !r.revived && !r.deaths; } },
     { id: 'mut1', name: '逆风', desc: '开着变异器通关', check: function (pr, r) { return r.won && r.mutators >= 1; } },
     { id: 'mut4', name: '逆天', desc: '开着 4 个变异器通关', check: function (pr, r) { return r.won && r.mutators >= 4; } },
     { id: 'no_build', name: '孤胆', desc: '一座建筑都不造就通关', check: function (pr, r) { return r.won && r.built === 0; } },
-    { id: 'daily', name: '今日值守', desc: '完成一次每日挑战', check: function (pr, r) { return !!r.daily; } },
+    { id: 'daily', name: '今日守护', desc: '完成一次每日挑战', check: function (pr, r) { return !!r.daily; } },
     { id: 'unlock_all', name: '满堂英雄', desc: '解锁全部英雄', check: function (pr) { for (var i = 0; i < RW.CLASS_ORDER.length; i++) if (!RW.isUnlocked(RW.CLASS_ORDER[i], pr)) return false; return true; } },
     { id: 'runs10', name: '常客', desc: '完成 10 局', check: function (pr) { return pr.runs >= 10; } },
     { id: 'runs50', name: '老兵', desc: '完成 50 局', check: function (pr) { return pr.runs >= 50; } },

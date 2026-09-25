@@ -1,4 +1,4 @@
-// 环带值守 · Steam 桌面版外壳（Electron 主进程）
+// 圣火守护者 · Steam 桌面版外壳（Electron 主进程）
 // 游戏本体就是 preview.html + js/ + vendor/，这里只负责开窗口、全屏切换、退出和存档位置。
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
@@ -7,7 +7,9 @@ const ROOT = path.join(__dirname, '..');
 // 测试用：--smoke 启动后截一张图就退出（CI / 云端环境验证桌面版能跑）
 const SMOKE = process.argv.includes('--smoke');
 
-app.setName('Ringwatch');
+app.setName('FlameGuardian');
+// 存档目录沿用改名前的 Ringwatch，老玩家的进度不丢（Windows：%APPDATA%/Ringwatch/saves）
+app.setPath('userData', path.join(app.getPath('appData'), 'Ringwatch'));
 // 冒烟测试时通常没有显卡：用软件 WebGL（真实玩家的机器走显卡，不受影响）
 if (SMOKE) { app.commandLine.appendSwitch('use-angle', 'swiftshader'); app.commandLine.appendSwitch('enable-unsafe-swiftshader'); }
 Menu.setApplicationMenu(null);   // 游戏不需要菜单栏
@@ -15,7 +17,7 @@ Menu.setApplicationMenu(null);   // 游戏不需要菜单栏
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280, height: 720, minWidth: 960, minHeight: 540,
-    backgroundColor: '#06070c', show: false, title: '环带值守 Ringwatch',
+    backgroundColor: '#06070c', show: false, title: '圣火守护者 Flame Guardian',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

@@ -4,7 +4,7 @@
 
 ## 项目是什么
 
-「环带值守 Ringwatch」：奇幻守村割草塔防，**目标平台 Steam（Windows / macOS / Linux）**，横屏 16:9。
+「圣火守护者 Flame Guardian」（原名「环带值守 Ringwatch」，仓库名沿用）：奇幻守村割草塔防，**目标平台 Steam（Windows / macOS / Linux）**，横屏 16:9。
 纯原生 JS，游戏本身**没有构建步骤**；3D 用 Three.js（打包成 `vendor/three.min.js`，全局变量 `THREE`），桌面壳是 Electron（`desktop/`）。
 入口是 `preview.html`（浏览器 / Electron 都加载它），按顺序加载 `vendor/three.min.js` 和 `js/` 下的脚本，全部挂在全局 `RW` 上。
 微信小游戏版已搁置（`game.js`、`game.json`、`project.config.json` 保留，暂不维护）。

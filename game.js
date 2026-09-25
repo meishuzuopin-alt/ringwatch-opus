@@ -1,4 +1,4 @@
-// 环带值守 · 微信小游戏入口
+// 圣火守护者 · 微信小游戏入口
 require('./js/data.js');
 require('./js/map.js');
 require('./js/sim.js');
