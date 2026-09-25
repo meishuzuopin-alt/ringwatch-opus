@@ -24,7 +24,7 @@ fs.mkdirSync(out, { recursive: true });
   const tap = async (x, y) => { const [a, b] = await toS(x, y); await page.mouse.click(a, b); await page.waitForTimeout(150); };
   const shot = n => page.screenshot({ path: path.join(out, n + '.png') });
   // 软件渲染很慢：等界面真正画出某个按钮 / 进入某个状态再操作，不靠固定延时
-  const until = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 60000, polling: 50 });
+  const until = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 120000, polling: 50 });   // 大地图 + 机器繁忙时软件渲染更慢
   const btn = id => until(id => RW.UI.btns.some(b => b.id === id), id);
   // 按按钮 id 点击：等它画出来，再点它的中心（界面改版不用改测试坐标）
   const press = async id => {

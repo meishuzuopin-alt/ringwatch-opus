@@ -249,7 +249,9 @@ RW.MAP_ORDER.forEach(function (mid, mi) {
   var gates = G.gates.north.concat(G.gates.side, G.gates.south);
   ok(gates.length >= 3, mid + '：至少 3 个入口（实际 ' + gates.length + '）');
   ok(gates.every(function (q) { return D[cell(q.x, q.y)] < 32767; }), mid + '：每个入口都能走到圣火');
-  ok(RW.FRONTS.length === 6 && RW.FRONTS.slice(1).every(function (f) { return RW.NAV.walkable(f.x, f.y) && D[cell(f.x, f.y)] < 32767; }), mid + '：五站王旗都在能走的地方');
+  var badF = RW.FRONTS.slice(1).filter(function (f) { return !(RW.NAV.walkable(f.x, f.y) && D[cell(f.x, f.y)] < 32767); }).map(function (f) { return f.name; });
+  ok(RW.FRONTS.length === RW.CORE_MAX_LV + 1 && !badF.length, mid + '：' + RW.CORE_MAX_LV + ' 站王旗都在能走的地方' + (badF.length ? '（' + badF.join(',') + ' 不行）' : ''));
+  ok(G.cols === G.rows && G.cols >= 56, mid + '：正方形大图 ' + G.cols + '×' + G.rows);
   ok(g.shrines.length >= 3 && g.shrines.every(function (q) { return D[cell(q.x, q.y)] < 32767; }), mid + '：至少 3 座祭坛，都走得到');
   ok(Math.abs(g.core.x - RW.TUNE.core.x) < 1e-6 && RW.NAV.walkable(g.player.x, g.player.y), mid + '：圣火和英雄位置正确');
   g.player.hp = g.player.maxHp = 1e5; g.core.hp = g.core.maxHp = 1e6;
@@ -351,12 +353,20 @@ RW.MAP_ORDER.forEach(function (mid, mi) {
   g.clearWave();
   ok(!g.player.dead, '清场时倒下的英雄直接站起来');
   var h = newGame('mage', {}, 82);
-  h.startWave(2); h.hurtCore(1e9, '测试');
-  run(h, 120);
-  ok(h.mode === 'result' && h.result && h.result.coreDown, '圣火熄灭（前 3 波）直接结算');
+  for (var rk = 0; rk < RW.REKINDLE.times; rk++) {
+    h.startWave(2 + rk); h.hurtCore(1e9, '测试'); run(h, 120);
+    ok(h.mode === 'revive', '圣火第 ' + (rk + 1) + ' 次熄灭：可以重燃（还剩 ' + h.revivesLeft + ' 次）');
+    h.revive();
+  }
+  ok(h.revivesLeft === 0 && h.rs.rekindles === RW.REKINDLE.times, '每局一共 ' + RW.REKINDLE.times + ' 次重燃');
+  var hm = h.mode; h.mode = 'shop'; var sv0 = h.saveRun(); h.mode = hm;
+  var h2 = newGame('mage', {}, 85); h2.loadRun(JSON.parse(JSON.stringify(sv0)));
+  ok(sv0.revivesLeft === 0 && h2.revivesLeft === 0, '局中存档记下剩余重燃次数');
+  h.hurtCore(1e9, '测试'); run(h, 120);
+  ok(h.mode === 'result' && h.result && h.result.coreDown, '重燃用完后圣火熄灭才结算');
   var k = newGame('mage', {}, 83);
   k.startWave(6); k.hurtCore(1e9, '测试'); run(k, 120);
-  ok(k.mode === 'revive', '第 4 波起圣火熄灭时给一次重燃机会');
+  ok(k.mode === 'revive', '圣火熄灭时给重燃机会');
   k.revive();
   ok(k.mode === 'battle' && k.core.hp >= k.core.maxHp * 0.5 && !k.player.dead, '重燃：圣火回到一半，英雄站着');
 })();
@@ -404,6 +414,43 @@ RW.MAP_ORDER.forEach(function (mid, mi) {
   }
   var sv = g.saveRun ? g.saveRun() : null;
   if (sv && g.loadRun) { var h = newGame('mage', {}, 92); h.loadRun(sv); ok(h.core.lv === 10 && h.core.aura === g.core.aura && h.core.formTier === 3, '局中存档：圣火等级、圣域、形态阶都还原'); }
+})();
+// 17. 兵营：兵种、阵型、布防点
+(function () {
+  var g = newGame('knight', {}, 95);
+  g.startWave(3); run(g, 30);
+  ok(/兵营/.test(g.commandBarracks('post')), '没有兵营时下令会提示先造兵营');
+  g.shardCount = 9999; ok(g.buildTower('barracks') === 'ok', '造一座兵营');
+  var tw = g.nearestBarracks();
+  g.dur = 1e9;   // 这一段只测兵营：波次不结束，敌人每帧清掉
+  var calm = function (n) { for (var f = 0; f < n; f++) { g.update({ mx: 0, my: 0 }); for (var q = 0; q < g.enemies.length; q++) if (g.enemies[q].on) g.killEnemy(g.enemies[q], null, 'silent'); } };
+  calm(60 * 14);
+  var mine = function () { return g.soldiers.filter(function (s) { return s.on && s.home === tw; }); };
+  ok(mine().length >= 2, '兵营出兵 ' + mine().length + ' 个');
+  // 布防：英雄走开一段距离后按 G
+  g.player.x = tw.x + 220; g.player.y = tw.y;
+  var msg = g.commandBarracks('post');
+  ok(tw.post && /布防/.test(msg), '按 G：' + msg);
+  var e;
+  calm(300);
+  var far = mine().filter(function (s) { return Math.hypot(s.x - tw.post.x, s.y - tw.post.y) > 90; });
+  ok(mine().length && !far.length, '士兵都到了布防点附近');
+  g.player.x = tw.x + 10; g.player.y = tw.y;
+  ok(/回营/.test(g.commandBarracks('post')) && !tw.post, '站在兵营旁按布防 = 召回');
+  g.commandBarracks('troop'); ok(tw.troop === RW.TROOP_ORDER[1] && mine().every(function (s) { return s.type === tw.troop; }), '换兵种：现有士兵就地换成' + RW.TROOPS[tw.troop].name);
+  g.commandBarracks('troop'); ok(tw.troop === 'archer', '再换：弓手');
+  g.commandBarracks('form'); ok(tw.form === RW.FORMATION_ORDER[1], '换阵型：' + RW.FORMATIONS[tw.form].name);
+  // 盾卫受伤减免
+  var sg = mine()[0]; sg.type = 'guard'; sg.hp = sg.maxHp = 100; g.hurtSoldier(sg, 10);
+  ok(Math.abs(sg.hp - (100 - 10 * (1 - RW.TROOPS.guard.armor) * (RW.FORMATIONS[tw.form].taken || 1))) < 1e-6, '盾卫受伤 -30%，圆阵再 -15%');
+  sg.type = 'archer';
+  // 弓手放箭：在射程内放一只敌人
+  g.player.x = tw.x + 400; tw.post = { x: tw.x, y: tw.y + 60 };
+  ok(RW.TROOPS.archer.range > 0, '弓手是远程');
+  // 存档保留兵种、阵型、布防点
+  g.mode = 'shop'; var sv = g.saveRun(); var h = newGame('knight', {}, 96); h.loadRun(JSON.parse(JSON.stringify(sv)));
+  var htw = h.towers.filter(function (t) { return t.on && t.id === 'barracks'; })[0];
+  ok(htw && htw.troop === 'archer' && htw.form === tw.form && htw.post && Math.abs(htw.post.x - tw.post.x) < 1e-6, '局中存档：兵种、阵型、布防点都还原');
 })();
 RW.loadMap('village');
 

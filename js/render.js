@@ -1148,6 +1148,13 @@
       c.fillStyle = sh.done ? 'rgba(120,130,140,0.8)' : (Math.sin(D.t * 5 + i) > 0 ? '#b8f2ff' : '#4fb8d8');
       c.beginPath(); c.arc(x0 + sh.x * s, y0 + sh.y * s, 3, 0, Math.PI * 2); c.fill();
     }
+    for (i = 0; i < g.towers.length; i++) {   // 兵营布防点：小旗
+      var bt = g.towers[i];
+      if (!bt.on || !bt.post) continue;
+      c.strokeStyle = RW.TROOPS[bt.troop].color; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x0 + bt.x * s, y0 + bt.y * s); c.lineTo(x0 + bt.post.x * s, y0 + bt.post.y * s); c.stroke();
+      c.fillStyle = RW.TROOPS[bt.troop].color; c.fillRect(x0 + bt.post.x * s - 1, y0 + bt.post.y * s - 5, 4, 3); c.fillRect(x0 + bt.post.x * s - 1, y0 + bt.post.y * s - 5, 1, 6);
+    }
     var co = g.core;
     if (co.aura && co.aura < 3000) {   // 圣域范围
       c.save(); c.beginPath(); c.rect(x0, y0, M.w, M.h); c.clip();
@@ -1361,6 +1368,25 @@
             c.globalAlpha = 1;
           } });
         })(RW.TOWER_ORDER[qi], qi);
+      }
+    }
+    // 兵营指挥：有兵营时在快速造塔上方显示四个指令（对离你最近的兵营下令）
+    var nb = !menu && g.nearestBarracks && g.nearestBarracks();
+    if (nb) {
+      var cx0 = B.build.x + B.build.r + 12, cy0 = H - 94, TRp = RW.TROOPS[nb.troop], FMp = RW.FORMATIONS[nb.form];
+      var cmds = [['post', 'G', 'LT', '布防', nb.post ? '已布防' : '到脚下'], ['recall', 'H', '—', '召回', '回营'], ['troop', 'T', 'L3', TRp.name, '换兵种'], ['form', 'Y', 'R3', FMp.name, '换阵型']];
+      for (var ci = 0; ci < cmds.length; ci++) {
+        (function (cm, i) {
+          ui.button('cmd:' + cm[0], cx0 + i * 67, cy0, 64, 28, '', { draw: function (x, y, w, h, pressed) {
+            c.fillStyle = pressed ? '#3a2a18' : 'rgba(20,15,11,0.82)'; D.rr(x, y, w, h, 6); c.fill();
+            c.strokeStyle = i === 2 ? TRp.color : 'rgba(255,210,122,0.5)'; c.lineWidth = 1.1; D.rr(x, y, w, h, 6); c.stroke();
+            var key = ui.padNav ? cm[2] : cm[1];
+            c.fillStyle = '#c9b68a'; D.rr(x + 4, y + 5, 18, 18, 4); c.fill();
+            D.text(key, x + 13, y + 14, key.length > 1 ? 8 : 11, '#1a1206', 'center', true);
+            D.text(cm[3], x + 26, y + 9, 10, i === 2 ? TRp.color : C.text, 'left', true);
+            D.text(cm[4], x + 26, y + 21, 8, C.faint, 'left');
+          } });
+        })(cmds[ci], ci);
       }
     }
     if (menu) {

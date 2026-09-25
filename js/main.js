@@ -73,6 +73,12 @@
       inputBuf.skill = ix + 1; return;
     }
     if (id === 'build') { buildMenu = !buildMenu; buildMenuT = 5; S.play({ type: 'ui' }); return; }
+    if (id.indexOf('cmd:') === 0) {   // 兵营指挥：布防 / 召回 / 兵种 / 阵型
+      var msg = g.commandBarracks(id.slice(4));
+      if (msg) UI.toast(msg, 1.6);
+      S.play({ type: 'ui' });
+      return;
+    }
     if (id.indexOf('bt:') === 0) {
       var r = g.buildTower(id.slice(3));
       if (r !== 'ok') { UI.toast(r, 1.2); S.play({ type: 'deny' }); }
@@ -86,7 +92,7 @@
     if (inBattle() && !paused) {
       if (type === 'down') {
         var b = UI.hit(x, y);
-        if (b && (BATTLE_BTNS[b.id] || b.id.indexOf('bt:') === 0 || b.id.indexOf('skill') === 0)) {
+        if (b && (BATTLE_BTNS[b.id] || b.id.indexOf('bt:') === 0 || b.id.indexOf('skill') === 0 || b.id.indexOf('cmd:') === 0)) {
           if (b.disabled) { if (b.why) UI.toast(b.why, 1.2); S.play({ type: 'deny' }); return; }
           UI.pressed = b.id; battleButton(b.id); return;
         }
@@ -150,6 +156,10 @@
       if (code === 'KeyR') { battleButton('skill:2'); return; }
       if (code === 'KeyB') { battleButton('build'); return; }
       if (/^Digit[1-4]$/.test(code)) { battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
+      if (code === 'KeyG') { battleButton('cmd:post'); return; }
+      if (code === 'KeyH') { battleButton('cmd:recall'); return; }
+      if (code === 'KeyT') { battleButton('cmd:troop'); return; }
+      if (code === 'KeyY') { battleButton('cmd:form'); return; }
     }
     if (code === 'Enter' || code === 'Space') {
       if (showHow) { showHow = false; return; }
@@ -175,7 +185,7 @@
   }
 
   // ---------- 手柄 ----------
-  // 战斗：左摇杆 / 十字键移动，A 或 RT 冲刺，X / Y / B 放 Q / E / R，LB 造塔（十字键选种类），菜单键暂停
+  // 战斗：左摇杆 / 十字键移动，A 或 RT 冲刺，X / Y / B 放 Q / E / R，LB 造塔（十字键选种类），LT 兵营布防，按下左 / 右摇杆换兵种 / 阵型，菜单键暂停
   // 菜单：十字键 / 左摇杆移动焦点，A 确认，B 返回，菜单键开始 / 下一波，整备页 X 刷新
   var pad = { prev: [], move: false, mx: 0, my: 0, navT: 0 };
   var PAD_DEAD = 0.22;
@@ -204,6 +214,9 @@
       if (hit(3)) battleButton('skill:1');
       if (hit(1) || hit(5)) battleButton('skill:2');
       if (hit(4)) battleButton('build');
+      if (hit(6)) battleButton('cmd:post');     // LT：兵营布防到脚下（站在兵营旁 = 召回）
+      if (hit(10)) battleButton('cmd:troop');   // 按下左摇杆：换兵种
+      if (hit(11)) battleButton('cmd:form');    // 按下右摇杆：换阵型
       if (buildMenu) { var order = [14, 12, 15, 13]; for (i = 0; i < 4; i++) if (hit(order[i])) battleButton('bt:' + RW.TOWER_ORDER[i]); }
       if (hit(9) || hit(8)) battleButton('pause');
       return;

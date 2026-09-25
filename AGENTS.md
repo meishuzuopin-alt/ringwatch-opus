@@ -11,6 +11,7 @@
 玩法设计见 `DESIGN.md`，美术方向见 `docs/ART.md`，上架清单见 `docs/STEAM.md`。
 玩家逐条要求见 `docs/PLAYER-LOG.md`。全面优化以那份日志为准；日志后面的条目覆盖前面的。
 全案白皮书见 `docs/WHITEPAPER.md`；同类游戏差评里的痛点与我们的对策见 `docs/PLAYER-VOICE.md`（每个版本前对照一遍）。
+设计储备（负责人贴来的长设计稿逐条对照：已做 / 下一批 / 待拍板 / 不能照做）见 `docs/DESIGN-BACKLOG.md`。
 
 | 文件 | 负责什么 |
 |---|---|

@@ -756,7 +756,12 @@
     D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', cx, 186, 13, C.text, 'center');
     var h = g.lastHits[g.lastHits.length - 1];
     if (h) D.text('最后一击：' + h.src, cx, 212, 13, '#ffb3c1', 'center', true);
-    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '重燃圣火', { style: 'ad', size: 18, sub: '圣火恢复一半，英雄站起来，清空身边的敌人（每局一次）' });
+    var left = g.revivesLeft, all = RW.REKINDLE.times;
+    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '重燃圣火 · 还剩 ' + left + ' / ' + all + ' 次', { style: 'ad', size: 18, sub: '圣火恢复一半，英雄站起来，清空身边的敌人' });
+    for (var ri = 0; ri < all; ri++) {   // 三簇小火苗：亮着的是还能用的重燃
+      var fx2 = cx - (all - 1) * 14 + ri * 28, on = ri < left;
+      D.ctx.fillStyle = on ? '#ffb347' : '#3a2a20'; D.ctx.beginPath(); D.ctx.moveTo(fx2, 226); D.ctx.quadraticCurveTo(fx2 + 8, 236, fx2, 242); D.ctx.quadraticCurveTo(fx2 - 8, 236, fx2, 226); D.ctx.fill();
+    }
     if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
     UI.button('giveup', cx - 190, 352, 380, 52, '结束守护，查看结算', { style: 'ghost', size: 14 });
   };

@@ -12,8 +12,8 @@
   // ---------- 全局手感/规格 ----------
   RW.TUNE = {
     W: 960, H: 540, DT: 1 / 60,                   // 逻辑分辨率：横屏 16:9，按窗口等比缩放
-    WORLD: { w: 1120, h: 1520 },                 // 地图总尺寸（由 js/map.js 决定，sim 启动时会校正）
-    ARENA: { x: 0, y: 0, w: 1120, h: 1520 },
+    WORLD: { w: 2240, h: 2240 },                 // 地图总尺寸（由 js/map.js 决定，sim 启动时会校正）
+    ARENA: { x: 0, y: 0, w: 2240, h: 2240 },
     VIEW: { x: 0, y: 0, w: 960, h: 540 },        // 战场视口：铺满全屏，HUD 悬浮在四角
     MAX_ENEMIES: 120,
     FONT: 'Consolas, "Courier New", monospace',
@@ -25,6 +25,7 @@
     },
     dash: { speed: 560, time: 0.16, iframes: 0.26, cd: 2.2, dmg: 6, knock: 180 },
     camera: { lead: 0.28, follow: 7 },
+    barracksCmd: { recallNear: 60 },   // 站在兵营这么近的地方按布防键 = 召回
     hitstop: { gap: 0.12, heavy: 3, shellKill: 2, eliteCrit: 2, eliteKill: 8, playerHurt: 5, mine: 3, evolve: 8 },
     shard: { life: 8, blink: 2, recallRate: 0.5, magnetSpeed: 560 },
     spawn: { telegraph: 0.8, safeDist: 170, ringMin: 260, ringMax: 470, anywhere: 0.15 },
@@ -353,6 +354,8 @@
     { cost: 520, hp: 400, dmg: 12, range: 0, cd: 0.03, heal: 0.1, aura: 4000, perk: 'sky', note: '天火', desc: '圣域照遍全图：火舌与流星打得到地图上任何地方，收成翻倍' }
   ];
   RW.CORE_MAX_LV = RW.CORE_LV.length - 1;
+  // 圣火熄灭后的重燃：每局 times 次，从 fromWave 波起可用；重燃后圣火至少回到 core 比例，身边 clear 像素内的小怪清掉
+  RW.REKINDLE = { times: 3, fromWave: 1, core: 0.5, clear: 170 };
   // 圣域：圣火照亮的范围。镜头、视野、收成、各级能力都跟着它走
   RW.SANCTUARY = {
     formTierAt: [0, 3, 6, 9],       // 几级进到形态 I / II / III
@@ -430,12 +433,27 @@
     barracks: {
       name: '兵营', kind: 'barracks', color: '#ff8f6b', cost: 22, techCost: 24, hp: 50, r: 15,
       soldiers: [2, 3, 4], spawnCd: 5, leash: 190,
-      soldier: { hp: 14, dmg: 4, speed: 118, r: 6, atkCd: 0.55 },
-      pros: '自动出兵，士兵会去拦截兵营附近的敌人，替你挡刀',
+      pros: '自动出兵，可以换兵种、换阵型，按 G 把它的兵派到你脚下布防',
       cons: '贵；士兵会被小怪围死，兵营离你远了就帮不上'
     }
   };
   RW.TOWER_ORDER = ['sentry', 'pylon', 'siphon', 'barracks'];
+  // 兵营的兵种与阵型（玩家反馈：兵营要能排兵布阵分兵种，指挥兵种在哪守卫）
+  // 每座兵营选一个兵种；hp / dmg 再乘兵营科技的档位。armor 是受伤减免，reach 是近战多够出去的距离，
+  // range 大于 0 的是远程（放箭），eliteMul 打精英和 Boss 的伤害倍率，taunt 越大越招怪
+  RW.TROOPS = {
+    guard:  { name: '盾卫', color: '#8fb8ff', hp: 26, dmg: 3, speed: 104, r: 7, atkCd: 0.6, armor: 0.3, taunt: 2, note: '血厚、受伤 -30%，最招怪：把怪拖在原地' },
+    spear:  { name: '枪兵', color: '#ff8f6b', hp: 14, dmg: 4.5, speed: 118, r: 6, atkCd: 0.55, reach: 14, eliteMul: 1.6, note: '出手远一点，打精英和 Boss 伤害 ×1.6' },
+    archer: { name: '弓手', color: '#9be27a', hp: 9, dmg: 4, speed: 112, r: 6, atkCd: 0.75, range: 160, arrow: 440, note: '站在后排放箭，射程 160，怕被近身' }
+  };
+  RW.TROOP_ORDER = ['spear', 'guard', 'archer'];
+  // 阵型：leash 是追击半径倍率（以布防点为圆心），taken 受伤倍率，speed 移速倍率
+  RW.FORMATIONS = {
+    ring:  { name: '圆阵', leash: 0.8, taken: 0.85, note: '围着布防点站一圈，追得近，受伤 -15%' },
+    line:  { name: '横阵', leash: 1, note: '面朝敌人来路排成一排，拦得最宽；弓手站第二排' },
+    loose: { name: '散阵', leash: 1.6, speed: 1.15, note: '散开追击：追得远、跑得快' }
+  };
+  RW.FORMATION_ORDER = ['line', 'ring', 'loose'];
   RW.MATES = {
     spark: { name: '火童', color: '#ff8a3c', hp: 16, dmg: 5, cd: 0.45, speed: 150, r: 7 },
     bolt: { name: '弩童', color: '#9dff7a', hp: 12, dmg: 7, cd: 0.7, speed: 140, r: 6 },

@@ -162,8 +162,8 @@
     this.ebullets = makePool(180, function () { return { x: 0, y: 0, vx: 0, vy: 0, life: 0, dmg: 0, r: 5, kind: 'orb', src: '' }; });
     this.shards = makePool(220, function () { return { x: 0, y: 0, vx: 0, vy: 0, val: 1, life: 0, mag: false, recall: false, tower: null, sp: 0 }; });
     this.mines = makePool(24, function () { return { x: 0, y: 0, arm: 0, life: 0, w: null, dmg: 0, rad: 0, knock: 0 }; });
-    this.towers = makePool(T.build.max, function () { return { id: '', d: null, x: 0, y: 0, hp: 1, maxHp: 1, cd: 0, build: 0, ang: -Math.PI / 2, pulse: 0, flash: 0, spawnT: 0, soldiers: 0 }; });
-    this.soldiers = makePool(28, function () { return { x: 0, y: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, r: 6, cd: 0, home: null, slot: 0, flash: 0, ang: 0 }; });
+    this.towers = makePool(T.build.max, function () { return { id: '', d: null, x: 0, y: 0, hp: 1, maxHp: 1, cd: 0, build: 0, ang: -Math.PI / 2, pulse: 0, flash: 0, spawnT: 0, soldiers: 0, troop: 'spear', form: 'line', post: null }; });
+    this.soldiers = makePool(40, function () { return { x: 0, y: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, r: 6, cd: 0, home: null, slot: 0, flash: 0, ang: 0, type: 'spear' }; });
     this.orbs = makePool(T.biomass.count, function () { return { x: 0, y: 0, dead: 0, r: 4, bob: 0 }; });
     this.missiles = makePool(80, function () { return { x: 0, y: 0, vx: 0, vy: 0, life: 0, dmg: 0, tgt: null, tseq: 0, color: '#fff' }; });
     this.blasts = makePool(24, function () { return { x: 0, y: 0, rad: 0, de: 0, dp: 0, src: null, color: '#fff', who: '' }; });
@@ -216,7 +216,7 @@
     this.thornSrc = src('荆棘反伤', '#9fc4ff', false);
     this.shardCount = 0; this.shardFrac = 0; this.totalShards = 0; this.built = 0;
     this.mom = 0; this.momT = 9; this.momTier = 0; this.focusT = 0; this.focus = 0;
-    this.kills = 0; this.wave = 0; this.reviveUsed = false; this.streak = 0; this.streakT = 0; this.bestStreak = 0;
+    this.kills = 0; this.wave = 0; this.revivesLeft = RW.REKINDLE.times; this.streak = 0; this.streakT = 0; this.bestStreak = 0;
     this.lastHits = [];
     this.lsT = 0; this.runHeals = 0;
     p.hurtT = 0; p.castT = 0;
@@ -1483,6 +1483,7 @@
     if (!tw) return '建筑已达上限';
     tw.id = id; tw.d = d; tw.x = bx; tw.y = by; tw.cd = 0.4; tw.build = T.build.time; tw.pulse = 0; tw.flash = 0;
     tw.spawnT = 1; tw.soldiers = 0; tw.ang = p.face; tw.spent = price;
+    tw.troop = RW.TROOP_ORDER[0]; tw.form = RW.FORMATION_ORDER[0]; tw.post = null;
     tw.maxHp = tw.hp = d.hp * RW.TOWER_TIER.hp[this.tech[id] - 1];
     this.shardCount -= price;
     this.built++;
@@ -1708,15 +1709,26 @@
   G.spawnSoldier = function (tw) {
     var s = take(this.soldiers);
     if (!s) return;
-    var ti = this.tech.barracks - 1, sd = tw.d.soldier;
-    s.home = tw; s.slot = tw.soldiers; tw.soldiers++;
+    var ti = this.tech.barracks - 1, sd = RW.TROOPS[tw.troop] || RW.TROOPS.spear;
+    s.home = tw; s.slot = this.freeSlot(tw); tw.soldiers++; s.type = tw.troop;
     s.x = tw.x + this.RR(-6, 6); s.y = tw.y + tw.d.r + 4; s.vx = s.vy = 0;
     s.maxHp = s.hp = sd.hp * RW.TOWER_TIER.hp[ti]; s.r = sd.r; s.cd = 0.3; s.flash = 0; s.ang = 0;
-    this.ringFx(s.x, s.y, 3, 16, 0.25, tw.d.color, 2);
+    this.ringFx(s.x, s.y, 3, 16, 0.25, sd.color, 2);
     this.emit('soldier');
+  };
+  // 阵型里空着的位置（士兵阵亡后补位）
+  G.freeSlot = function (tw) {
+    for (var k = 0; k < 16; k++) {
+      var used = false;
+      for (var i = 0; i < this.soldiers.length; i++) { var o = this.soldiers[i]; if (o.on && o.home === tw && o.slot === k) { used = true; break; } }
+      if (!used) return k;
+    }
+    return 0;
   };
   G.hurtSoldier = function (s, dmg) {
     if (!s.on) return;
+    var tr = RW.TROOPS[s.type], fm = s.home && RW.FORMATIONS[s.home.form];
+    dmg *= (1 - ((tr && tr.armor) || 0)) * ((fm && fm.taken) || 1);
     s.hp -= dmg; s.flash = 0.1;
     if (s.hp <= 0) this.killSoldier(s);
   };
@@ -1725,44 +1737,130 @@
     if (s.home && s.home.soldiers > 0) s.home.soldiers--;
     this.burst(s.x, s.y, 8, '#ff9ecf', 140, 2, false);
   };
+  // 兵营指挥：布防点、兵种、阵型。对离英雄最近的兵营下令（站在兵营旁边按布防 = 召回）
+  G.nearestBarracks = function () {
+    var p = this.player, best = null, bd = 1e18;
+    for (var i = 0; i < this.towers.length; i++) {
+      var tw = this.towers[i];
+      if (!tw.on || tw.d.kind !== 'barracks') continue;
+      var d2 = (tw.x - p.x) * (tw.x - p.x) + (tw.y - p.y) * (tw.y - p.y);
+      if (d2 < bd) { bd = d2; best = tw; }
+    }
+    return best;
+  };
+  G.commandBarracks = function (cmd) {
+    var tw = this.nearestBarracks(), p = this.player;
+    if (!tw) return '还没有兵营：按 4 在脚下造一座';
+    var i, TR, FM;
+    if (cmd === 'post' && Math.hypot(p.x - tw.x, p.y - tw.y) < T.barracksCmd.recallNear) cmd = 'recall';
+    if (cmd === 'post') {
+      tw.post = { x: p.x, y: p.y };
+      this.ringFx(p.x, p.y, 6, 40, 0.5, RW.TROOPS[tw.troop].color, 4);
+      this.emit('command', 'post');
+      return RW.TROOPS[tw.troop].name + '去你脚下布防（' + RW.FORMATIONS[tw.form].name + '）';
+    }
+    if (cmd === 'recall') { tw.post = null; this.ringFx(tw.x, tw.y, 6, 40, 0.5, '#ffd27a', 4); this.emit('command', 'recall'); return RW.TROOPS[tw.troop].name + '回营守着兵营'; }
+    if (cmd === 'troop') {
+      tw.troop = RW.TROOP_ORDER[(RW.TROOP_ORDER.indexOf(tw.troop) + 1) % RW.TROOP_ORDER.length];
+      TR = RW.TROOPS[tw.troop];
+      var ti = this.tech.barracks - 1;
+      for (i = 0; i < this.soldiers.length; i++) {   // 现有士兵就地换装，血量按比例
+        var s = this.soldiers[i];
+        if (!s.on || s.home !== tw) continue;
+        var k = s.hp / s.maxHp;
+        s.type = tw.troop; s.maxHp = TR.hp * RW.TOWER_TIER.hp[ti]; s.hp = Math.max(1, s.maxHp * k); s.r = TR.r;
+        this.ringFx(s.x, s.y, 3, 16, 0.25, TR.color, 2);
+      }
+      this.emit('command', 'troop');
+      return '兵营改练' + TR.name + '：' + TR.note;
+    }
+    if (cmd === 'form') {
+      tw.form = RW.FORMATION_ORDER[(RW.FORMATION_ORDER.indexOf(tw.form) + 1) % RW.FORMATION_ORDER.length];
+      FM = RW.FORMATIONS[tw.form];
+      this.emit('command', 'form');
+      return '阵型：' + FM.name + ' · ' + FM.note;
+    }
+    return '';
+  };
+  // 离某点最近的敌人入口方向（横阵面朝这里）
+  G.threatDir = function (x, y) {
+    var G2 = RW.GRID, best = null, bd = 1e18, all = G2 ? G2.gates.north.concat(G2.gates.side, G2.gates.south) : [];
+    for (var i = 0; i < all.length; i++) { var d2 = (all[i].x - x) * (all[i].x - x) + (all[i].y - y) * (all[i].y - y); if (d2 < bd) { bd = d2; best = all[i]; } }
+    if (!best) return { x: 0, y: -1 };
+    var dx = best.x - x, dy = best.y - y, l = Math.sqrt(dx * dx + dy * dy) || 1;
+    return { x: dx / l, y: dy / l };
+  };
+  // 每座兵营这一帧的阵地：锚点（布防点 / 王旗方向 / 兵营本身）、朝向、人数
+  G.barracksAnchor = function (tw) {
+    var a = tw.anchor || (tw.anchor = { x: 0, y: 0, fx: 0, fy: -1, n: 1 });
+    var fr = this.front, push = fr && (this.core.lv || 1) > 1;
+    if (tw.post) { a.x = tw.post.x; a.y = tw.post.y; }
+    else if (push) {
+      var ox = fr.x - tw.x, oy = fr.y - tw.y, ol = Math.sqrt(ox * ox + oy * oy) || 1, ro = Math.min(ol, 220);
+      a.x = tw.x + ox / ol * ro; a.y = tw.y + oy / ol * ro;
+    } else { a.x = tw.x; a.y = tw.y + tw.d.r + 20; }
+    var f = this.threatDir(a.x, a.y); a.fx = f.x; a.fy = f.y;
+    a.n = Math.max(1, tw.d.soldiers[this.tech.barracks - 1]);
+    return a;
+  };
+  G.formationSpot = function (tw, a, s) {
+    var n = a.n, k = s.slot % n, form = tw.form, out = this._spot || (this._spot = { x: 0, y: 0 });
+    var px = -a.fy, py = a.fx, ranged = RW.TROOPS[s.type] && RW.TROOPS[s.type].range > 0;
+    if (form === 'ring') {
+      var ang = k / n * Math.PI * 2 + 0.4, rad = 22 + n * 5;
+      out.x = a.x + Math.cos(ang) * rad; out.y = a.y + Math.sin(ang) * rad;
+    } else if (form === 'loose') {
+      var ang2 = k * 2.4 + 0.7, rad2 = 46 + k * 14;
+      out.x = a.x + Math.cos(ang2) * rad2; out.y = a.y + Math.sin(ang2) * rad2;
+    } else {   // 横阵：垂直于来敌方向排开；弓手退半个身位站第二排
+      var off = (k - (n - 1) / 2) * 22, back = ranged ? -26 : 8;
+      out.x = a.x + px * off + a.fx * back; out.y = a.y + py * off + a.fy * back;
+    }
+    return out;
+  };
   G.updateSoldiers = function () {
-    var battle = this.mode === 'battle';
-    for (var i = 0; i < this.soldiers.length; i++) {
+    var battle = this.mode === 'battle', i;
+    for (i = 0; i < this.towers.length; i++) { var bt = this.towers[i]; if (bt.on && bt.d.kind === 'barracks') this.barracksAnchor(bt); }
+    for (i = 0; i < this.soldiers.length; i++) {
       var s = this.soldiers[i];
       if (!s.on) continue;
       var tw = s.home;
       if (!tw || !tw.on) { this.killSoldier(s); continue; }
       if (s.flash > 0) s.flash -= DT;
-      var d = tw.d, sd = d.soldier, ti = this.tech.barracks - 1;
+      var d = tw.d, sd = RW.TROOPS[s.type] || RW.TROOPS.spear, fm = RW.FORMATIONS[tw.form] || RW.FORMATIONS.line, ti = this.tech.barracks - 1;
+      var an = tw.anchor || this.barracksAnchor(tw);
       s.cd -= DT;
       var tgt = null;
-      var fr = this.front, push = fr && (this.core.lv || 1) > 1;
       if (battle) {
-        var leash = push ? d.leash + 140 : d.leash;
-        var best = 1e9, cnt = this.near(s.x, s.y, leash);
+        // 以阵地为圆心、阵型决定的半径内找敌人；弓手多看一个射程
+        var leash = d.leash * (fm.leash || 1), look = leash + (sd.range || 0);
+        var best = 1e9, cnt = this.near(an.x, an.y, look);
         for (var j = 0; j < cnt; j++) {
           var e = this.enemies[this.nbuf[j]];
           if (!e.on || e.spawnT > 0) continue;
-          var hx = e.x - tw.x, hy = e.y - tw.y;
-          if (!push && hx * hx + hy * hy > d.leash * d.leash) continue;
+          var hx = e.x - an.x, hy = e.y - an.y;
+          if (hx * hx + hy * hy > look * look) continue;
           var sx = e.x - s.x, sy = e.y - s.y, s2 = sx * sx + sy * sy;
           if (s2 < best) { best = s2; tgt = e; }
         }
       }
-      var gx, gy;
-      if (tgt) { gx = tgt.x; gy = tgt.y; }
-      else if (push) {
-        var ox = fr.x - tw.x, oy = fr.y - tw.y, ol = Math.sqrt(ox * ox + oy * oy) || 1;
-        var reachOut = Math.min(ol, 220 + s.slot * 18);
-        gx = tw.x + ox / ol * reachOut; gy = tw.y + oy / ol * reachOut;
-      } else { var a = s.slot * 1.9 + this.clock * 0.3; gx = tw.x + Math.cos(a) * 30; gy = tw.y + Math.sin(a) * 30; }
+      var gx, gy, reach;
+      var ranged = sd.range > 0;
+      if (tgt && !ranged) { gx = tgt.x; gy = tgt.y; reach = tgt.r + s.r + 3 + (sd.reach || 0); }
+      else {
+        var sp = this.formationSpot(tw, an, s); gx = sp.x; gy = sp.y; reach = 4;
+        // 弓手：目标在射程外就往前挪到射程边上
+        if (tgt && ranged) {
+          var rx = tgt.x - s.x, ry = tgt.y - s.y, rl = Math.sqrt(rx * rx + ry * ry) || 1;
+          if (rl > sd.range) { gx = tgt.x - rx / rl * (sd.range - 10); gy = tgt.y - ry / rl * (sd.range - 10); }
+        }
+      }
       var dx = gx - s.x, dy = gy - s.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
-      var reach = tgt ? tgt.r + s.r + 3 : 4;
-      var want = dl > reach ? sd.speed : 0;
+      var want = dl > reach ? sd.speed * (fm.speed || 1) : 0;
       var k = Math.min(1, 10 * DT);
       s.vx += (dx / dl * want - s.vx) * k; s.vy += (dy / dl * want - s.vy) * k;
       s.x += s.vx * DT; s.y += s.vy * DT;
-      if (dl > 1) s.ang = Math.atan2(dy, dx);
+      if (dl > 1 && want > 0) s.ang = Math.atan2(dy, dx);
       // 士兵之间软分离
       for (var q = 0; q < this.soldiers.length; q++) {
         if (q === i) continue;
@@ -1773,11 +1871,18 @@
       }
       s.x = clampX(s.x, s.r); s.y = clampY(s.y, s.r);
       collideGrid(s, s.r);
-      if (tgt && dl <= reach + 2 && s.cd <= 0) {
-        s.cd = sd.atkCd;
-        this.hitEnemy(tgt, sd.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg * RW.SHEET.def(this.wave), dx / dl, dy / dl, 70, this.towerStats.barracks, false);
-        var f = take(this.fx, true);
-        f.kind = 'slash'; f.x = s.x + dx / dl * 6; f.y = s.y + dy / dl * 6; f.r = s.ang; f.life = f.max = 0.12; f.color = '#ffd1e8';
+      if (tgt && s.cd <= 0) {
+        var tx = tgt.x - s.x, ty = tgt.y - s.y, tl = Math.sqrt(tx * tx + ty * ty) || 1;
+        var dmg = sd.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg * RW.SHEET.def(this.wave) * ((tgt.elite || tgt.d.boss) && sd.eliteMul ? sd.eliteMul : 1);
+        if (ranged && tl <= sd.range) {
+          s.cd = sd.atkCd; s.ang = Math.atan2(ty, tx);
+          this.fireBullet(s.x, s.y, s.ang, sd.arrow, sd.range / sd.arrow + 0.1, dmg, 30, 3, this.towerStats.barracks, 0, sd.color);
+        } else if (!ranged && tl <= tgt.r + s.r + 5 + (sd.reach || 0)) {
+          s.cd = sd.atkCd; s.ang = Math.atan2(ty, tx);
+          this.hitEnemy(tgt, dmg, tx / tl, ty / tl, 70, this.towerStats.barracks, false);
+          var f = take(this.fx, true);
+          f.kind = 'slash'; f.x = s.x + tx / tl * 6; f.y = s.y + ty / tl * 6; f.r = s.ang; f.life = f.max = 0.12; f.color = sd.color;
+        }
       }
       if (!tgt && s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 2 * DT);
     }
@@ -1947,6 +2052,8 @@
         var s = this.soldiers[i];
         if (!s.on) continue;
         var sx = s.x - e.x, sy = s.y - e.y, s2 = sx * sx + sy * sy;
+        var tt = RW.TROOPS[s.type] && RW.TROOPS[s.type].taunt;   // 盾卫招怪：看起来更近
+        if (tt) s2 /= tt;
         if (s2 < sa && s2 < best) { best = s2; tx = s.x; ty = s.y; tk = 2; tref = s; }
       }
     }
@@ -2418,23 +2525,25 @@
     this.ringFx(p.x, p.y, 10, 140, 0.5, RW.EVO[p.stage].color, 5);
     this.emit('revive');
   };
-  G.canRevive = function () { return !this.reviveUsed && this.wave >= RW.AD.FIRST_AD_WAVE; };
+  // 圣火熄灭：每局可以重燃 RW.REKINDLE.times 次（玩家反馈：要有三次重燃机会）
+  G.canRevive = function () { return this.revivesLeft > 0 && this.wave >= RW.REKINDLE.fromWave; };
   G.afterDeath = function () {
     if (this.canRevive()) { this.mode = 'revive'; this.emit('reviveOffer'); }
     else this.finishRun();
   };
   G.revive = function () {
     var p = this.player;
-    this.reviveUsed = true;
-    this.rs.revived = true;
+    var RK = RW.REKINDLE;
+    this.revivesLeft = Math.max(0, this.revivesLeft - 1);
+    this.rs.revived = true; this.rs.rekindles = (this.rs.rekindles || 0) + 1;
     p.dead = false; p.respawnT = 0;
     p.hp = Math.ceil(p.maxHp * 0.6); p.inv = 2.2;
-    var co = this.core; co.hp = Math.max(co.hp, co.maxHp * 0.5); this.deathCause = '';
+    var co = this.core; co.hp = Math.max(co.hp, co.maxHp * RK.core); this.deathCause = '';
     for (var i = 0; i < this.enemies.length; i++) {
       var e = this.enemies[i];
       if (!e.on) continue;
       var dx = e.x - p.x, dy = e.y - p.y, d2 = dx * dx + dy * dy;
-      if (d2 < 170 * 170 && !e.elite) this.killEnemy(e, null, 'silent');
+      if (d2 < RK.clear * RK.clear && !e.elite) this.killEnemy(e, null, 'silent');
       else { var d = Math.sqrt(d2) || 1; e.kvx += dx / d * 300 * e.knockRes; e.kvy += dy / d * 300 * e.knockRes; }
     }
     clearPool(this.ebullets);
@@ -2786,7 +2895,7 @@
     var p = this.player, co = this.core, out = {
       v: RW.RUN_SAVE_V, seed: seed, mode: this.mode, cls: this.clsId, danger: this.danger, mutators: this.mutList.slice(), daily: this.daily,
       endless: this.endless, won: this.won, wave: this.wave, gold: this.shardCount, goldFrac: this.shardFrac, totalGold: this.totalShards,
-      built: this.built, kills: this.kills, bestStreak: this.bestStreak, reviveUsed: this.reviveUsed, runHeals: this.runHeals,
+      built: this.built, kills: this.kills, bestStreak: this.bestStreak, revivesLeft: this.revivesLeft, runHeals: this.runHeals,
       blessPending: this.blessPending, blessOffers: this.blessOffers ? this.blessOffers.slice() : null, bless: this.bless, mods: this.mods,
       tech: this.tech, rs: this.rs, rec: this._rec, lastHits: this.lastHits,
       player: { mass: p.mass, stage: p.stage, hp: p.hp, mp: p.mp, x: p.x, y: p.y },
@@ -2802,7 +2911,7 @@
     out.skillAt = sk.indexOf(this.skill);
     var rt = this.retiredSkills || [];
     for (i = 0; i < rt.length; i++) out.retired.push({ name: rt[i].name, color: rt[i].color, dmg: rt[i].dmg, kills: rt[i].kills });
-    for (i = 0; i < this.towers.length; i++) { var t = this.towers[i]; if (t.on) out.towers.push({ id: t.id, x: t.x, y: t.y, hp: t.hp, spent: t.spent, ang: t.ang }); }
+    for (i = 0; i < this.towers.length; i++) { var t = this.towers[i]; if (t.on) out.towers.push({ id: t.id, x: t.x, y: t.y, hp: t.hp, spent: t.spent, ang: t.ang, troop: t.troop, form: t.form, post: t.post ? { x: t.post.x, y: t.post.y } : null }); }
     for (i = 0; i < this.mates.length; i++) { var m = this.mates[i]; if (m.on) out.mates.push({ id: m.id, star: m.star, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, r: m.r }); }
     for (i = 0; i < this.chests.length; i++) { var c = this.chests[i]; if (c.on) out.chests.push([c.x, c.y, c.life || 0]); }
     for (i = 0; i < this.orbs.length; i++) { var o = this.orbs[i]; out.orbs.push([o.on ? 1 : 0, o.x, o.y, o.dead || 0, o.bob || 0]); }
@@ -2817,7 +2926,7 @@
     this.startRun(sv.cls, { danger: sv.danger, mutators: sv.mutators, daily: sv.daily, map: sv.map });
     this.endless = !!sv.endless; this.won = !!sv.won; this.final = false;
     this.wave = sv.wave; this.shardCount = sv.gold; this.shardFrac = sv.goldFrac || 0; this.totalShards = sv.totalGold;
-    this.built = sv.built; this.kills = sv.kills; this.bestStreak = sv.bestStreak; this.reviveUsed = !!sv.reviveUsed; this.runHeals = sv.runHeals || 0;
+    this.built = sv.built; this.kills = sv.kills; this.bestStreak = sv.bestStreak; this.revivesLeft = sv.revivesLeft != null ? sv.revivesLeft : (sv.reviveUsed ? RW.REKINDLE.times - 1 : RW.REKINDLE.times); this.runHeals = sv.runHeals || 0;
     this.bless = sv.bless || {}; this.mods = sv.mods || {}; this.tech = sv.tech; this.rs = sv.rs; this._rec = sv.rec; this.lastHits = sv.lastHits || [];
     this.blessPending = sv.blessPending || 0; this.blessOffers = sv.blessOffers;
     this.banned = sv.banned || {}; this.bansLeft = sv.bansLeft != null ? sv.bansLeft : RW.SHOP_BIAS.bans;
@@ -2859,6 +2968,7 @@
       if (!tw || !d) continue;
       tw.id = ts.id; tw.d = d; tw.x = ts.x; tw.y = ts.y; tw.cd = 0.4; tw.build = 0; tw.pulse = 0; tw.flash = 0;
       tw.spawnT = 1; tw.soldiers = 0; tw.ang = ts.ang || 0; tw.spent = ts.spent;
+      tw.troop = RW.TROOPS[ts.troop] ? ts.troop : RW.TROOP_ORDER[0]; tw.form = RW.FORMATIONS[ts.form] ? ts.form : RW.FORMATION_ORDER[0]; tw.post = ts.post ? { x: ts.post.x, y: ts.post.y } : null;
       tw.maxHp = d.hp * RW.TOWER_TIER.hp[this.tech[ts.id] - 1]; tw.hp = Math.min(tw.maxHp, ts.hp);
     }
     for (i = 0; i < sv.mates.length; i++) {

@@ -864,10 +864,27 @@
       var s = g.soldiers[i];
       if (!s.on || !W3.inView(s.x, s.y, 30)) continue;
       var sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
-      GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, 1.1, 1.1, 1.1, 0, 1, 1, 1, s.flash > 0 ? 0.7 : 0);
+      // 兵种：盾卫高大偏蓝、枪兵原色、弓手瘦小偏绿；脚下一圈兵种色
+      var ty = s.type, sc = ty === 'guard' ? 1.3 : (ty === 'archer' ? 0.95 : 1.1), tr = RW.TROOPS[ty];
+      var tc = ty === 'guard' ? TINT_GUARD : (ty === 'archer' ? TINT_ARCHER : WHITE);
+      GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, sc, sc, sc, 0, tc[0], tc[1], tc[2], s.flash > 0 ? 0.7 : 0);
       GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, (0.3) * W3.blobShadow());
+      if (tr) GL.ground(true, s.x, 0.8, s.y, 9, 1, 0.2, C(tr.color), 0.45);
+    }
+    // 兵营布防点：兵种色的旗帜光与地面圈，和兵营之间一道淡淡的连线
+    var nb = g.nearestBarracks && g.mode === 'battle' ? g.nearestBarracks() : null;
+    for (i = 0; i < g.towers.length; i++) {
+      var tw = g.towers[i];
+      if (!tw.on || tw.d.kind !== 'barracks') continue;
+      var tc2 = C(RW.TROOPS[tw.troop].color);
+      if (tw === nb) GL.ground(true, tw.x, 1, tw.y, 30 + Math.sin(W3.t * 5) * 3, 1, 0.12, tc2, 0.5);   // 下一个指令给这座兵营
+      if (!tw.post) continue;
+      GL.streak(true, tw.x, 1, tw.y, tw.post.x, tw.post.y, 3, tc2, 0.18);
+      GL.ground(true, tw.post.x, 1.1, tw.post.y, 26, 1, 0.1, tc2, 0.55);
+      GL.glow(tw.post.x, 30 + Math.sin(W3.t * 3 + i) * 2, tw.post.y, 9, tc2, 0.9);
     }
   }
+  var TINT_GUARD = [0.75, 0.85, 1.25], TINT_ARCHER = [0.8, 1.15, 0.8];
   function drawCore(g, M) {
     var co = g.core;
     var lv = co.lv || 1, fl = co.flash > 0 ? 0.4 : 0, F = RW.CORE_FORMS[co.form];
