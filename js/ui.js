@@ -97,26 +97,26 @@
     }
     D.glowText('圣火守护者', W / 2, 120, 60, C.cyan, 'center', 24);
     D.text('F L A M E   G U A R D I A N', W / 2, 170, 13, '#e8d8b8', 'center', true, 3);
-    D.text('夜色压境，守住村子的圣火。撑过倒计时，整备，再迎下一波。', W / 2, 214, 14, C.text, 'center', true, 3);
+    D.text('长夜围住村子，你是火旁最后的守护者。', W / 2, 214, 14, C.text, 'center', true, 3);
     var pr = g.prog || {};
     if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波' + (pr.wins ? ' · 通关 ' + pr.wins + ' 次' : '') + (pr.bestScore ? ' · 最高分 ' + pr.bestScore : ''), W / 2, 244, 13, C.gold, 'center', true, 3);
     var ri = UI.runInfo, y = 272;
     if (ri) {   // 有没打完的一局：继续是首选
-      UI.button('continueRun', W / 2 - 150, 256, 300, 52, '继续上局', { style: 'primary', size: 20,
+      UI.button('continueRun', W / 2 - 150, 256, 300, 52, '继续守护', { style: 'primary', size: 20,
         sub: ri.hero + ' · ' + (ri.daily ? '每日挑战 · ' : '') + (ri.endless ? '无尽 · ' : '') + '第 ' + ri.wave + ' 波前的整备' + (ri.danger ? ' · 危险 ' + ri.danger : '') });
-      UI.button('start', W / 2 - 150, 314, 300, 36, '开始新的一局（会放弃上局）', { size: 13 });
+      UI.button('start', W / 2 - 150, 314, 300, 36, '新的守护', { size: 13, sub: '将放弃上局' });
       y = 358;
     } else { UI.button('start', W / 2 - 150, 272, 300, 58, '开始守护', { style: 'primary', size: 22 }); y = 340; }
     UI.button('mute', W / 2 - 150, y, 72, 38, muted ? '声音：关' : '声音：开', { size: 12 });
     UI.button('music', W / 2 - 74, y, 72, 38, UI.musicOff ? '音乐：关' : '音乐：开', { size: 12 });
-    UI.button('howto', W / 2 + 2, y, 72, 38, '玩法说明', { size: 12 });
+    UI.button('howto', W / 2 + 2, y, 72, 38, '玩法', { size: 12 });
     UI.button('settings', W / 2 + 78, y, 72, 38, '设置', { size: 12 });
     var dk = UI.dayKey(), ds = RW.dailySetup(dk), db = pr.daily && pr.daily[dk];
     UI.button('daily', W / 2 - 150, y + 46, 148, 44, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
-    UI.button('records', W / 2 + 2, y + 46, 148, 44, '成就与纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
+    UI.button('records', W / 2 + 2, y + 46, 148, 44, '火光纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
     var K = RW.keyLabel;
     D.text(K('up') + K('left') + K('down') + K('right') + ' 移动 · 自动攻击 · ' + K('dash') + ' 冲刺 · ' + K('skill0') + '/' + K('skill1') + '/' + K('skill2') + ' 技能 · 1–4 造塔 · Enter 开始 · F11 全屏 · 支持手柄', W / 2, y + 108, 12, C.dim, 'center', false, 3);
-    if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出游戏', { style: 'ghost', size: 13 });
+    if (root.desktop) UI.button('exitGame', W - 136, H - 56, 120, 40, '退出', { style: 'ghost', size: 13 });
     D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2, H - 18, 10, C.faint, 'center', false, 3);
   };
 
@@ -148,7 +148,7 @@
       var wl = D.wrap(lines[i][1], 270, 12);
       for (var j = 0; j < wl.length; j++) D.text(wl[j], x0 + 50, y + j * 17, 12, C.text, 'left');
     }
-    UI.button('howtoClose', W / 2 - 100, 436, 200, 44, '知道了', { style: 'primary' });
+    UI.button('howtoClose', W / 2 - 100, 436, 200, 44, '明白', { style: 'primary' });
   };
 
   // ================= 选择英雄 =================
@@ -170,7 +170,7 @@
     UI.heroDetail(g, UI.heroSel, 468, 24, W - 492, 454);
     var sel = UI.heroSel, ok = RW.isUnlocked(sel, prog);
     UI.button('back', 24, 486, 160, 44, '返回', { style: 'ghost', size: 14 });
-    UI.button('pick:' + sel, 468, 486, W - 492, 44, ok ? '出发 · ' + RW.CLASSES[sel].name + ' · ' + RW.MAPS[UI.runMap].name : '未解锁', { style: ok ? 'primary' : 'ghost', size: 17, disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
+    UI.button('pick:' + sel, 468, 486, W - 492, 44, ok ? '举火出发' : '未解锁', { style: ok ? 'primary' : 'ghost', size: 17, sub: ok ? RW.CLASSES[sel].name + ' · ' + RW.MAPS[UI.runMap].name : '', disabled: !ok, why: '还没解锁：' + RW.CLASSES[sel].unlock.text });
   };
   // 本局设置：危险等级（按英雄解锁）+ 变异器；记在 UI 上，存档一起保存
   UI.runDanger = 0; UI.runMuts = []; UI.runMap = 'village';
@@ -539,7 +539,7 @@
     D.text(String(g.shardCount), W - 94, 31, 28, C.shard, 'left', true);
     // 属性条
     UI.statStrip(g, 74);
-    UI.button('statsHelp', 318, 12, 92, 26, '属性说明', { size: 11, style: 'ghost' });
+    UI.button('statsHelp', 318, 12, 92, 26, '属性', { size: 11, style: 'ghost' });
     // 武器槽
     var y = 128;
     D.text('武器 ' + g.weapons.length + '/' + RW.MAX_SLOTS + ' · 点两次出售（返还 50%）', 16, y, 11, C.dim, 'left');
@@ -574,9 +574,9 @@
     c.fillStyle = '#140e0a'; c.fillRect(118, y + 22, 120, 6);
     c.fillStyle = ck < 0.3 ? C.red : (ck < 0.6 ? '#ff9f43' : '#ffd27a'); c.fillRect(118, y + 22, 120 * ck, 6);
     var rc2 = g.coreRepairCost(), uc = g.coreUpgradeCost(), nxt = RW.CORE_LV[(co.lv || 1) + 1], maxed = !nxt;
-    UI.button('repair', 118, y + 32, 124, 26, '维修 +50% · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '圣火是满的' : '金币不足' });
+    UI.button('repair', 118, y + 32, 124, 26, '护火 · ' + rc2, { size: 11, disabled: co.hp >= co.maxHp || g.shardCount < rc2, why: co.hp >= co.maxHp ? '圣火无需修补' : '金币不足' });
     var needF = g.coreNeedsForm(), cf = RW.CORE_FORMS[co.form];
-    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火已满级' : ((needF ? '选形态并升级 · ' : nxt.note + ' · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '已满级' : '金币不足' });
+    UI.button('upgrade', 250, y + 32, 146, 26, maxed ? '圣火满级' : ((needF ? '择形升级 · ' : '升级 · ') + uc), { size: 11, style: needF ? 'ad' : 'normal', disabled: maxed || g.shardCount < uc, why: maxed ? '圣火已至满级' : '金币不足' });
     if (cf) D.text(cf.name + ' ' + ['I', 'II', 'III'][(co.formTier || 1) - 1], 396, y + 14, 10, cf.color, 'right', true);
     // 卡片
     // 右栏：4 张货
@@ -595,7 +595,7 @@
     UI.button('reroll', 16, by, 120, 50, '刷新', { sub: rc + ' 金币', disabled: g.shardCount < rc, why: '金币不足，刷新要 ' + rc });
     var adOk = !!adLabel && g.wave >= RW.AD.FIRST_AD_WAVE;   // 桌面版没有广告入口
     if (adOk) UI.button('adReroll', 144, by, 116, 50, adLabel, { style: 'ad', sub: shop.adUsed ? '本轮已用' : '免费刷新 1 次', size: 13, disabled: shop.adUsed, why: '每轮整备只能用一次' });
-    UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '开始第 ' + (g.wave + 1) + ' 波', { style: 'primary', size: adOk ? 15 : 18 });
+    UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '迎战', { style: 'primary', size: adOk ? 15 : 18, sub: '第 ' + (g.wave + 1) + ' 波' });
   };
 
   // 流派套装：同流派武器阶数之和，2 / 4 / 6 层各一档
@@ -759,13 +759,13 @@
     var h = g.lastHits[g.lastHits.length - 1];
     if (h) D.text('最后一击：' + h.src, cx, 212, 13, '#ffb3c1', 'center', true);
     var left = g.revivesLeft, all = RW.REKINDLE.times;
-    UI.button('revive', cx - 190, 244, 380, 70, (adLabel ? adLabel + ' · ' : '') + '重燃圣火 · 还剩 ' + left + ' / ' + all + ' 次', { style: 'ad', size: 18, sub: '圣火恢复一半，英雄站起来，清空身边的敌人' });
+    UI.button('revive', cx - 190, 244, 380, 70, '重燃圣火', { style: 'ad', size: 18, sub: (adLabel ? adLabel + ' · ' : '') + '剩 ' + left + ' / ' + all + ' 次 · 恢复半数火光' });
     for (var ri = 0; ri < all; ri++) {   // 三簇小火苗：亮着的是还能用的重燃
       var fx2 = cx - (all - 1) * 14 + ri * 28, on = ri < left;
       D.ctx.fillStyle = on ? '#ffb347' : '#3a2a20'; D.ctx.beginPath(); D.ctx.moveTo(fx2, 226); D.ctx.quadraticCurveTo(fx2 + 8, 236, fx2, 242); D.ctx.quadraticCurveTo(fx2 - 8, 236, fx2, 226); D.ctx.fill();
     }
     if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
-    UI.button('giveup', cx - 190, 352, 380, 52, '结束守护，查看结算', { style: 'ghost', size: 14 });
+    UI.button('giveup', cx - 190, 352, 380, 52, '查看结算', { style: 'ghost', size: 14, sub: '本局守护到此为止' });
   };
 
   // ================= 结算 =================
@@ -837,9 +837,9 @@
     var same = (r.hero && RW.CLASSES[r.hero] ? RW.CLASSES[r.hero].name : '') + (r.daily ? ' · 今日挑战' : (r.danger ? ' · 危险 ' + r.danger : ''));
     if (r.canEndless) {
       UI.button('endless', RX, 396, RWd / 2 - 5, 52, '继续无尽', { style: 'ad', size: 17, sub: '从第 ' + (r.wave + 1) + ' 波接着打' });
-      UI.button('retry', RX + RWd / 2 + 5, 396, RWd / 2 - 5, 52, '同设置再来', { style: 'primary', size: 16, sub: same });
-    } else UI.button('retry', RX, 396, RWd, 52, '同设置再来一局', { style: 'primary', size: 18, sub: same });
-    UI.button('again', RX, 456, RWd / 2 - 5, 38, '换英雄 / 设置', { size: 13 });
+      UI.button('retry', RX + RWd / 2 + 5, 396, RWd / 2 - 5, 52, '再守一夜', { style: 'primary', size: 16, sub: same });
+    } else UI.button('retry', RX, 396, RWd, 52, '再守一夜', { style: 'primary', size: 18, sub: same });
+    UI.button('again', RX, 456, RWd / 2 - 5, 38, '重新选择', { size: 13 });
     UI.button('home', RX + RWd / 2 + 5, 456, RWd / 2 - 5, 38, '返回标题', { size: 13 });
     D.text('Enter 同设置再来' + (r.canEndless ? ' · C 继续无尽' : ''), RX + RWd / 2, 508, 10, C.faint, 'center');
   };
@@ -861,7 +861,7 @@
     var c = D.ctx, pr = g.prog || {}, got = pr.ach || {}, i;
     D.drawBg(true);
     UI.dim(0.72);
-    D.text('成就与纪录', 24, 36, 24, C.text, 'left', true, 3);
+    D.text('火光纪录', 24, 36, 24, C.text, 'left', true, 3);
     D.text('成就 ' + RW.countKeys(got) + ' / ' + RW.ACHIEVEMENTS.length + ' · 以后上架时与 Steam 成就一一对应', 24, 60, 11, C.dim, 'left', false, 3);
     // 左栏：累计数据 + 各英雄
     UI.panel(24, 74, 300, 404);
@@ -922,7 +922,7 @@
         } });
       })(RW.CORE_FORM_ORDER[i], i);
     }
-    UI.button('formClose', W / 2 - 80, 440, 160, 40, '再想想', { style: 'ghost', size: 14 });
+    UI.button('formClose', W / 2 - 80, 440, 160, 40, '稍后再选', { style: 'ghost', size: 14 });
   };
 
   // ================= 设置 =================
@@ -949,7 +949,7 @@
     var by = H - 70;
     UI.button('keys', x0 + 20, by, 150, 38, '按键设置', { size: 13 });
     UI.button('optReset', x0 + 180, by, 130, 38, '恢复默认', { size: 13, style: 'ghost' });
-    if (root.desktop) UI.button('fullscreen', x0 + 320, by, 170, 38, '全屏 / 窗口（F11）', { size: 12 });
+    if (root.desktop) UI.button('fullscreen', x0 + 320, by, 170, 38, '切换全屏', { size: 12, sub: 'F11' });
     UI.button('settingsClose', x0 + w - 170, by, 150, 38, '完成', { style: 'primary', size: 15 });
   };
   // 改键：两列列出可改的操作；点「改键」后按下新键（Esc 取消）
@@ -968,7 +968,7 @@
       UI.button('keyset:' + id, x + cw - 100, y, 90, 30, wait ? '按新键…' : '改键', { size: 12, style: wait ? 'ad' : 'normal' });
     }
     var by = H - 70;
-    UI.button('keysReset', x0 + 20, by, 150, 38, '恢复默认按键', { size: 13, style: 'ghost' });
+    UI.button('keysReset', x0 + 20, by, 150, 38, '恢复默认', { size: 13, style: 'ghost' });
     UI.button('keysClose', x0 + w - 170, by, 150, 38, '完成', { style: 'primary', size: 15 });
   };
   // 整备页「属性说明」：每个属性一句话，现在的数值写在前面
@@ -985,7 +985,7 @@
       D.text(vt, x + 96, y, 11, C.text, 'right', true);
       D.text(RW.STAT_DESC[k], x + 106, y, 10, C.dim, 'left');
     }
-    UI.button('statsClose', W / 2 - 80, H - 62, 160, 36, '知道了', { style: 'primary', size: 14 });
+    UI.button('statsClose', W / 2 - 80, H - 62, 160, 36, '明白', { style: 'primary', size: 14 });
   };
 
   UI.historyList = function (pr) {
@@ -1012,9 +1012,9 @@
     UI.button('mute', cx - 140, 208, 136, 38, muted ? '声音：关' : '声音：开', { size: 13 });
     UI.button('music', cx + 4, 208, 136, 38, UI.musicOff ? '音乐：关' : '音乐：开', { size: 13 });
     UI.button('settings', cx - 140, 254, 136, 38, '设置', { size: 13 });
-    UI.button('retry', cx + 4, 254, 136, 38, '重新开始', { size: 13 });
-    UI.button('toTitle', cx - 140, 300, 280, 44, '退出到标题', { size: 14, sub: UI.runInfo ? '下次从第 ' + UI.runInfo.wave + ' 波前的整备继续' : '第一次整备前退出，本局不保存' });
-    UI.button('quit', cx - 140, 354, 280, 44, '放弃本局，查看结算', { style: 'danger', size: 14 });
+    UI.button('retry', cx + 4, 254, 136, 38, '重新守护', { size: 13 });
+    UI.button('toTitle', cx - 140, 300, 280, 44, '回到标题', { size: 14, sub: UI.runInfo ? '已存至第 ' + UI.runInfo.wave + ' 波前' : '未经整备，本局不保存' });
+    UI.button('quit', cx - 140, 354, 280, 44, '结束守护', { style: 'danger', size: 14, sub: '立即查看结算' });
     D.text('重新开始 / 放弃本局都会记一局', cx, 416, 10, C.faint, 'center');
   };
 
