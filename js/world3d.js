@@ -265,13 +265,171 @@
   }
 
   // ================= 模型 =================
-  function model(fn) { var gb = new GB(); fn(gb); return GL.upload(gb); }
+  // 统一的原创资产收边：三段火纹、黄铜嵌线与青瓷能量点贯穿角色、怪物、建筑和圣火。
+  // 几何直接由项目代码构造，不依赖外部模型、纹理或训练集输出。
+  function finishModel(g, id) {
+    var brass = hex('#d6a84f'), pale = hex('#f7e5b7'), teal = hex('#71d4d7');
+    var deep = hex('#355b68'), ink = hex('#302638');
+    if (id === 'heroLeg') {
+      g.box(0.2, 4, 0, 4.5, 1.2, 5.2, brass, 0.15);
+      g.box(0.2, 10.5, 0, 4.5, 1, 4.8, deep, 0.1);
+    } else if (id === 'heroBody') {
+      g.box(4.1, 15, 0, 0.8, 4.5, 4.6, brass, 0.2);
+      g.cyl(4.7, 15.8, 0, 1.25, 0.5, 2.3, 6, teal, 0.8);
+      g.box(0, 21, 0, 8.5, 1.4, 11, ink, 0.05);
+    } else if (id === 'cape') {
+      g.box(-4.05, 6.4, 0, 1.7, 1.3, 10.5, brass, 0.1);
+      g.box(-4.1, 7.8, 0, 1.2, 1, 1.8, pale, 0.15);
+    } else if (id === 'hat_wizard') {
+      g.cyl(-0.2, 29.6, 0, 6.2, 6.4, 1.1, 8, brass, 0.12);
+      g.blob(5.3, 30, 0, 1.3, 1.8, 1.3, teal, 0.7, 5, 0.05);
+    } else if (id === 'hat_hood') {
+      g.box(3.3, 25.5, 0, 1, 1.4, 5.6, deep, 0.15);
+      g.box(3.8, 25.8, 0, 0.7, 0.5, 3.6, pale, 0.1);
+    } else if (id === 'hat_helm') {
+      g.box(-0.2, 31, 0, 3.2, 1.2, 2, brass, 0.1);
+      g.box(3.8, 26, 0, 0.8, 1, 4.8, deep, 0.1);
+    } else if (id === 'hat_horn') {
+      g.cyl(-0.5, 29.5, 4.2, 1.7, 1.5, 1.2, 5, brass, 0.1);
+      g.cyl(-0.5, 29.5, -4.2, 1.7, 1.5, 1.2, 5, brass, 0.1);
+    } else if (id === 'hat_halo') {
+      for (var hi = 0; hi < 3; hi++) { var ha = hi * Math.PI * 2 / 3; g.box(-1.6 + Math.cos(ha) * 5, 34.5, Math.sin(ha) * 5, 1.5, 1, 1.5, brass, 0.8); }
+      g.blob(4.1, 27, 0, 1.2, 1.7, 1.2, teal, 0.9, 6, 0.05);
+    } else if (id === 'hat_cap') {
+      g.box(-0.2, 30.5, 0, 5.2, 1, 4.2, brass, 0.12);
+      g.box(4.6, 28.4, 0, 1.8, 0.5, 4.7, deep, 0.05);
+    } else if (id === 'hat_tophat') {
+      g.cyl(0, 29.7, 0, 4.4, 4.4, 1.4, 10, brass, 0.1);
+      g.blob(4, 30.3, 0, 1.1, 1.2, 1.1, teal, 0.7, 4, 0.04);
+    } else if (id === 'hat_crown') {
+      for (var ci = -1; ci <= 1; ci++) g.blob(3.8, 32.3, ci * 2, 0.8, 1.4, 0.8, ci ? teal : pale, 1, ci + 4, 0.02);
+    } else if (id === 'prop_staff') {
+      g.cyl(2, 8, 7, 1.3, 1.3, 1.6, 6, brass, 0.08);
+      g.cyl(2, 23, 7, 1.3, 1.3, 1.6, 6, brass, 0.08);
+    } else if (id === 'prop_crossbow') {
+      g.box(11, 17.2, 3, 1.8, 1, 12, brass, 0.08);
+      g.box(8, 14.5, 3, 6, 0.7, 1, teal, 0.1);
+    } else if (id === 'prop_sword') {
+      g.box(3, 24, 7, 1.8, 2, 3.4, pale, 0.12);
+      g.box(3, 7, 7, 2, 2, 2, brass, 0.08);
+    } else if (id === 'prop_dagger') {
+      g.box(3, 10, 7, 2.5, 1.5, 1.5, brass, 0.1);
+      g.box(3, 10, -7, 2.5, 1.5, 1.5, brass, 0.1);
+    } else if (id === 'prop_wrench') {
+      g.box(2, 7, 7, 2.5, 2, 2.5, deep, 0.05);
+      g.box(2, 15, 7, 2.5, 1.3, 2.5, brass, 0.08);
+    } else if (id === 'prop_axe') {
+      g.box(2, 12, 7, 2.4, 2, 2.4, deep, 0.05);
+      g.box(5.5, 25, 7, 5.7, 1, 1.1, pale, 0.06);
+    } else if (id === 'prop_book') {
+      g.box(5, 7, 7, 6.4, 1.1, 2.1, brass, 0.12);
+      g.blob(5, 11, 7.9, 1.1, 1.1, 0.6, teal, 0.6, 7, 0.02);
+    } else if (id === 'prop_bomb') {
+      g.cyl(5, 11, 7, 3.8, 3.8, 1.2, 8, deep, 0.05);
+      g.blob(5, 18.4, 7, 1.3, 1.5, 1.3, pale, 1.1, 8, 0.03);
+    } else if (id === 'prop_coin') {
+      g.cyl(5.5, 15, 7.5, 1.2, 1.2, 1.1, 6, pale, 1);
+    } else if (id === 'prop_dice') {
+      g.box(5, 10.4, 8.9, 0.7, 0.7, 0.5, ink, 0);
+      g.box(4, 11.4, 5.1, 0.7, 0.7, 0.5, ink, 0);
+      g.box(6, 11.4, 5.1, 0.7, 0.7, 0.5, ink, 0);
+    } else if (id === 'imp') {
+      g.cyl(-4, 8, 0, 2.4, 0.5, 5, 5, deep, 0.12);
+      g.box(1, 4, 0, 2, 1.2, 4.8, brass, 0.05);
+    } else if (id === 'batBody') {
+      g.box(3.2, 2.6, 0, 1, 1.2, 3.2, pale, 0.1);
+      g.cyl(-2.5, 0, 0, 1.5, 0.2, 3.5, 5, deep, 0.08);
+    } else if (id === 'brute') {
+      g.box(-4, 12, 0, 3, 4, 12, deep, 0.06);
+      g.box(0, 18.5, 0, 5, 1.3, 12, brass, 0.08);
+    } else if (id === 'wolf') {
+      g.box(-12, 7, 0, 4, 2.2, 3.5, deep, 0.08);
+      g.box(-2, 12.2, 0, 12, 1.6, 8.5, shade(hex('#6b4a30'), 1.2));
+    } else if (id === 'sack') {
+      g.cyl(-5, 7, 0, 2.5, 3, 1.6, 6, brass, 0.08);
+      g.box(0, 2, 0, 8, 1.1, 7, deep, 0.05);
+    } else if (id === 'goblin') {
+      g.box(6, 10, 5.3, 4.5, 2, 1.3, deep, 0.1);
+      g.box(6, 10, -5.3, 4.5, 2, 1.3, deep, 0.1);
+    } else if (id === 'archer') {
+      g.box(-5, 8, 0, 2, 8, 7, deep, 0.05);
+      g.cyl(-4, 15, 0, 3, 3, 1, 8, brass, 0.08);
+    } else if (id === 'shaman') {
+      g.cyl(0, 16, 0, 7, 7, 1.4, 8, brass, 0.12);
+      g.blob(6, 14, 0, 1.6, 2, 1.6, teal, 0.9, 3, 0.03);
+    } else if (id === 'warlock') {
+      g.cyl(-1, 34, 0, 14, 14, 2, 8, deep, 0.08);
+      g.blob(11, 52, 0, 2, 3, 2, pale, 1, 5, 0.03);
+    } else if (id === 'brood') {
+      g.cyl(0, 24, 0, 18, 18, 2.4, 8, deep, 0.05);
+      g.blob(4, 40, 0, 4, 4, 4, pale, 0.4, 9, 0.05);
+    } else if (id === 'golem') {
+      g.box(-9, 56, 0, 15, 4, 24, deep, 0.12);
+      g.blob(19, 47, 0, 3.4, 5, 3.4, teal, 1.1, 6, 0.03);
+    } else if (id === 'sentry') {
+      g.box(0, 114, 0, 5, 3, 5, brass, 0.2);
+      g.blob(0, 105, 0, 3.2, 5, 3.2, pale, 0.7, 3, 0.04);
+    } else if (id === 'pylon') {
+      g.cyl(0, 54, 0, 13, 13, 2.2, 8, deep, 0.12);
+      g.cyl(0, 56.2, 0, 12, 12, 1.2, 8, brass, 0.2);
+    } else if (id === 'siphon') {
+      g.cyl(0, 83, 0, 10, 8, 4, 8, deep, 0.08);
+      g.blob(0, 91, 0, 4, 4.5, 4, teal, 1, 8, 0.04);
+    } else if (id === 'barracks') {
+      g.box(0, 48, 12.8, 19, 2, 1.2, brass, 0.05);
+      g.box(-14, 50, 0, 2, 8, 25, deep, 0.06);
+    } else if (id === 'soldier') {
+      g.box(3.2, 4, -3.4, 1, 6, 6, brass, 0.08);
+      g.box(0.5, 12, 0, 2.2, 1, 4.4, pale, 0.06);
+    } else if (id === 'core') {
+      g.cyl(0, 31, 0, 15, 15, 2, 10, brass, 0.3);
+      for (var fi = 0; fi < 3; fi++) {
+        var fa = fi * Math.PI * 2 / 3 + Math.PI / 6;
+        g.box(Math.cos(fa) * 15, 34, Math.sin(fa) * 15, 5, 13, 5, fi === 1 ? pale : teal, 1.1);
+      }
+      g.blob(5, 40, 0, 5.5, 7, 5.5, pale, 1.3, 12, 0.03);
+    } else if (id === 'coreRing') {
+      for (var ri = 0; ri < 6; ri++) {
+        var ra = ri * Math.PI / 3, rx = Math.cos(ra) * 44, rz = Math.sin(ra) * 44;
+        g.box(rx, 6, rz, 9.5, 1.4, 9.5, brass, 0.08);
+        g.box(rx, 18, rz, 2.2, 4, 2.2, pale, 0.18);
+      }
+    } else if (id === 'core_blaze') {
+      for (var bi = 0; bi < 3; bi++) {
+        var ba = bi * Math.PI * 2 / 3;
+        g.box(Math.cos(ba) * 21, 58, Math.sin(ba) * 21, 3.2, 8, 3.2, pale, 1.6);
+      }
+    } else if (id === 'core_ward') {
+      g.cyl(0, 49, 0, 12, 12, 2, 10, brass, 0.2);
+      for (var wi = 0; wi < 3; wi++) {
+        var wa = wi * Math.PI * 2 / 3;
+        g.box(Math.cos(wa) * 24, 36, Math.sin(wa) * 24, 4, 8, 4, teal, 0.6);
+      }
+    } else if (id === 'core_star') {
+      g.cyl(0, 74, 0, 8.5, 8.5, 1.2, 6, brass, 0.6);
+      g.blob(0, 77, 0, 3.8, 4, 3.8, pale, 1.6, 11, 0.02);
+    } else if (id === 'coin') {
+      g.cyl(0, -0.8, 0, 3.8, 3.8, 0.5, 8, brass, 0.3);
+      g.blob(0, -0.1, 0, 1.5, 1.5, 0.5, pale, 0.7, 5, 0.02);
+    } else if (id === 'stone') {
+      g.box(-1, 1.5, 0, 6, 0.9, 6, pale, 0.02);
+    } else if (id === 'crystal') {
+      g.cyl(0, -1.4, 0, 2.7, 2.7, 0.7, 6, deep, 0.1);
+      g.box(0, 3.8, 0, 1, 1, 1, pale, 1);
+    }
+  }
+  function model(id, fn) {
+    var gb = new GB();
+    fn(gb);
+    finishModel(gb, id);
+    return GL.upload(gb);
+  }
   var SKIN = hex('#f1c9a5'), HAIR = hex('#4a2f1f');
   function buildModels() {
     var M = W3.meshes;
     // ---- 主角（分部件，方便做走路/披风动画）----
-    M.heroLeg = model(function (g) { g.box(0, 0, 0, 4.5, 5, 4.8, hex('#4a3020')); g.box(0, 5, 0, 4.2, 7, 4.4, hex('#2b2622')); });
-    M.heroBody = model(function (g) {
+    M.heroLeg = model('heroLeg', function (g) { g.box(0, 0, 0, 4.5, 5, 4.8, hex('#4a3020')); g.box(0, 5, 0, 4.2, 7, 4.4, hex('#2b2622')); });
+    M.heroBody = model('heroBody', function (g) {
       g.box(0, 11, 0, 7.5, 12, 11, hex('#2d2a33'));
       g.box(0, 11, 0, 7.9, 2, 11.4, hex('#5a3a22'));
       g.box(3.9, 12, 0, 0.6, 10, 2, hex('#c8963c'), 0.3);
@@ -284,54 +442,54 @@
     });
     // 斗篷与兜帽/尖帽做成白色，绘制时按英雄的 cape 颜色着色；其余帽子、手持物自带颜色
     var CLOTH = hex('#ffffff'), STEEL = hex('#c8d2e0'), WOOD = hex('#6b4428'), GOLDC = hex('#e0a83a');
-    M.cape = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, CLOTH); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, CLOTH, 0, 5, 0.2); });
-    M.hat_wizard = model(function (g) { g.cyl(-0.3, 29.4, 0, 6.8, 6.4, 0.9, 8, CLOTH); g.cyl(-0.8, 30.3, 0, 4.2, 0, 11, 7, CLOTH); });
-    M.hat_hood = model(function (g) { g.blob(-1, 27.5, 0, 4.9, 4.4, 4.9, CLOTH, 0, 9, 0.12); g.cyl(-2.2, 29, 0, 3.2, 0, 6, 5, CLOTH); });
-    M.hat_helm = model(function (g) {
+    M.cape = model('cape', function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, CLOTH); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, CLOTH, 0, 5, 0.2); });
+    M.hat_wizard = model('hat_wizard', function (g) { g.cyl(-0.3, 29.4, 0, 6.8, 6.4, 0.9, 8, CLOTH); g.cyl(-0.8, 30.3, 0, 4.2, 0, 11, 7, CLOTH); });
+    M.hat_hood = model('hat_hood', function (g) { g.blob(-1, 27.5, 0, 4.9, 4.4, 4.9, CLOTH, 0, 9, 0.12); g.cyl(-2.2, 29, 0, 3.2, 0, 6, 5, CLOTH); });
+    M.hat_helm = model('hat_helm', function (g) {
       g.box(-0.2, 25.5, 0, 8, 6.2, 8, STEEL); g.box(3.9, 25.6, 0, 0.4, 1.1, 5.6, hex('#1e2230'));
       g.box(-0.2, 31.6, 0, 3, 1.4, 1.4, STEEL); g.box(-1.2, 33, 0, 5, 3.4, 1, hex('#ff5a3a'));
     });
-    M.hat_bandana = model(function (g) {
+    M.hat_bandana = model('hat_bandana', function (g) {
       g.box(0, 27.6, 0, 7.6, 2.2, 7.6, hex('#3a2350')); g.box(-5, 26.5, 1.5, 2.6, 1, 1.4, hex('#3a2350')); g.box(-6.2, 25.6, 2.2, 2, 1, 1.2, hex('#3a2350'));
       g.box(1.2, 23.2, 0, 5.2, 2.6, 7.4, hex('#1c1226'));
     });
-    M.hat_goggles = model(function (g) {
+    M.hat_goggles = model('hat_goggles', function (g) {
       g.box(0, 27.2, 0, 7.6, 1.4, 7.6, hex('#5a3a22'));
       g.box(3.8, 26.8, 1.7, 0.8, 2.2, 2.2, hex('#8fe3ff'), 1.2); g.box(3.8, 26.8, -1.7, 0.8, 2.2, 2.2, hex('#8fe3ff'), 1.2);
     });
-    M.hat_horn = model(function (g) {
+    M.hat_horn = model('hat_horn', function (g) {
       g.blob(-0.3, 29, 0, 4.6, 3.2, 4.6, hex('#8a8a92'), 0, 4, 0.08);
       g.cyl(-0.5, 29.5, 4.6, 1.5, 0, 7, 5, hex('#efe4cc')); g.cyl(-0.5, 29.5, -4.6, 1.5, 0, 7, 5, hex('#efe4cc'));
     });
-    M.hat_halo = model(function (g) {
+    M.hat_halo = model('hat_halo', function (g) {
       g.blob(-1.6, 25, 0, 4.6, 6, 4.8, hex('#f4f0e0'), 0, 3, 0.1);
       for (var i = 0; i < 10; i++) { var a = i / 10 * Math.PI * 2; g.box(Math.cos(a) * 5, 35, Math.sin(a) * 5, 2.4, 0.8, 2.4, hex('#fff1a8'), 2.2); }
     });
-    M.hat_cap = model(function (g) { g.blob(-0.3, 29, 0, 4.4, 2.6, 4.4, hex('#6a5236'), 0, 6, 0.06); g.box(3.6, 28.4, 0, 3.6, 0.6, 5, hex('#5a4630')); });
-    M.hat_tophat = model(function (g) { g.cyl(0, 29.6, 0, 6.2, 6.2, 0.8, 10, hex('#2a1a2a')); g.cyl(0, 30.4, 0, 3.8, 3.8, 8.5, 10, hex('#2a1a2a')); g.cyl(0, 31.2, 0, 3.9, 3.9, 1.3, 10, hex('#ffe066'), 0.3); });
-    M.hat_crown = model(function (g) {
+    M.hat_cap = model('hat_cap', function (g) { g.blob(-0.3, 29, 0, 4.4, 2.6, 4.4, hex('#6a5236'), 0, 6, 0.06); g.box(3.6, 28.4, 0, 3.6, 0.6, 5, hex('#5a4630')); });
+    M.hat_tophat = model('hat_tophat', function (g) { g.cyl(0, 29.6, 0, 6.2, 6.2, 0.8, 10, hex('#2a1a2a')); g.cyl(0, 30.4, 0, 3.8, 3.8, 8.5, 10, hex('#2a1a2a')); g.cyl(0, 31.2, 0, 3.9, 3.9, 1.3, 10, hex('#ffe066'), 0.3); });
+    M.hat_crown = model('hat_crown', function (g) {
       g.cyl(0, 29.8, 0, 4.2, 4.4, 2.4, 8, GOLDC, 0.4);
       for (var i = 0; i < 5; i++) { var a = i / 5 * Math.PI * 2; g.box(Math.cos(a) * 3.8, 32.2, Math.sin(a) * 3.8, 1.2, 2.2, 1.2, GOLDC, 0.4); }
       g.box(4.2, 31, 0, 0.6, 1.2, 1.2, hex('#7affd0'), 1.6);
     });
-    M.prop_staff = model(function (g) { g.box(2, 0, 7, 1.6, 30, 1.6, WOOD); g.blob(2, 32, 7, 3, 3, 3, hex('#ffb347'), 1.4, 2, 0.1); g.box(2, 28, 7, 3, 1.5, 3, hex('#c8963c'), 0.3); });
-    M.prop_crossbow = model(function (g) { g.box(6, 15, 3, 12, 2, 2, WOOD); g.box(11, 15.5, 3, 1.5, 1.5, 12, hex('#4a3020')); g.box(12, 16, 3, 0.4, 0.4, 11, hex('#f6e2b0'), 0.5); g.box(4, 12, 3, 2, 4, 2, WOOD); });
-    M.prop_sword = model(function (g) {
+    M.prop_staff = model('prop_staff', function (g) { g.box(2, 0, 7, 1.6, 30, 1.6, WOOD); g.blob(2, 32, 7, 3, 3, 3, hex('#ffb347'), 1.4, 2, 0.1); g.box(2, 28, 7, 3, 1.5, 3, hex('#c8963c'), 0.3); });
+    M.prop_crossbow = model('prop_crossbow', function (g) { g.box(6, 15, 3, 12, 2, 2, WOOD); g.box(11, 15.5, 3, 1.5, 1.5, 12, hex('#4a3020')); g.box(12, 16, 3, 0.4, 0.4, 11, hex('#f6e2b0'), 0.5); g.box(4, 12, 3, 2, 4, 2, WOOD); });
+    M.prop_sword = model('prop_sword', function (g) {
       g.box(3, 5, 7, 1.4, 5, 1.4, hex('#4a3020')); g.box(3, 10, 7, 1.6, 1.2, 6, GOLDC); g.box(3, 11.2, 7, 0.8, 16, 2.6, STEEL);
       g.box(2, 5, -7.2, 1.4, 12, 8.5, hex('#3f5f9e')); g.box(2.8, 9, -7.2, 0.4, 4, 3, GOLDC, 0.3);
     });
-    M.prop_dagger = model(function (g) {
+    M.prop_dagger = model('prop_dagger', function (g) {
       g.box(3, 9, 7, 3, 1.2, 1.2, hex('#2a1a10')); g.box(8, 9, 7, 7, 0.6, 1.6, STEEL);
       g.box(3, 9, -7, 3, 1.2, 1.2, hex('#2a1a10')); g.box(8, 9, -7, 7, 0.6, 1.6, STEEL);
     });
-    M.prop_wrench = model(function (g) { g.box(2, 4, 7, 1.6, 20, 1.6, STEEL); g.box(2, 23, 7, 5, 3, 2, STEEL); g.box(3.4, 26, 7, 1.4, 2.4, 2, STEEL); g.box(0.6, 26, 7, 1.4, 2.4, 2, STEEL); });
-    M.prop_axe = model(function (g) { g.box(2, 0, 7, 1.8, 29, 1.8, WOOD); g.box(5.6, 21, 7, 5.6, 8, 0.8, STEEL); g.box(-0.8, 23, 7, 2, 4, 0.8, STEEL); });
-    M.prop_book = model(function (g) { g.box(5, 11, 6, 5.5, 7, 1.6, hex('#8a2a1a')); g.box(5, 11.6, 6.9, 4.4, 5.8, 0.4, hex('#ffe2a8'), 0.6); });
-    M.prop_bomb = model(function (g) { g.blob(5, 12, 7, 3.6, 3.6, 3.6, hex('#2a2a30'), 0, 3, 0.05); g.box(5, 15.4, 7, 0.8, 2.6, 0.8, hex('#c8963c')); g.blob(5, 18.4, 7, 1.1, 1.1, 1.1, hex('#ffb347'), 2.5, 2, 0.1); });
-    M.prop_coin = model(function (g) { g.blob(2.5, 9, 7, 3.6, 3.8, 3.6, hex('#8a6440'), 0, 5, 0.12); g.box(2.5, 12.6, 7, 1.8, 1.4, 1.8, hex('#5a3a22')); g.cyl(5.5, 15, 7, 2.2, 2.2, 0.8, 8, GOLDC, 0.8); });
-    M.prop_dice = model(function (g) { g.box(5, 10, 7, 3.6, 3.6, 3.6, hex('#f4f0e0')); g.box(6.9, 11.2, 7, 0.3, 0.9, 0.9, hex('#1f5a4a')); g.box(4, 14, 8.5, 2.6, 2.6, 2.6, hex('#ffd6d6')); });
+    M.prop_wrench = model('prop_wrench', function (g) { g.box(2, 4, 7, 1.6, 20, 1.6, STEEL); g.box(2, 23, 7, 5, 3, 2, STEEL); g.box(3.4, 26, 7, 1.4, 2.4, 2, STEEL); g.box(0.6, 26, 7, 1.4, 2.4, 2, STEEL); });
+    M.prop_axe = model('prop_axe', function (g) { g.box(2, 0, 7, 1.8, 29, 1.8, WOOD); g.box(5.6, 21, 7, 5.6, 8, 0.8, STEEL); g.box(-0.8, 23, 7, 2, 4, 0.8, STEEL); });
+    M.prop_book = model('prop_book', function (g) { g.box(5, 11, 6, 5.5, 7, 1.6, hex('#8a2a1a')); g.box(5, 11.6, 6.9, 4.4, 5.8, 0.4, hex('#ffe2a8'), 0.6); });
+    M.prop_bomb = model('prop_bomb', function (g) { g.blob(5, 12, 7, 3.6, 3.6, 3.6, hex('#2a2a30'), 0, 3, 0.05); g.box(5, 15.4, 7, 0.8, 2.6, 0.8, hex('#c8963c')); g.blob(5, 18.4, 7, 1.1, 1.1, 1.1, hex('#ffb347'), 2.5, 2, 0.1); });
+    M.prop_coin = model('prop_coin', function (g) { g.blob(2.5, 9, 7, 3.6, 3.8, 3.6, hex('#8a6440'), 0, 5, 0.12); g.box(2.5, 12.6, 7, 1.8, 1.4, 1.8, hex('#5a3a22')); g.cyl(5.5, 15, 7, 2.2, 2.2, 0.8, 8, GOLDC, 0.8); });
+    M.prop_dice = model('prop_dice', function (g) { g.box(5, 10, 7, 3.6, 3.6, 3.6, hex('#f4f0e0')); g.box(6.9, 11.2, 7, 0.3, 0.9, 0.9, hex('#1f5a4a')); g.box(4, 14, 8.5, 2.6, 2.6, 2.6, hex('#ffd6d6')); });
     // ---- 敌人 ----
-    M.imp = model(function (g) {
+    M.imp = model('imp', function (g) {
       var b = hex('#6a3f8e');
       g.box(-1, 0, 2.2, 2.4, 4, 2.4, b); g.box(-1, 0, -2.2, 2.4, 4, 2.4, b);
       g.blob(0, 7, 0, 5.5, 4.6, 5, b, 0, 11, 0.2);
@@ -340,13 +498,13 @@
       g.box(6.8, 10, 1.2, 0.6, 1, 1, hex('#ff3b3b'), 2); g.box(6.8, 10, -1.2, 0.6, 1, 1, hex('#ff3b3b'), 2);
       g.box(3, 5, 4.5, 4, 1.4, 1.4, b); g.box(3, 5, -4.5, 4, 1.4, 1.4, b);
     });
-    M.batBody = model(function (g) { g.blob(0, 0, 0, 3.5, 3, 3, hex('#5a3a8a'), 0, 2, 0.15); g.box(2.8, 0.8, 1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); g.box(2.8, 0.8, -1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); });
-    M.batWing = model(function (g) {
+    M.batBody = model('batBody', function (g) { g.blob(0, 0, 0, 3.5, 3, 3, hex('#5a3a8a'), 0, 2, 0.15); g.box(2.8, 0.8, 1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); g.box(2.8, 0.8, -1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); });
+    M.batWing = model('batWing', function (g) {
       var c = hex('#7a4ab0');
       g.tri([1, 0, 1.5], [-2, 0, 9], [2, 3, 7], c); g.tri([1, 0, 1.5], [2, 3, 7], [-2, 0, 9], c);
       g.tri([1, 0, -1.5], [2, 3, -7], [-2, 0, -9], c); g.tri([1, 0, -1.5], [-2, 0, -9], [2, 3, -7], c);
     });
-    M.brute = model(function (g) {
+    M.brute = model('brute', function (g) {
       var st = hex('#6d7486'), dk = hex('#454a58');
       g.box(-1, 0, 4, 5, 7, 5, dk); g.box(-1, 0, -4, 5, 7, 5, dk);
       g.box(0, 6, 0, 14, 13, 16, st);
@@ -356,7 +514,7 @@
       g.box(8.6, 18, 2, 0.6, 1.2, 1.4, hex('#ff4a2a'), 2); g.box(8.6, 18, -2, 0.6, 1.2, 1.4, hex('#ff4a2a'), 2);
       g.box(5, 8, 9.5, 3, 10, 3, dk); g.box(7, 4, 9.5, 10, 4, 4, hex('#5a3a22'));
     });
-    M.wolf = model(function (g) {
+    M.wolf = model('wolf', function (g) {
       var f = hex('#6b4a30');
       for (var i = 0; i < 4; i++) g.box(i < 2 ? 5 : -5, 0, i % 2 ? 2.8 : -2.8, 2.4, 5, 2.4, shade(f, 0.8));
       g.box(0, 5, 0, 16, 7, 7.5, f);
@@ -367,13 +525,13 @@
       g.box(-1, 12, 0, 5, 7, 5, hex('#3a2e2a')); g.box(-1, 19, 0, 4.4, 4.4, 4.4, hex('#5a5f6a'));
       g.box(4, 16, 3.5, 14, 1, 1, hex('#8a6440')); g.cyl(11.5, 16, 3.5, 1.2, 0, 3, 4, hex('#c9ccd6'));
     });
-    M.sack = model(function (g) {
+    M.sack = model('sack', function (g) {
       var c = hex('#7a2e9e');
       g.blob(0, 10, 0, 11, 10, 11, c, 0, 5, 0.18);
       g.blob(-3, 16, 5, 4, 4, 4, shade(c, 1.2), 0, 8, 0.2); g.blob(-4, 12, -6, 4, 3.5, 4, shade(c, 1.2), 0, 9, 0.2);
       g.box(10, 12, 2.5, 0.8, 2, 2, hex('#ffe14a'), 2); g.box(10, 12, -2.5, 0.8, 2, 2, hex('#ffe14a'), 2);
     });
-    M.goblin = model(function (g) {
+    M.goblin = model('goblin', function (g) {
       var s = hex('#6fbf3a');
       g.box(0, 0, 2, 2, 4, 2, hex('#4a3020')); g.box(0, 0, -2, 2, 4, 2, hex('#4a3020'));
       g.box(0, 4, 0, 5.5, 6, 6, hex('#7a5a3a'));
@@ -384,7 +542,7 @@
       g.blob(-5, 8, 0, 5, 5, 5, hex('#1c1c22'), 0, 6, 0.08);
       g.box(-5, 13, 0, 1, 3, 1, hex('#caa46a')); g.box(-5, 16, 0, 1.8, 1.8, 1.8, hex('#ffb040'), 2.5);
     });
-    M.archer = model(function (g) {
+    M.archer = model('archer', function (g) {
       var c = hex('#39445c');
       g.box(0, 0, 1.8, 2, 6, 2, hex('#2a2a33')); g.box(0, 0, -1.8, 2, 6, 2, hex('#2a2a33'));
       g.cyl(0, 5, 0, 5, 3.5, 10, 6, c);
@@ -393,7 +551,7 @@
       g.box(2.4, 16, 0, 0.5, 0.8, 3, hex('#ffe066'), 2);
       g.box(4, 8, 0, 1.2, 14, 1.2, hex('#6b4428')); g.box(4.5, 15, 0, 1.2, 2, 1.2, hex('#8a6440'));
     });
-    M.shaman = model(function (g) {
+    M.shaman = model('shaman', function (g) {
       var c = hex('#2e4f9e');
       g.cyl(0, 0, 0, 7, 4, 13, 7, c);
       g.box(0, 13, 0, 5, 5, 5, hex('#e8e2d0'));
@@ -401,7 +559,7 @@
       g.cyl(-1, 18, 0, 1.5, 0, 6, 4, hex('#ff6b4a'));
       g.box(4, 0, 5, 1.2, 22, 1.2, hex('#6b4428')); g.blob(4, 23, 5, 2.4, 3.2, 2.4, hex('#6fc3ff'), 1.8, 2, 0.1);
     });
-    M.warlock = model(function (g) {
+    M.warlock = model('warlock', function (g) {
       var c = hex('#4a0f24');
       g.cyl(0, 0, 0, 11, 5, 26, 8, c);
       g.box(0, 26, 0, 7, 8, 7, hex('#2a0812'));
@@ -410,7 +568,7 @@
       g.box(4, 12, 8, 1.4, 28, 1.4, hex('#2a1a10')); g.blob(4, 42, 8, 3.5, 3.5, 3.5, hex('#ff3b8c'), 1.8, 3, 0.1);
       g.box(0, 22, 0, 12, 2, 16, hex('#6a1a36'));
     });
-    M.brood = model(function (g) {
+    M.brood = model('brood', function (g) {
       var c = hex('#3c1f5c');
       g.blob(0, 16, 0, 16, 13, 14, c, 0, 5, 0.2);
       g.blob(12, 20, 0, 8, 7, 8, shade(c, 1.2), 0, 6, 0.2);
@@ -418,12 +576,12 @@
       for (var i = 0; i < 4; i++) g.box(i < 2 ? 6 : -6, 0, i % 2 ? 6 : -6, 3, 8, 3, shade(c, 0.7));
       g.blob(-6, 26, 0, 7, 5, 9, hex('#9b4dff'), 0.4, 9, 0.3);
     });
-    M.broodWing = model(function (g) {
+    M.broodWing = model('broodWing', function (g) {
       var c = hex('#5a2e8a');
       g.tri([2, 0, 6], [-10, 0, 34], [6, 10, 28], c); g.tri([2, 0, 6], [6, 10, 28], [-10, 0, 34], c);
       g.tri([2, 0, -6], [6, 10, -28], [-10, 0, -34], c); g.tri([2, 0, -6], [-10, 0, -34], [6, 10, -28], c);
     });
-    M.golem = model(function (g) {
+    M.golem = model('golem', function (g) {
       var s = hex('#6a6660'), s2 = hex('#7d7870'), lava = hex('#ff6a2e');
       g.blob(-4, 10, 12, 10, 12, 9, s, 0, 3, 0.2); g.blob(-4, 10, -12, 10, 12, 9, s, 0, 4, 0.2);
       g.blob(0, 38, 0, 26, 20, 24, s2, 0, 5, 0.2);
@@ -435,33 +593,33 @@
       g.box(10, 44, 12, 8, 2, 2, lava, 2.2); g.box(8, 30, -14, 8, 2, 2, lava, 2.2); g.box(-6, 46, 6, 2, 10, 2, lava, 2.2);
     });
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
-    M.sentry = model(function (g) {
+    M.sentry = model('sentry', function (g) {
       g.box(0, 0, 0, 22, 26, 22, PAL.rock2, 0, PAL.stone);
       g.box(0, 26, 0, 16, 62, 16, PAL.wallWood);
       g.box(0, 58, 8.2, 7, 8, 0.8, hex('#1a120c'));
       g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed);
       g.box(0, 40, 8.4, 8, 28, 0.8, PAL.banner); g.box(0, 52, 8.9, 4, 6, 0.4, PAL.gold, 0.6);
     });
-    M.pylon = model(function (g) {
+    M.pylon = model('pylon', function (g) {
       g.box(0, 0, 0, 20, 10, 20, PAL.rock2, 0, PAL.stone);
       g.box(0, 10, 0, 10, 70, 10, PAL.rock);
       g.blob(0, 92, 0, 8, 22, 8, hex('#8fe3ff'), 1.1, 3, 0.15);
       g.blob(6, 48, 4, 4, 16, 4, hex('#8fe3ff'), 0.9, 5, 0.2); g.blob(-6, 36, -4, 4, 14, 4, hex('#8fe3ff'), 0.9, 6, 0.2);
     });
-    M.siphon = model(function (g) {
+    M.siphon = model('siphon', function (g) {
       g.box(0, 0, 0, 16, 6, 16, PAL.stone);
       g.box(0, 6, 0, 5, 78, 5, PAL.wood);
       g.box(0, 78, 0, 16, 3, 3, PAL.wood);
       g.cyl(0, 92, 0, 7, 7, 2, 8, PAL.gold, 1.0);
     });
-    M.barracks = model(function (g) {
+    M.barracks = model('barracks', function (g) {
       g.box(0, 0, 0, 32, 4, 28, PAL.stone2);
       g.box(0, 4, 0, 28, 48, 24, PAL.wallWood);
       g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed);
       g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
       banner(g, -15, 13, 72);
     });
-    M.soldier = model(function (g) {
+    M.soldier = model('soldier', function (g) {
       g.box(0, 0, 1.6, 1.8, 4, 1.8, hex('#5a5f6a')); g.box(0, 0, -1.6, 1.8, 4, 1.8, hex('#5a5f6a'));
       g.box(0, 4, 0, 4, 6, 5, hex('#c9ccd6'));
       g.box(0, 10, 0, 3.6, 3.6, 3.6, hex('#aeb2bd'));
@@ -469,7 +627,7 @@
       g.box(3, 5, 3, 7, 1, 1, hex('#e6e8ee'), 0.3);
       g.box(0.5, 4, -3.2, 3.5, 5, 0.8, hex('#8a2a22'));
     });
-    M.core = model(function (g) {
+    M.core = model('core', function (g) {
       g.box(0, 0, 0, 56, 6, 56, PAL.stone2);
       g.box(0, 6, 0, 40, 8, 40, PAL.stone);
       g.box(0, 14, 0, 26, 10, 26, PAL.rock2);
@@ -478,14 +636,14 @@
       for (var i = 0; i < 4; i++) { var a = i * Math.PI / 2 + Math.PI / 4; banner(g, Math.cos(a) * 30, Math.sin(a) * 30, 40); }
     });
     // 圣火外形随等级长大：2 级起一圈石柱；3 级起按形态换上层建筑
-    M.coreRing = model(function (g) {
+    M.coreRing = model('coreRing', function (g) {
       for (var i = 0; i < 6; i++) {
         var a = i * Math.PI / 3, x = Math.cos(a) * 44, z = Math.sin(a) * 44;
         g.box(x, 0, z, 8, 26, 8, PAL.rock2, 0, PAL.stone);
         g.box(x, 26, z, 11, 3, 11, PAL.gold, 0.5);
       }
     });
-    M.core_blaze = model(function (g) {   // 烈焰：黑石尖塔，四片向上翻的火翼
+    M.core_blaze = model('core_blaze', function (g) {   // 烈焰：黑石尖塔，四片向上翻的火翼
       g.cyl(0, 30, 0, 14, 8, 24, 6, hex('#2a2224'));
       for (var i = 0; i < 4; i++) {
         var a = i * Math.PI / 2 + Math.PI / 4, x = Math.cos(a) * 16, z = Math.sin(a) * 16;
@@ -493,7 +651,7 @@
         g.box(x * 1.2, 58, z * 1.2, 4, 8, 4, hex('#ff7a2e'), 1.3);
       }
     });
-    M.core_ward = model(function (g) {    // 守护：白石穹顶 + 四块立石
+    M.core_ward = model('core_ward', function (g) {    // 守护：白石穹顶 + 四块立石
       g.cyl(0, 30, 0, 20, 18, 6, 10, hex('#dfe8ee'));
       g.blob(0, 42, 0, 16, 12, 16, hex('#cfe6f2'), 0.2, 3, 0.05);
       for (var i = 0; i < 4; i++) {
@@ -502,13 +660,13 @@
         g.box(x, 54, z, 3, 6, 3, hex('#8fe8ff'), 1.2);
       }
     });
-    M.core_star = model(function (g) {    // 星火：细高方尖碑，顶上一颗星
+    M.core_star = model('core_star', function (g) {    // 星火：细高方尖碑，顶上一颗星
       g.box(0, 30, 0, 12, 46, 12, hex('#3a2e4a'), 0, hex('#d9a8ff'));
       g.cyl(0, 76, 0, 7, 0.5, 14, 4, hex('#d9a8ff'), 1.1);
     });
-    M.coin = model(function (g) { g.cyl(0, -0.8, 0, 3.4, 3.4, 1.6, 8, PAL.gold, 0.6, hex('#ffd76a')); });
-    M.stone = model(function (g) { g.blob(0, 2, 0, 5, 3, 5, PAL.rock2, 0, 4, 0.25); });
-    M.crystal = model(function (g) { g.blob(0, 0, 0, 2.6, 4.5, 2.6, hex('#9dffcf'), 1.2, 3, 0.1); });
+    M.coin = model('coin', function (g) { g.cyl(0, -0.8, 0, 3.4, 3.4, 1.6, 8, PAL.gold, 0.6, hex('#ffd76a')); });
+    M.stone = model('stone', function (g) { g.blob(0, 2, 0, 5, 3, 5, PAL.rock2, 0, 4, 0.25); });
+    M.crystal = model('crystal', function (g) { g.blob(0, 0, 0, 2.6, 4.5, 2.6, hex('#9dffcf'), 1.2, 3, 0.1); });
   }
 
   // 敌人类型 → 模型与基础尺寸

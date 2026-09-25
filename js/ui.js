@@ -47,11 +47,13 @@
     else if (st === 'ghost') { fill = 'rgba(0,0,0,0)'; stroke = '#5a4630'; tc = C.dim; }
     c.fillStyle = fill; D.rr(x, y, w, h, 7); c.fill();
     c.strokeStyle = stroke; c.lineWidth = 1.5; D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 7); c.stroke();
-    var size = opts.size || 15;
+    var size = opts.size || 15, hasIcon = id === 'repair' || id === 'upgrade' || id === 'reroll' || id === 'adReroll' || id === 'next';
+    var labelX = x + w / 2 + (hasIcon ? 8 : 0);
+    if (hasIcon) UI.controlIcon(c, id, x + 14, y + h / 2, 12);
     if (opts.sub) {
-      D.text(label, x + w / 2, y + h / 2 - 8, size, tc, 'center', true);
-      D.text(opts.sub, x + w / 2, y + h / 2 + 11, 10, st === 'primary' ? '#0b3440' : C.dim, 'center');
-    } else D.text(label, x + w / 2, y + h / 2 + 1, size, tc, 'center', true);
+      D.text(label, labelX, y + h / 2 - 8, size, tc, 'center', true);
+      D.text(opts.sub, labelX, y + h / 2 + 11, 10, st === 'primary' ? '#0b3440' : C.dim, 'center');
+    } else D.text(label, labelX, y + h / 2 + 1, size, tc, 'center', true);
     c.globalAlpha = 1;
     if (pressed) c.restore();
     UI.focusRing(id, x, y, w, h);
@@ -669,6 +671,139 @@
     function pct(v) { var r = Math.round(v * 100); return (r > 0 ? '+' : '') + r + '%'; }
   };
 
+  // 购物卡图标按稳定物品 ID 映射到手绘矢量轮廓；不读外网，也不依赖字母或 emoji。
+  UI.ART_SHAPE = {
+    needle: 'crossbow', repeater: 'repeater', scatter: 'flame', javelin: 'spear', blades: 'orbit', flail: 'flail',
+    cleaver: 'axe', pike: 'spear', lance: 'lance', arc: 'lightning', mines: 'rune',
+    nova: 'burst', veil: 'cloak', well: 'well', storm: 'storm', bash: 'shield', shade: 'dagger',
+    cleave: 'axe', hymn: 'book', salvo: 'arrow', bounty: 'coin', wager: 'dice', fan: 'fan', ring: 'ring', lash: 'lash',
+    sentry: 'tower', pylon: 'prism', siphon: 'siphon', barracks: 'house',
+    fins: 'wing', lens: 'lens', hull: 'armor', nano: 'gear', magnet: 'magnet', whet: 'whetstone',
+    gauntlet: 'gauntlet', quiver: 'quiver', tome: 'book', bracer: 'bracer', apple: 'apple',
+    feather: 'feather', purse: 'purse', herb: 'herb', coil: 'coil', sight: 'eye', plate: 'plate',
+    greed: 'coins', overclock: 'gear', fang: 'fang', cloak: 'cloak', maul: 'hammer',
+    blueprint: 'blueprint', powder: 'vial', thornmail: 'thorn', piggy: 'pig', prism: 'prism',
+    contract: 'scroll', clover: 'clover', holy: 'halo', drum: 'drum', ember: 'flame',
+    heart: 'heart', crown: 'crown', belt: 'belt', trident: 'trident'
+  };
+  UI.assetIcon = function (c, kind, id, x, y, size, color) {
+    var shape = UI.ART_SHAPE[id] || (kind === 'tech' ? 'tower' : (kind === 'skill' ? 'star' : 'prism'));
+    var a = color || '#e5bd69', b = '#78dce1', dark = '#35404a', light = '#f6e8c6';
+    c.save();
+    D.rr(x, y, size, size, 9); c.fillStyle = '#171d27'; c.fill();
+    c.strokeStyle = '#526174'; c.lineWidth = 1; D.rr(x + 0.5, y + 0.5, size - 1, size - 1, 9); c.stroke();
+    c.translate(x + size / 2, y + size / 2); c.scale(size / 48, size / 48);
+    c.lineWidth = 3; c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = a; c.fillStyle = a;
+    function path(points, fill) {
+      c.beginPath(); c.moveTo(points[0][0], points[0][1]);
+      for (var i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
+      c.closePath(); if (fill) c.fill(); c.stroke();
+    }
+    function line(points) {
+      c.beginPath(); c.moveTo(points[0][0], points[0][1]);
+      for (var i = 1; i < points.length; i++) c.lineTo(points[i][0], points[i][1]);
+      c.stroke();
+    }
+    function dot(px, py, r, fill) { c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fillStyle = fill || a; c.fill(); }
+    function ring(px, py, r) { c.beginPath(); c.arc(px, py, r, 0.2, Math.PI * 1.8); c.stroke(); }
+    if (shape === 'crossbow' || shape === 'repeater' || shape === 'quiver') {
+      line([[-17, 11], [15, -5], [19, -3]]); line([[-9, 15], [7, -14], [15, -5]]);
+      path([[-17, 11], [-9, 15], [-13, 20]], false); line([[-9, 15], [-4, 3]]);
+      if (shape === 'repeater') { line([[-12, 3], [13, -10]]); dot(-3, -2, 2.2, light); }
+      if (shape === 'quiver') { line([[8, -13], [13, 9]]); line([[13, 9], [18, 4]]); }
+    } else if (shape === 'flame' || shape === 'burst') {
+      path([[-3, 18], [-12, 8], [-11, 0], [-5, 3], [-4, -10], [2, -18], [4, -5], [12, -10], [10, 1], [15, 8], [7, 18]], true);
+      c.fillStyle = '#ffdb8a'; c.beginPath(); c.ellipse(1, 9, 4, 7, 0, 0, Math.PI * 2); c.fill();
+    } else if (shape === 'orbit' || shape === 'ring') {
+      ring(0, 0, 15); ring(0, 0, 8); path([[-1, -20], [4, -9], [-5, -11]], true);
+      path([[19, 2], [9, 7], [12, -2]], true); path([[-18, 7], [-9, 2], [-10, 12]], true);
+    } else if (shape === 'dagger') {
+      line([[-14, 15], [11, -11]]); path([[6, -18], [18, -18], [18, -6], [11, -6]], false); line([[-8, 9], [-2, 15]]);
+    } else if (shape === 'well') {
+      c.beginPath(); c.arc(0, 0, 15, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.arc(0, 0, 8, 0, Math.PI * 2); c.stroke(); line([[-2, -2], [5, -2], [5, 5], [-5, 5]]); dot(0, -17, 2.5, b);
+    } else if (shape === 'storm') {
+      c.beginPath(); c.arc(-7, -2, 8, Math.PI * 0.9, Math.PI * 1.9); c.arc(2, -7, 10, Math.PI, Math.PI * 1.8); c.arc(9, -1, 8, Math.PI * 1.2, Math.PI * 2.1); c.stroke(); line([[-7, 5], [-2, 5], [-6, 17], [7, 2], [1, 2], [5, -7]]);
+    } else if (shape === 'flail') {
+      line([[-15, 13], [2, -3], [12, -13]]); dot(-15, 13, 4, dark); dot(13, -14, 8, a);
+      line([[7, -17], [19, -11]]); line([[7, -11], [19, -17]]);
+    } else if (shape === 'spear' || shape === 'lance' || shape === 'arrow' || shape === 'trident') {
+      line([[-15, 17], [13, -14]]);
+      path([[13, -14], [4, -11], [11, -3]], true);
+      if (shape === 'trident') { line([[7, -8], [2, -17]]); line([[11, -11], [16, -20]]); }
+      if (shape === 'arrow') { line([[11, -10], [16, -8]]); line([[6, -5], [4, -1]]); }
+    } else if (shape === 'axe' || shape === 'hammer' || shape === 'whetstone') {
+      line([[-12, 17], [9, -13]]);
+      if (shape === 'hammer') { path([[4, -17], [18, -14], [18, -5], [1, -7]], true); }
+      else if (shape === 'whetstone') { path([[3, -15], [18, -12], [11, 1], [-1, -3]], true); line([[4, -8], [13, -6]]); }
+      else { path([[4, -16], [19, -18], [17, -3], [10, 0], [5, -4]], true); }
+    } else if (shape === 'lightning' || shape === 'coil' || shape === 'magnet') {
+      if (shape === 'magnet') { c.beginPath(); c.arc(0, -1, 13, Math.PI, 0); c.lineTo(13, 12); c.moveTo(-13, -1); c.lineTo(-13, 12); c.stroke(); line([[-18, -14], [-10, -14]]); line([[10, -14], [18, -14]]); }
+      else if (shape === 'coil') { line([[-16, -9], [14, -9], [14, -3], [-12, -3], [-12, 4], [12, 4], [12, 10], [-15, 10]]); }
+      else path([[2, -20], [-12, 2], [-2, 2], [-7, 20], [13, -6], [3, -6]], true);
+    } else if (shape === 'rune' || shape === 'prism') {
+      path([[0, -19], [14, -1], [2, 18], [-14, 2]], false);
+      line([[-8, 1], [0, -8], [8, 1], [0, 10], [-8, 1]]);
+      dot(0, 1, shape === 'eye' ? 3.5 : 2.4, light);
+    } else if (shape === 'shield' || shape === 'armor' || shape === 'plate' || shape === 'gauntlet' || shape === 'bracer' || shape === 'thorn') {
+      path([[-16, -14], [0, -19], [16, -14], [13, 6], [0, 19], [-13, 6]], false);
+      if (shape === 'thorn') { line([[-13, -2], [-20, -8]]); line([[13, -2], [20, -8]]); line([[0, 13], [0, 21]]); }
+      else if (shape === 'gauntlet' || shape === 'bracer') { line([[-7, -10], [-7, 8]]); line([[0, -12], [0, 10]]); line([[7, -10], [7, 8]]); }
+      else line([[-8, 0], [0, 8], [8, 0]]);
+    } else if (shape === 'book' || shape === 'blueprint' || shape === 'scroll' || shape === 'cloak') {
+      if (shape === 'cloak') path([[-12, -16], [0, -10], [12, -16], [10, 10], [0, 18], [-10, 10]], false);
+      else if (shape === 'scroll') { c.beginPath(); c.arc(-8, -8, 6, Math.PI / 2, Math.PI * 1.5); c.arc(8, 8, 6, -Math.PI / 2, Math.PI / 2); c.stroke(); line([[-8, -14], [8, -14], [8, 14], [-8, 14]]); }
+      else { path([[-16, -13], [-2, -16], [0, -12], [2, -16], [16, -13], [16, 14], [2, 10], [0, 13], [-2, 10], [-16, 14]], false); line([[0, -10], [0, 10]]); line([[-11, -5], [-3, -7]]); line([[4, -6], [11, -4]]); }
+    } else if (shape === 'tower' || shape === 'house' || shape === 'siphon') {
+      if (shape === 'house') { path([[-18, -1], [0, -17], [18, -1]], false); c.strokeRect(-13, -1, 26, 18); c.strokeRect(-4, 5, 8, 12); }
+      else if (shape === 'siphon') { line([[0, -18], [0, 9]]); c.beginPath(); c.ellipse(0, -16, 11, 5, 0, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.ellipse(0, 12, 15, 5, 0, 0, Math.PI * 2); c.stroke(); }
+      else { path([[-13, 17], [-13, -8], [-7, -8], [-7, -15], [7, -15], [7, -8], [13, -8], [13, 17]], false); line([[-17, 17], [17, 17]]); }
+    } else if (shape === 'wing' || shape === 'feather' || shape === 'fan' || shape === 'lash') {
+      if (shape === 'lash') { line([[-16, 14], [-5, 3], [2, -6], [10, -9], [17, -18]]); }
+      else if (shape === 'fan') { for (var fi = -2; fi <= 2; fi++) line([[0, 16], [fi * 6, -14]]); c.beginPath(); c.arc(0, 14, 14, Math.PI, 0); c.stroke(); }
+      else { path([[-18, 12], [-10, -6], [0, -18], [3, -5], [17, -14], [8, 4], [15, 11], [0, 7]], false); line([[-11, 6], [3, -5]]); }
+    } else if (shape === 'heart' || shape === 'apple' || shape === 'herb') {
+      if (shape === 'heart') { c.beginPath(); c.moveTo(0, 15); c.bezierCurveTo(-23, 2, -14, -18, 0, -9); c.bezierCurveTo(14, -18, 23, 2, 0, 15); c.fillStyle = '#ef8290'; c.fill(); c.stroke(); }
+      else if (shape === 'apple') { c.beginPath(); c.ellipse(0, 3, 13, 14, 0, 0, Math.PI * 2); c.fillStyle = '#ef9c57'; c.fill(); c.stroke(); line([[0, -10], [2, -17]]); path([[1, -14], [12, -18], [7, -10]], true); }
+      else { line([[0, 16], [0, -13]]); path([[0, -2], [-15, -11], [-12, 2]], true); path([[0, 5], [15, -5], [12, 9]], true); }
+    } else if (shape === 'lens' || shape === 'eye') {
+      c.beginPath(); c.ellipse(0, 0, 17, 11, 0, 0, Math.PI * 2); c.stroke(); dot(0, 0, 5, b);
+    } else if (shape === 'coins' || shape === 'coin' || shape === 'purse' || shape === 'pig') {
+      if (shape === 'pig') { c.beginPath(); c.ellipse(0, 2, 15, 11, 0, 0, Math.PI * 2); c.stroke(); dot(14, -1, 3, a); line([[-8, 11], [-8, 17]]); line([[8, 11], [8, 17]]); c.beginPath(); c.arc(0, -8, 5, Math.PI, 0); c.stroke(); }
+      else if (shape === 'purse') { path([[-12, -9], [0, -17], [12, -9], [9, 15], [-9, 15]], false); line([[-12, -9], [12, -9]]); dot(0, -7, 2, light); }
+      else { c.beginPath(); c.arc(-5, 3, 10, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.arc(7, -5, 10, 0, Math.PI * 2); c.stroke(); line([[-5, -2], [-5, 8]]); }
+    } else if (shape === 'dice' || shape === 'gear' || shape === 'drum' || shape === 'belt') {
+      if (shape === 'dice') { c.strokeRect(-13, -13, 26, 26); dot(-6, -6, 2.3); dot(6, 6, 2.3); dot(0, 0, 2.3); }
+      else if (shape === 'drum') { c.beginPath(); c.ellipse(0, -10, 13, 5, 0, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.ellipse(0, 11, 13, 5, 0, 0, Math.PI * 2); c.stroke(); line([[-13, -10], [-13, 11]]); line([[13, -10], [13, 11]]); }
+      else if (shape === 'belt') { c.strokeRect(-17, -7, 34, 14); c.strokeRect(-5, -5, 10, 10); }
+      else { ring(0, 0, 12); for (var gi = 0; gi < 8; gi++) { var ga = gi * Math.PI / 4; line([[Math.cos(ga) * 13, Math.sin(ga) * 13], [Math.cos(ga) * 19, Math.sin(ga) * 19]]); } dot(0, 0, 3, light); }
+    } else if (shape === 'crown' || shape === 'halo' || shape === 'clover' || shape === 'star') {
+      if (shape === 'crown') path([[-17, -10], [-13, 9], [13, 9], [17, -10], [7, -3], [0, -16], [-7, -3]], false);
+      else if (shape === 'clover') { dot(0, -9, 7); dot(-9, 0, 7); dot(9, 0, 7); dot(0, 9, 7); line([[0, 5], [6, 18]]); }
+      else if (shape === 'halo') { c.beginPath(); c.ellipse(0, -2, 17, 6, -0.2, 0, Math.PI * 2); c.stroke(); dot(0, 11, 6, light); }
+      else path([[0, -19], [5, -5], [19, -4], [8, 4], [12, 18], [0, 9], [-12, 18], [-8, 4], [-19, -4], [-5, -5]], true);
+    } else if (shape === 'vial' || shape === 'fang' || shape === 'bracer' || shape === 'belt') {
+      if (shape === 'vial') { c.strokeRect(-8, -9, 16, 22); c.strokeRect(-4, -16, 8, 7); c.fillStyle = '#d98858'; c.fillRect(-6, 3, 12, 8); }
+      else if (shape === 'fang') path([[-10, -16], [10, -16], [7, -2], [0, 17], [-7, -2]], false);
+      else { c.strokeRect(-14, -11, 28, 22); line([[-8, -4], [8, -4]]); line([[-8, 4], [8, 4]]); }
+    } else {
+      // 未知 ID 仍显示可辨认的晶体器物，不退化成文字符号。
+      path([[0, -18], [14, 0], [0, 18], [-14, 0]], false); dot(0, 0, 3.5, b);
+    }
+    c.restore();
+  };
+  UI.controlIcon = function (c, id, x, y, r) {
+    var col = id === 'next' ? '#082d35' : '#e6bd6d';
+    c.save(); c.translate(x, y); c.scale(r / 16, r / 16); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 2.5; c.lineCap = 'round'; c.lineJoin = 'round';
+    if (id === 'repair') { lineWrench(); }
+    else if (id === 'upgrade') { c.beginPath(); c.moveTo(0, 12); c.lineTo(0, -10); c.moveTo(-8, -2); c.lineTo(0, -10); c.lineTo(8, -2); c.stroke(); }
+    else if (id === 'reroll' || id === 'adReroll') { c.beginPath(); c.arc(0, 0, 10, -0.5, Math.PI * 1.35); c.stroke(); c.beginPath(); c.moveTo(-12, -7); c.lineTo(-4, -9); c.lineTo(-7, -1); c.fill(); if (id === 'adReroll') { c.beginPath(); c.arc(9, -10, 2, 0, Math.PI * 2); c.fill(); } }
+    else { c.beginPath(); c.moveTo(-11, 11); c.lineTo(-11, -10); c.lineTo(11, -7); c.lineTo(4, 0); c.lineTo(-11, -3); c.stroke(); c.beginPath(); c.moveTo(0, -15); c.lineTo(0, -5); c.stroke(); }
+    c.restore();
+    function lineWrench() {
+      c.beginPath(); c.moveTo(-9, 10); c.lineTo(7, -6); c.moveTo(2, -11); c.lineTo(12, -1); c.moveTo(6, -7); c.lineTo(11, -12); c.stroke();
+      c.beginPath(); c.arc(-9, 10, 3, 0, Math.PI * 2); c.stroke();
+    }
+  };
   UI.card = function (g, sl, i, x, y, w, h) {
     var c = D.ctx;
     if (!sl || sl.kind === 'none') { c.strokeStyle = '#3a2e20'; D.rr(x, y, w, h, 8); c.stroke(); return; }
@@ -687,22 +822,24 @@
     c.strokeStyle = sl.locked ? C.gold : (rare ? RQ.color : '#5a4630'); c.lineWidth = sl.locked ? 2 : (rare >= 1 ? 1.4 + rare * 0.3 : 1.2); D.rr(x + 0.5, y + 0.5, w - 1, h - 1, 8); c.stroke();
     D.text(RQ.name, x + w - 108, y + h - 12, 9, rare ? RQ.color : C.faint, 'right', true);
     c.fillStyle = info.color; c.fillRect(x + 1, y + 10, 3, h - 20);
-    D.text(info.name, x + 14, y + 16, 16, info.color, 'left', true);
-    c.font = D.font(16, true);
+    UI.assetIcon(c, sl.kind, sl.id, x + 12, y + 28, 50, info.color);
+    var textX = x + 70;
+    D.text(info.name, textX, y + 16, 14, info.color, 'left', true);
+    c.font = D.font(14, true);
     var nw = c.measureText(info.name).width;
-    D.text(info.tag, x + 20 + nw, y + 17, 10, C.dim, 'left');
-    var textW = w - 128;
+    D.text(info.tag, textX + 6 + nw, y + 17, 9, C.dim, 'left');
+    var textW = w - 180;
     var yy = y + 38;
-    if (info.stat) { D.text(info.stat, x + 14, y + 34, 10, C.dim, 'left'); yy = y + 52; }
+    if (info.stat) { D.text(info.stat, textX, y + 34, 10, C.dim, 'left'); yy = y + 52; }
     var pl = D.wrap(info.pros, textW, 11), cl = D.wrap(info.cons, textW, 11);
-    c.fillStyle = C.good; D.rr(x + 12, yy - 7, 14, 14, 3); c.fill(); D.text('强', x + 19, yy, 10, '#06150c', 'center', true);
-    D.text(pl[0] || '', x + 32, yy, 11, '#c9ffd6', 'left');
-    if (pl[1]) D.text(pl[1], x + 32, yy + 13, 11, '#c9ffd6', 'left');
+    c.fillStyle = C.good; D.rr(textX, yy - 7, 14, 14, 3); c.fill(); D.text('强', textX + 7, yy, 10, '#06150c', 'center', true);
+    D.text(pl[0] || '', textX + 20, yy, 11, '#c9ffd6', 'left');
+    if (pl[1]) D.text(pl[1], textX + 20, yy + 13, 11, '#c9ffd6', 'left');
     var cy = yy + (pl[1] ? 29 : 18);
     if (!info.stat && pl[1] && cl[1]) cy -= 2;
-    c.fillStyle = C.bad; D.rr(x + 12, cy - 7, 14, 14, 3); c.fill(); D.text('弱', x + 19, cy, 10, '#1a0508', 'center', true);
-    D.text(cl[0] || '', x + 32, cy, 11, '#ffc9d1', 'left');
-    if (cl[1] && cy + 13 < y + h - 4) D.text(cl[1], x + 32, cy + 13, 11, '#ffc9d1', 'left');
+    c.fillStyle = C.bad; D.rr(textX, cy - 7, 14, 14, 3); c.fill(); D.text('弱', textX + 7, cy, 10, '#1a0508', 'center', true);
+    D.text(cl[0] || '', textX + 20, cy, 11, '#ffc9d1', 'left');
+    if (cl[1] && cy + 13 < y + h - 4) D.text(cl[1], textX + 20, cy + 13, 11, '#ffc9d1', 'left');
     // 价格与锁定
     UI.button('buy:' + i, x + w - 100, y + 10, 90, 44, '', { disabled: !afford, why: '金币不足，还差 ' + (sl.price - g.shardCount), draw: function (bx, by, bw, bh, pressed) {
       c.globalAlpha = afford ? 1 : 0.45;
