@@ -22,7 +22,8 @@ const server = http.createServer((q, r) => {
 
 // 注入页面：记录一帧里画了哪些文字、在哪个按钮里
 function hook() {
-  const D = RW.Draw, UI = RW.UI, rec = { texts: [], btns: [] };
+  const D = RW.Draw, UI = RW.UI, rec = { texts: [], btns: [], hudPanels: [] };
+  let inHud = false;
   let inBtn = null;
   const text0 = D.text;
   D.text = function (s, x, y, size, color, align, bold, stroke) {
@@ -30,7 +31,7 @@ function hook() {
       const c = D.ctx; c.font = D.font(size, bold);
       const w = c.measureText(String(s)).width, a = align || 'left';
       const x0 = a === 'center' ? x - w / 2 : (a === 'right' ? x - w : x);
-      rec.texts.push({ s: String(s), x0, x1: x0 + w, y0: y - size / 2, y1: y + size / 2, size, btn: inBtn, tip: !!D.tip });
+      rec.texts.push({ s: String(s), x0, x1: x0 + w, y0: y - size / 2, y1: y + size / 2, size, btn: inBtn, tip: !!D.tip, hud: inHud });
     }
     return text0.apply(this, arguments);
   };
@@ -40,6 +41,13 @@ function hook() {
     inBtn = { id, x, y, w, h };
     try { return btn0.apply(this, arguments); } finally { inBtn = null; }
   };
+  const hud0 = D.hud;
+  D.hud = function () { inHud = true; try { return hud0.apply(this, arguments); } finally { inHud = false; } };
+  const wood0 = D.woodFrame;
+  D.woodFrame = function (x, y, w, h, opts) {
+    if (window.__auditOn && inHud && opts && opts.style === 'hud') rec.hudPanels.push({ x, y, w, h });
+    return wood0.apply(this, arguments);
+  };
   // 盖在上面的遮罩 / 面板会挡住之前画的文字：这些文字不算重叠
   const cover = (x, y, w, h) => { rec.texts = rec.texts.filter(t => t.x1 <= x || t.x0 >= x + w || t.y1 <= y || t.y0 >= y + h); };
   const dim0 = UI.dim;
@@ -48,7 +56,7 @@ function hook() {
   UI.panel = function (x, y, w, h) { if (window.__auditOn) cover(x, y, w, h); return panel0.apply(this, arguments); };
   // 每帧开头清空：只看最后完整画出的一帧
   const frame0 = UI.frame;
-  UI.frame = function () { if (window.__auditOn) { rec.texts = []; rec.btns = []; } return frame0.apply(this, arguments); };
+  UI.frame = function () { if (window.__auditOn) { rec.texts = []; rec.btns = []; rec.hudPanels = []; } return frame0.apply(this, arguments); };
   window.__audit = rec;
 }
 function collect() {
@@ -57,6 +65,22 @@ function collect() {
   const T = rec.texts;
   // 战斗画面里的提示不许进中央 50%：x 240–720，y 135–405
   const battle = /^(battle|clear|down)$/.test(RW.game.mode);
+  if (battle) {
+    const hud = T.filter(t => t.hud), chars = hud.reduce((n, t) => n + [...t.s].length, 0);
+    const small = hud.filter(t => t.size < 12 && !(t.size === 11 && [...t.s].length === 1));
+    const area = rec.hudPanels.reduce((n, p) => n + p.w * p.h, 0);
+    if (hud.length > 24) issues.push('战斗 HUD 文字段 ' + hud.length + '（上限 24）');
+    if (chars > 80) issues.push('战斗 HUD 字数 ' + chars + '（上限 80）');
+    if (small.length) issues.push('战斗 HUD 小于 12px：' + small.map(t => t.s).slice(0, 6).join('、'));
+    if (area > W * H * 0.12) issues.push('战斗面板面积 ' + (area / (W * H) * 100).toFixed(1) + '%（上限 12%）');
+    rec.metrics = { segments: hud.length, chars, under12: small.length, panelAreaPct: +(area / (W * H) * 100).toFixed(2) };
+  }
+  if (RW.game.mode === 'shop') {
+    const chars = T.reduce((n, t) => n + [...t.s].length, 0), small = T.filter(t => t.size < 12);
+    if (T.length > 35) issues.push('整备页文字段 ' + T.length + '（上限 35）');
+    if (chars > 220) issues.push('整备页字数 ' + chars + '（上限 220）');
+    if (small.length) issues.push('整备页小于 12px：' + small.map(t => t.s).slice(0, 6).join('、'));
+  }
   for (const t of T) {
     if (battle && t.tip && t.x1 > W * 0.25 && t.x0 < W * 0.75 && t.y1 > H * 0.25 && t.y0 < H * 0.75) issues.push('提示盖住战场中央：「' + t.s.slice(0, 20) + '」 y ' + Math.round(t.y0) + '–' + Math.round(t.y1));
     if (t.x0 < -1 || t.x1 > W + 1 || t.y0 < -1 || t.y1 > H + 1) issues.push('出屏：「' + t.s.slice(0, 24) + '」 x ' + Math.round(t.x0) + '–' + Math.round(t.x1));
@@ -96,9 +120,10 @@ function collect() {
     await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     await page.evaluate(() => { window.__auditOn = false; });
     const issues = await page.evaluate(collect);
+    const metrics = await page.evaluate(() => window.__audit.metrics || null);
     report.screens[name] = issues;
     await page.screenshot({ path: path.join(out, name + '.png') });
-    console.log((issues.length ? '✗ ' : '✓ ') + name + (issues.length ? '\n    ' + issues.slice(0, 12).join('\n    ') + (issues.length > 12 ? '\n    …共 ' + issues.length + ' 处' : '') : ''));
+    console.log((issues.length ? '✗ ' : '✓ ') + name + (metrics ? ' ' + JSON.stringify(metrics) : '') + (issues.length ? '\n    ' + issues.slice(0, 12).join('\n    ') + (issues.length > 12 ? '\n    …共 ' + issues.length + ' 处' : '') : ''));
   }
   const M = a => 'RW.Main.action(' + JSON.stringify(a) + ')';
   await screen('01_title', null, 2500);

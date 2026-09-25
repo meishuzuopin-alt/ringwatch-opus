@@ -48,6 +48,7 @@
     }
     var od = RW.optDefaults(), so = save.opt || {};
     for (var ok in od) RW.opt[ok] = typeof so[ok] === 'number' ? so[ok] : od[ok];
+    RW.opt.miniMap = so.miniMap ? 1 : 0;
     // 改过的按键：只收认识的操作和字符串键码，坏档回到默认
     if (save.keys) for (var ka in RW.keys) { var kl = save.keys[ka]; if (kl && kl.length && kl.every(function (x) { return typeof x === 'string'; })) RW.keys[ka] = kl.slice(0, 4); }
     applyOpt();
@@ -331,6 +332,7 @@
       case 'toTitle': paused = false; resetStick(); g.mode = 'title'; break;
       case 'settings': overlay = 'settings'; break;
       case 'settingsClose': overlay = ''; persist(); break;
+      case 'miniMapToggle': RW.opt.miniMap = RW.opt.miniMap ? 0 : 1; persist(); break;
       case 'statsHelp': overlay = 'stats'; break;
       case 'keys': overlay = 'keys'; UI.keyWait = null; break;
       case 'keysClose': overlay = 'settings'; UI.keyWait = null; persist(); break;
@@ -483,7 +485,7 @@
     UI.pressed = pressed;
     // 提示条：战斗时放在波次面板下面；暂停和其他界面放最顶上。战斗里的提示不带到结算 / 标题页（那里有自己的标题）
     if (UI.lastMode !== g.mode) { if (/^(result|title|pick|records)$/.test(g.mode)) UI.toastT = 0; UI.lastMode = g.mode; }
-    UI.toastY = !paused && /^(battle|clear|down|revive)$/.test(g.mode) ? 98 : 8;   // 战斗中：顶部横幅（8–60）和 Boss 血条下方，仍在画面中央 50% 之外
+    UI.toastY = !paused && /^(battle|clear|down|revive)$/.test(g.mode) ? 64 : 8;   // 战斗中：顶部横幅（8–60）和 Boss 血条下方，仍在画面中央 50% 之外
     UI.drawToast();
   }
 
