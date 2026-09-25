@@ -56,8 +56,8 @@
 
 ## 硬规则
 
-1. **模型、音乐、音效全部由代码生成**：不引入图片、模型文件、音频文件。第三方库只有 Three.js 与 Electron；新增库或素材需先征得项目负责人同意，并在 `docs/ART.md` 记录。
-   **唯一例外（负责人 2026-09-25 批准，FG-ART-002 A+ 路线）**：一款 SIL OFL 1.1 授权的中文字体（Noto Serif SC / Noto Sans SC，即思源宋体 / 思源黑体），只以子集形式放在 `fonts/`，许可证 `fonts/OFL.txt` 同目录。改了文案后跑 `npm run fonts` 重新子集化，`npm run check` 会拦下缺字。`docs/` 里的概念图、参考图只是文档，不进安装包（打包白名单不含 `docs/`，check 会拦）。
+1. **3D 场景、模型、音乐、音效全部由代码生成**：不引入对应的图片、模型文件、音频文件。UI 允许在 `assets/ui/` 下使用本项目原创制作的 SVG / PNG，来源必须登记在 `docs/ART.md`；禁止导入第三方素材。第三方库只有 Three.js 与 Electron；新增库或其他素材需先征得项目负责人同意，并在 `docs/ART.md` 记录。
+   **字体例外（负责人 2026-09-25 批准，FG-ART-002 A+ 路线）**：一款 SIL OFL 1.1 授权的中文字体（Noto Serif SC / Noto Sans SC，即思源宋体 / 思源黑体），只以子集形式放在 `fonts/`，许可证 `fonts/OFL.txt` 同目录。改了文案后跑 `npm run fonts` 重新子集化，`npm run check` 会拦下缺字。`docs/` 里的概念图、参考图只是文档，不进安装包（打包白名单不含 `docs/`，check 会拦）。
 2. **Three.js 只通过 `node tools/vendor-three.js` 重新打包**（版本锁在 `package.json`），不要手改 `vendor/three.min.js`。
 3. **新增 `js/` 文件**时，`preview.html` 和 `game.js` 两处都要加，顺序一致（check 会拦）。
 4. **`sim.js` 不许碰画面 API**，否则无头数值测试跑不了。
