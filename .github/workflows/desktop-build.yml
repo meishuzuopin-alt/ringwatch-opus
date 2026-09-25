@@ -31,6 +31,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node tools/check.js
+      - run: node tools/icon.js
       - run: npx electron-builder ${{ matrix.target }} --dir --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'   # 暂不做代码签名（Steam 不强制）

@@ -426,6 +426,7 @@
     }
     ev.length = 0;
   }
+  var booted = false;
   function frame() {
     var now = P.now(), dt = Math.min(0.1, (now - last) / 1000);
     last = now;
@@ -447,6 +448,8 @@
     S.updateMusic(mstate, intensity);
     if (inBattle() || g.mode === 'revive') D.updateCamera(g, paused ? 0 : dt);
     render(paused ? 0 : dt);
+    // 桌面版启动计时：第一帧画完记一笔（写进 startup.log）
+    if (!booted) { booted = true; if (typeof window !== 'undefined' && window.desktop && window.desktop.boot) window.desktop.boot('第一帧画面'); }
     P.raf(frame);
   }
   function render(dt) {

@@ -2,7 +2,13 @@
 (function (root) {
   var RW = root.RW;
   var T = RW.TUNE, A = T.ARENA, WD = T.WORLD, V = T.VIEW, W = T.W, H = T.H, TAU = Math.PI * 2;
-  var F = T.FONT;
+  var F = T.FONT, FT = T.FONT_TITLE;
+  // 载入字体子集（浏览器 / Electron）；没载完之前先用系统字体，载完后下一帧自动换上
+  if (typeof FontFace !== 'undefined' && typeof document !== 'undefined' && document.fonts) {
+    T.FONT_FILES.forEach(function (f) {
+      try { var ff = new FontFace(f[0], 'url(' + f[1] + ')', { weight: f[2] }); document.fonts.add(ff); ff.load().catch(function () {}); } catch (e) { /* 老环境没有 FontFace：用系统字体 */ }
+    });
+  }
 
   var C = {
     bg: '#06070c', panel: 'rgba(14,12,18,0.9)', line: '#4a3a24', grid: 'rgba(94,242,255,0.09)',
@@ -13,7 +19,7 @@
   var D = { C: C, ctx: null, bgSpace: null, bgScale: 0, t: 0, cam: { x: 0, y: 0 }, camSnap: true };
 
   // ---------- 基础工具 ----------
-  D.font = function (size, bold) { return (bold ? 'bold ' : '') + size + 'px ' + F; };
+  D.font = function (size, bold) { return (bold ? 'bold ' : '') + size + 'px ' + (bold && size >= T.FONT_TITLE_MIN ? FT : F); };
   D.text = function (s, x, y, size, color, align, bold, stroke) {
     var c = D.ctx;
     c.font = D.font(size, bold);

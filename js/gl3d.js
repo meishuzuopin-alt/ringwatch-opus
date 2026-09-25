@@ -261,7 +261,7 @@
     r.setPixelRatio(1);   // 画布尺寸由 platform.js 按设备像素比设置好了
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.NeutralToneMapping; r.toneMappingExposure = 1.0;
-    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;   // r18x 起 PCFSoftShadowMap 已移除（会报警告），PCFShadowMap 本身已是柔化过滤
     var sc = GL.scene = new THREE.Scene();
     sc.fog = new THREE.Fog(0x7a5f80, 1300, 3000);
     sc.background = new THREE.Color(0x5e4a70);

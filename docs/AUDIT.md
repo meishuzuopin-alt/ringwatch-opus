@@ -182,8 +182,25 @@
 |---|---|---|
 | P0 | Steamworks 接入（成就、覆盖层）：要 AppID 和引入原生模块的许可 | 负责人拍板，Claude 实现 |
 | P0 | 英文版（界面文案抽表） | Claude |
-| P0 | 真机性能：Windows 独显和核显、Steam Deck 1280×800 | 负责人找机器，Claude 出测试脚本 |
+| P0 | 真机性能：Windows 独显和核显、Steam Deck 1280×800 | Grok 组真机验收（GROK-FG-001 已跑第一轮） |
+| P0 | 桌面版启动约 50 秒（GROK-FG-001）：阶段 0 已处理，待 Grok 复测，见下方「桌面启动」 | Claude 修 → Grok 复测 |
 | P1 | 英雄平衡用大样本复测（每英雄 40 局 × 4 图 × 3 档），弩手前期 | Claude |
 | P1 | 内容量：武器、道具、敌人各再加一批；`docs/DESIGN-BACKLOG.md` 第二类（建筑相性、插槽改塔、元素反应） | Claude / Grok |
 | P1 | 美术：受击碎块、角色动作、界面插画化、雪地岩壁造型 | Codex |
 | P2 | 界面缩放、手柄图示按设备区分、拍照模式 | Claude |
+
+## 11. 桌面启动（GROK-FG-001 → FG-ART-002 阶段 0）
+
+真机回执：Windows（Quadro P2000）上连续 3 次都要 50–51 秒才出窗口；浏览器进程卡 23 秒、枚举显示器卡 13 秒，日志有 `WSALookupServiceBegin failed with: 10108`；窗口标题被网页标题盖掉；首次启动没抢到前台；three.js 报 `PCFSoftShadowMap has been removed`；exe 用 Electron 默认图标；`package.json` 缺 `author`。
+
+云端能复现和确认的：
+- **启动时联网**：用 `--log-net-log` 抓到桌面版一启动就去 `redirector.gvt1.com` 下载英文拼写词典（Electron 默认开拼写检查）。`WSALookupServiceBegin` 正是 Windows 解析网络名时的调用，10108 表示名字解析服务出错；断网、代理或防火墙环境下这个请求会拖住启动。已关掉拼写检查，并加 `--no-proxy-server`（游戏不联网，跳过 WPAD 代理探测）和 `--disable-background-networking`。改后 net log 里**一个外部请求都没有**。
+- **标题**：拦下 `page-title-updated`，窗口标题固定为「圣火守护者 Flame Guardian」。
+- **前台**：窗口显示时在 Windows 上临时置顶再取消、`app.focus({ steal: true })`；画面最多等 3 秒，没准备好也先显示窗口。
+- **阴影警告**：改用 `PCFShadowMap`。
+- **图标**：代码生成（见 `docs/ART.md`「游戏图标」），`package.json` 补 `author`。
+
+云端没法确认的：「枚举显示器 13 秒」发生在 Chromium 读显卡和显示器信息的阶段，和驱动有关。为了在真机上定位，桌面版现在会把每一步的耗时写进 `%APPDATA%\Ringwatch\startup.log`（主进程开始、app ready、窗口创建、ready-to-show、窗口显示、第一帧画面、页面加载完成）。云端软件渲染下的一次记录：app ready 0.1 秒、窗口显示 0.5 秒、第一帧 2.1 秒。
+
+**请 Grok 复测**：打包后连续启动 3 次，记下出窗口的秒数，并附上 `startup.log`。如果还是卡在「主进程开始」和「app ready」之间，说明问题在 Electron / 驱动层，下一步试 `--disable-gpu-sandbox` 和更新显卡驱动做对照。
+

@@ -57,6 +57,7 @@
 ## 硬规则
 
 1. **模型、音乐、音效全部由代码生成**：不引入图片、模型文件、音频文件。第三方库只有 Three.js 与 Electron；新增库或素材需先征得项目负责人同意，并在 `docs/ART.md` 记录。
+   **唯一例外（负责人 2026-09-25 批准，FG-ART-002 A+ 路线）**：一款 SIL OFL 1.1 授权的中文字体（Noto Serif SC / Noto Sans SC，即思源宋体 / 思源黑体），只以子集形式放在 `fonts/`，许可证 `fonts/OFL.txt` 同目录。改了文案后跑 `npm run fonts` 重新子集化，`npm run check` 会拦下缺字。`docs/` 里的概念图、参考图只是文档，不进安装包（打包白名单不含 `docs/`，check 会拦）。
 2. **Three.js 只通过 `node tools/vendor-three.js` 重新打包**（版本锁在 `package.json`），不要手改 `vendor/three.min.js`。
 3. **新增 `js/` 文件**时，`preview.html` 和 `game.js` 两处都要加，顺序一致（check 会拦）。
 4. **`sim.js` 不许碰画面 API**，否则无头数值测试跑不了。
@@ -68,7 +69,8 @@
 ## 提交前
 
 ```bash
-npm run check        # 必跑，几秒：语法 / 入口一致 / 模拟冒烟 / 包体
+npm run check        # 必跑，几秒：语法 / 入口一致 / 模拟冒烟 / 包体 / 字体缺字 / 安装包素材
+npm run fonts        # 改了文案（新出现的字）后跑：重新生成 fonts/ 里的字体子集
 npm run test:flow    # 改了界面或流程时跑（需要 Playwright + Chromium）
 npm run shots        # 改了画面时跑，截图在 shots/art/，前后对比
 npm run balance      # 改了数值时跑：node tools/balance.js [局数] [最高波数]

@@ -16,7 +16,11 @@
     ARENA: { x: 0, y: 0, w: 2240, h: 2240 },
     VIEW: { x: 0, y: 0, w: 960, h: 540 },        // 战场视口：铺满全屏，HUD 悬浮在四角
     MAX_ENEMIES: 120,
-    FONT: 'Consolas, "Courier New", monospace',
+    // 字体：导入的 OFL 字体子集（fonts/，由 tools/fonts.js 生成），系统中文字体兜底
+    FONT: '"FG Sans", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+    FONT_TITLE: '"FG Serif", "FG Sans", "Songti SC", "SimSun", serif',   // 标题：粗体且字号不小于 FONT_TITLE_MIN 时用衬线体
+    FONT_TITLE_MIN: 22,
+    FONT_FILES: [['FG Sans', 'fonts/fg-sans-500.woff2', '400'], ['FG Sans', 'fonts/fg-sans-700.woff2', '700'], ['FG Serif', 'fonts/fg-serif-900.woff2', '700']],
     player: {
       hp: 30, mp: 100, mpRegen: 18, speed: 165, radius: 10,
       accel: 2300, turnAccel: 3600, friction: 1150,

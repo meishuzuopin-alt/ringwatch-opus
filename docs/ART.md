@@ -56,6 +56,24 @@
 
 ## 已实现
 
+### 字体（FG-ART-002 阶段 0，2026-09-25，负责人批准的唯一外部素材例外）
+
+| 用途 | 字体 | 字重 | 游戏里的名字 | 文件 |
+|---|---|---|---|---|
+| 标题、页面大标题（粗体且字号 ≥ 22） | Noto Serif SC（思源宋体） | Black 900 | `FG Serif` | `fonts/fg-serif-900.woff2` |
+| 正文 | Noto Sans SC（思源黑体） | Medium 500 | `FG Sans` | `fonts/fg-sans-500.woff2` |
+| 正文粗体 | Noto Sans SC | Bold 700 | `FG Sans` bold | `fonts/fg-sans-700.woff2` |
+
+- 来源：Google Fonts 发行的 Noto Serif SC / Noto Sans SC，经 npm 包 `@expo-google-fonts/noto-serif-sc@0.4.3`、`@expo-google-fonts/noto-sans-sc@0.4.3` 取得（`tools/fonts.js` 里锁了版本和 sha512 校验）。
+- 授权：SIL Open Font License 1.1，全文在 `fonts/OFL.txt`。OFL 允许随游戏再分发和子集化，不允许单独售卖字体；保留字体名 "Noto" 不用于修改版，我们在游戏里注册为 `FG Sans` / `FG Serif`。
+- 子集：只保留 `js/` 和 `preview.html` 里出现的字（约 1300 个）加全部 ASCII，三个文件合计约 640 KB。子集工具 `subset-font`（MIT，基于 HarfBuzz）只是开发依赖，不进游戏包。
+- 用法：`T.FONT` / `T.FONT_TITLE`（`js/data.js`），`D.font(size, bold)` 自动选择；系统中文字体兜底。
+- 截图：`shots/audit/01_title.png`（标题「圣火守护者」为思源宋体 Black）、`12_shop.png`。
+
+### 游戏图标（FG-ART-002 阶段 0）
+
+`desktop/icon.js` 用代码画：夜蓝圆角底板、圣火金到余烬橙的火焰、铜色火盆和石台，4×4 超采样。打包前 `tools/icon.js` 生成 `build/icon.ico`（16–256）和 `build/icon.png`（1024），`build/` 不入库；桌面版运行时也用它设窗口图标。造型可以由 Codex 直接改 `sample()`。
+
 ### 渲染管线（`js/gl3d.js`，基于 Three.js）
 
 | 效果 | 做法 | 在哪调 |
@@ -74,5 +92,5 @@
 
 ## 红线
 
-- 不引入图片、模型文件、字体文件（见 `AGENTS.md` 硬规则 1）。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
+- 不引入图片、模型文件；字体只有下面「字体」一节记录的 OFL 字体（见 `AGENTS.md` 硬规则 1 的例外）。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
 - 不做影响读图的全屏效果（大面积暗角、强烈镜头光晕、全屏抖动）。
