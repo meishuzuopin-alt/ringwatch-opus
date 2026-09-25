@@ -1,7 +1,7 @@
 // 提交前快速自检（不需要浏览器，几秒跑完）：node tools/check.js
 // 1. 所有 js 语法检查  2. json 可解析  3. game.js 与 preview.html 加载的脚本清单与顺序一致
 // 4. 无头模拟冒烟：两种职业各跑 3 波，确认逻辑不抛异常；玩法闭环测试（tools/simtest.js）  5. 统计桌面版游戏文件体积
-// 6. 字体子集没有缺字；安装包只收白名单里的目录，除字体外没有图片 / 模型 / 音频文件（硬规则 1）
+// 6. 字体子集没有缺字；安装包只收白名单里的目录，仅 assets/ui/ 可含原创 SVG / PNG，且没有模型 / 音频文件（硬规则 1）
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -63,7 +63,7 @@ function sizeOf(p) {
   if (!st.isDirectory()) return st.size;
   return fs.readdirSync(p).reduce((n, f) => n + sizeOf(path.join(p, f)), 0);
 }
-for (const f of ['preview.html', 'js', 'vendor', 'desktop', 'fonts']) if (fs.existsSync(path.join(root, f))) bytes += sizeOf(path.join(root, f));
+for (const f of ['preview.html', 'js', 'vendor', 'desktop', 'fonts', 'assets/ui']) if (fs.existsSync(path.join(root, f))) bytes += sizeOf(path.join(root, f));
 ok(`游戏文件约 ${(bytes / 1024).toFixed(0)} KB（不含 Electron 运行时）`);
 
 // 字体：游戏里用到的每个字都要在子集里，否则会退回系统字体（改了文案后跑 npm run fonts）
@@ -76,11 +76,19 @@ console.log('字体与素材');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const files = pkg.build.files;
   if (files.some(f => /^docs|^shots|^tools/.test(f))) bad('安装包白名单里不能有 docs/、shots/、tools/：' + files.join(', '));
-  const media = [];
-  for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
-    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f)) media.push(path.relative(root, f));
-  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1）：' + media.join(', '));
-  else ok('安装包白名单：' + files.join('、') + '；除字体外没有外部素材');
+  const forbiddenMedia = [];
+  const invalidUi = [];
+  for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory())) {
+    for (const f of walk(path.join(root, d), '')) {
+      const rel = path.relative(root, f).replace(/\\/g, '/');
+      if (rel.startsWith('assets/ui/')) {
+        if (!/\.(svg|png|json)$/i.test(rel)) invalidUi.push(rel);
+      } else if (/\.(png|jpe?g|gif|webp|bmp|svg|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(rel)) forbiddenMedia.push(rel);
+    }
+  }
+  if (invalidUi.length) bad('assets/ui/ 只允许 SVG / PNG 与 manifest JSON：' + invalidUi.join(', '));
+  if (forbiddenMedia.length) bad('安装包其他目录有图片 / 模型 / 音频文件（硬规则 1）：' + forbiddenMedia.join(', '));
+  if (!invalidUi.length && !forbiddenMedia.length) ok('安装包白名单：' + files.join('、') + '；assets/ui/ 仅含原创 SVG / PNG');
 }
 
 if (failed) { console.log(`\n${failed} 项失败`); process.exit(1); }

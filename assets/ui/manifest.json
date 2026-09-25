@@ -1,0 +1,524 @@
+{
+  "version": 1,
+  "license": "本项目原创；AI 辅助制作，无第三方素材",
+  "iconSizes": [
+    16,
+    24,
+    32,
+    48
+  ],
+  "items": {
+    "icon.flame": {
+      "file": "assets/ui/icons/flame.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.heart": {
+      "file": "assets/ui/icons/heart.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.mana": {
+      "file": "assets/ui/icons/mana.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.resolve": {
+      "file": "assets/ui/icons/resolve.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.coin": {
+      "file": "assets/ui/icons/coin.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.wave": {
+      "file": "assets/ui/icons/wave.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.timer": {
+      "file": "assets/ui/icons/timer.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.sword": {
+      "file": "assets/ui/icons/sword.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.bow": {
+      "file": "assets/ui/icons/bow.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.staff": {
+      "file": "assets/ui/icons/staff.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.dagger": {
+      "file": "assets/ui/icons/dagger.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.shield": {
+      "file": "assets/ui/icons/shield.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.armor": {
+      "file": "assets/ui/icons/armor.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.speed": {
+      "file": "assets/ui/icons/speed.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.luck": {
+      "file": "assets/ui/icons/luck.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.harvest": {
+      "file": "assets/ui/icons/harvest.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.pickup": {
+      "file": "assets/ui/icons/pickup.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.build": {
+      "file": "assets/ui/icons/build.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.tower": {
+      "file": "assets/ui/icons/tower.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.barracks": {
+      "file": "assets/ui/icons/barracks.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.repair": {
+      "file": "assets/ui/icons/repair.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.fortify": {
+      "file": "assets/ui/icons/fortify.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.reroll": {
+      "file": "assets/ui/icons/reroll.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.lock": {
+      "file": "assets/ui/icons/lock.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.spark": {
+      "file": "assets/ui/icons/spark.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.skull": {
+      "file": "assets/ui/icons/skull.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.book": {
+      "file": "assets/ui/icons/book.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.gem": {
+      "file": "assets/ui/icons/gem.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.focus": {
+      "file": "assets/ui/icons/focus.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.heal": {
+      "file": "assets/ui/icons/heal.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.warning": {
+      "file": "assets/ui/icons/warning.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "icon.achievement": {
+      "file": "assets/ui/icons/achievement.svg",
+      "size": [
+        64,
+        64
+      ],
+      "nineSlice": null,
+      "usage": "界面图标；建议显示为 16/24/32/48 px"
+    },
+    "kit.panel_hud": {
+      "file": "assets/ui/kit/panel_hud.svg",
+      "size": [
+        96,
+        96
+      ],
+      "nineSlice": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "usage": "九宫格面板，整体透明度 0.82"
+    },
+    "kit.panel_menu": {
+      "file": "assets/ui/kit/panel_menu.svg",
+      "size": [
+        96,
+        96
+      ],
+      "nineSlice": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "usage": "九宫格面板，整体透明度 0.94"
+    },
+    "kit.button_normal": {
+      "file": "assets/ui/kit/button_normal.svg",
+      "size": [
+        192,
+        48
+      ],
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "usage": "按钮 normal 状态"
+    },
+    "kit.button_hover": {
+      "file": "assets/ui/kit/button_hover.svg",
+      "size": [
+        192,
+        48
+      ],
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "usage": "按钮 hover 状态"
+    },
+    "kit.button_pressed": {
+      "file": "assets/ui/kit/button_pressed.svg",
+      "size": [
+        192,
+        48
+      ],
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "usage": "按钮 pressed 状态"
+    },
+    "kit.button_disabled": {
+      "file": "assets/ui/kit/button_disabled.svg",
+      "size": [
+        192,
+        48
+      ],
+      "nineSlice": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "usage": "按钮 disabled 状态"
+    },
+    "kit.shop_card_common": {
+      "file": "assets/ui/kit/shop_card_common.svg",
+      "size": [
+        216,
+        240
+      ],
+      "nineSlice": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "usage": "商店竖卡框 216×240，普通边框；非危险红"
+    },
+    "kit.shop_card_rare": {
+      "file": "assets/ui/kit/shop_card_rare.svg",
+      "size": [
+        216,
+        240
+      ],
+      "nineSlice": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "usage": "商店竖卡框 216×240，稀有边框；非危险红"
+    },
+    "kit.shop_card_epic": {
+      "file": "assets/ui/kit/shop_card_epic.svg",
+      "size": [
+        216,
+        240
+      ],
+      "nineSlice": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "usage": "商店竖卡框 216×240，史诗边框；非危险红"
+    },
+    "kit.shop_card_legendary": {
+      "file": "assets/ui/kit/shop_card_legendary.svg",
+      "size": [
+        216,
+        240
+      ],
+      "nineSlice": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "usage": "商店竖卡框 216×240，传说边框；非危险红"
+    },
+    "kit.top_banner": {
+      "file": "assets/ui/kit/top_banner.svg",
+      "size": [
+        320,
+        40
+      ],
+      "nineSlice": [
+        14,
+        10,
+        14,
+        10
+      ],
+      "usage": "顶部横幅 320×40"
+    },
+    "kit.bar_health": {
+      "file": "assets/ui/kit/bar_health.svg",
+      "size": [
+        240,
+        24
+      ],
+      "nineSlice": [
+        8,
+        6,
+        8,
+        6
+      ],
+      "usage": "生命条：底槽、填充与高光示例"
+    },
+    "kit.bar_mana": {
+      "file": "assets/ui/kit/bar_mana.svg",
+      "size": [
+        240,
+        24
+      ],
+      "nineSlice": [
+        8,
+        6,
+        8,
+        6
+      ],
+      "usage": "法力条：底槽、填充与高光示例"
+    },
+    "kit.bar_resolve": {
+      "file": "assets/ui/kit/bar_resolve.svg",
+      "size": [
+        240,
+        24
+      ],
+      "nineSlice": [
+        8,
+        6,
+        8,
+        6
+      ],
+      "usage": "战意条：底槽、填充与高光示例"
+    },
+    "kit.tip_scroll": {
+      "file": "assets/ui/kit/tip_scroll.svg",
+      "size": [
+        216,
+        56
+      ],
+      "nineSlice": [
+        14,
+        12,
+        14,
+        12
+      ],
+      "usage": "右侧提示卷轴 216×56"
+    },
+    "kit.logo_ornament": {
+      "file": "assets/ui/kit/logo_ornament.svg",
+      "size": [
+        420,
+        104
+      ],
+      "nineSlice": [
+        52,
+        28,
+        52,
+        24
+      ],
+      "usage": "标题 Logo 字标底饰；不包含字体"
+    }
+  }
+}

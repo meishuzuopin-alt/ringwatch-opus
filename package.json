@@ -55,6 +55,7 @@
       "preview.html",
       "js/**",
       "vendor/**",
+      "assets/ui/**",
       "fonts/**",
       "package.json"
     ],
