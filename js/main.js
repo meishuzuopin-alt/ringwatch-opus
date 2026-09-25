@@ -478,7 +478,9 @@
     else if (overlay === 'stats') UI.statsPanel(g);
     else if (overlay === 'form') UI.formPanel(g);
     UI.pressed = pressed;
-    UI.toastY = /^(battle|clear|down|revive|bless)$/.test(g.mode) ? 84 : 8;   // 战斗时避开顶部的波次面板
+    // 提示条：战斗时放在波次面板下面；暂停和其他界面放最顶上。战斗里的提示不带到结算 / 标题页（那里有自己的标题）
+    if (UI.lastMode !== g.mode) { if (/^(result|title|pick|records)$/.test(g.mode)) UI.toastT = 0; UI.lastMode = g.mode; }
+    UI.toastY = !paused && /^(battle|clear|down|revive)$/.test(g.mode) ? 84 : 8;
     UI.drawToast();
   }
 

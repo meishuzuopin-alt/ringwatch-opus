@@ -79,8 +79,10 @@ function collect() {
   await page.evaluate(hook);
   const report = { screens: {}, perf: {}, errors };
   // 一个界面：先做准备，等画面稳定，再录一帧的文字
-  async function screen(name, prep, settle) {
+  // cond：进入这个界面该有的状态（比如 mode === 'shop'）。CI 上软件渲染很慢，靠固定延时会在界面切过去之前就操作
+  async function screen(name, prep, settle, cond) {
     if (prep) await page.evaluate(prep);
+    if (cond) await page.waitForFunction(cond, null, { timeout: 120000, polling: 100 });
     await page.waitForTimeout(settle || 1500);
     await page.evaluate(() => { window.__audit.texts.length = 0; window.__audit.btns.length = 0; window.__auditOn = true; });
     await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
@@ -97,10 +99,11 @@ function collect() {
   await screen('03b_keys', () => { RW.Main.action('keys'); RW.Main.action('keyset:cmd:post'); });
   await screen('04_records', () => { RW.Main.action('keysClose'); RW.Main.action('settingsClose'); RW.Main.action('records'); });
   await screen('05_pick', () => { RW.Main.action('home'); RW.Main.action('start'); });
-  await screen('06_battle_w1', () => { RW.Main.action('pick:' + RW.UI.heroSel); }, 3000);
+  await screen('06_battle_w1', () => { RW.Main.action('pick:' + RW.UI.heroSel); }, 3000, () => RW.game.mode === 'battle');
   await screen('07_battle_mid', () => {
     const g = RW.game; g.player.hp = g.player.maxHp = 9999; g.core.hp = g.core.maxHp = 99999; g.shardCount = 999;
     g.startWave(8); g.buildTower('barracks'); g.player.x += 90; g.buildTower('sentry'); g.player.x -= 90;
+    RW.UI.toast('审计：战斗中的提示条不许压住波次面板', 20);
   }, 6000);
   // 绘制开销（战斗中，一整帧所有渲染通道加起来）
   report.perf = await page.evaluate(() => new Promise(res => {
@@ -114,13 +117,13 @@ function collect() {
   console.log('  战斗画面：' + JSON.stringify(report.perf));
   await screen('08_respawn', () => { const g = RW.game; g.player.hp = 1; g.player.inv = 0; g.player.maxHp = 30; g.hurtPlayer(999, '审计', g.player.x + 5, g.player.y); }, 1500);
   await screen('09_pause', () => { RW.game.respawn(); RW.Main.battle('pause'); }, 800);
-  await screen('10_revive', () => { RW.Main.action('resume'); RW.game.hurtCore(1e9, '审计'); }, 3000);
-  await screen('11_bless', () => { const g = RW.game; RW.Main.action('revive'); g.blessPending = 1; g.clearWave(); }, 4000);
-  await screen('12_shop', () => { RW.Main.action('bless:0'); }, 2000);
+  await screen('10_revive', () => { RW.Main.action('resume'); RW.game.hurtCore(1e9, '审计'); }, 1500, () => RW.game.mode === 'revive');
+  await screen('11_bless', () => { const g = RW.game; RW.Main.action('revive'); g.blessPending = 1; g.clearWave(); }, 1500, () => RW.game.mode === 'bless' && (RW.UI.toast('审计：提示条不许压住标题', 20), true));
+  await screen('12_shop', () => { RW.Main.action('bless:0'); }, 1500, () => RW.game.mode === 'shop');
   await screen('13_stats', () => RW.Main.action('statsHelp'));
   await screen('14_form', () => { RW.Main.action('statsClose'); const g = RW.game; g.shardCount = 9999; g.core.lv = 2; g.applyCoreLevel(); RW.Main.action('upgrade'); });
-  await screen('15_result_lose', () => { RW.Main.action('formClose'); RW.game.finishRun(); }, 2000);
-  await screen('16_result_win', () => { RW.Main.action('again'); RW.Main.action('pick:' + RW.UI.heroSel); const g = RW.game; g.won = true; g.wave = RW.RUN.waves; g.finishRun(); }, 3000);
+  await screen('15_result_lose', () => { RW.Main.action('formClose'); RW.game.finishRun(); }, 1500, () => RW.game.mode === 'result');
+  await screen('16_result_win', () => { RW.Main.action('again'); RW.Main.action('pick:' + RW.UI.heroSel); const g = RW.game; g.won = true; g.wave = RW.RUN.waves; g.finishRun(); }, 2000, () => RW.game.mode === 'result' && RW.game.result && RW.game.result.won);
   await browser.close();
   server.close();
   const n = Object.values(report.screens).reduce((a, b) => a + b.length, 0);

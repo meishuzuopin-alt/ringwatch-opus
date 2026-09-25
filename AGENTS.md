@@ -1,6 +1,8 @@
-# 协作约定（Claude / Cursor / Codex 共用）
+# 协作约定（Claude / GPT / Codex 共用；Cursor 暂停）
 
-这份文件是所有 AI 助手和人共同遵守的项目规则。Codex 会自动读取本文件，Claude Code 通过 `CLAUDE.md` 引用它，Cursor 通过 `.cursor/rules/` 引用它。
+这份文件是所有 AI 助手和人共同遵守的项目规则。Codex / GPT 会自动读取本文件，Claude Code 通过 `CLAUDE.md` 引用它，Cursor 通过 `.cursor/rules/` 引用它。
+
+> 2026-09-25 起：Cursor 额度用完，暂停。原来 Cursor 负责的微调（数值、手感、文案、小修小改）交给 GPT。
 
 ## 项目是什么
 
@@ -33,10 +35,11 @@
 | 角色 | 负责 | 通常改哪里 | 分支 |
 |---|---|---|---|
 | **Claude Code** | 工程搭建、渲染管线、系统性功能、收尾完善（修 bug、补测试、重构） | `tools/`、`.github/`、`gl3d.js`、`sim.js`、`main.js`，以及落实美术方案所需的代码 | `claude/*` |
-| **你（Cursor）** | 微调：数值、手感、文案、小修小改 | `data.js`、`ui.js` 文案、任意小改动 | `main` 或自建分支 |
+| **GPT**（接手原 Cursor 的活） | 微调：数值、手感、文案、小修小改 | `data.js`、`ui.js` 文案、任意小改动；调数值后跑 `npm run balance` 或 `npm run audit:game`，改界面后跑 `npm run audit:ui` | `gpt/*` |
+| ~~Cursor~~ | 额度用完，暂停 | — | `cursor/*`（旧分支保留） |
 | **Codex** | 美术指导：定风格、调色板、光照氛围、模型造型、特效观感 | `docs/ART.md`、`world3d.js` 的 `PAL` 与昼夜预设、模型造型函数 | `codex/*` |
 
-**所有工作都要推到 GitHub**：Claude 用 `claude/*`、Cursor 用 `cursor/*`、Codex 用 `codex/*` 分支，改完就提交并推送，不要只留在本地。
+**所有工作都要推到 GitHub**：Claude 用 `claude/*`、GPT 用 `gpt/*`、Codex 用 `codex/*` 分支（Cursor 暂停，旧的 `cursor/*` 分支保留），改完就提交并推送，不要只留在本地。
 没推送的改动别人看不到，全面升级时会被漏掉。`npm run sync` 汇总所有分支的进度和可能冲突的文件；全面升级方案见 `docs/UPGRADE-PLAN.md`。
 
 交接方式：美术方案先写进 `docs/ART.md`（要什么、参考、验收标准），能直接改颜色 / 造型的就直接改；

@@ -184,6 +184,6 @@
 | P0 | 英文版（界面文案抽表） | Claude |
 | P0 | 真机性能：Windows 独显和核显、Steam Deck 1280×800 | 负责人找机器，Claude 出测试脚本 |
 | P1 | 英雄平衡用大样本复测（每英雄 40 局 × 4 图 × 3 档），弩手前期 | Claude |
-| P1 | 内容量：武器、道具、敌人各再加一批；`docs/DESIGN-BACKLOG.md` 第二类（建筑相性、插槽改塔、元素反应） | Claude / Cursor |
+| P1 | 内容量：武器、道具、敌人各再加一批；`docs/DESIGN-BACKLOG.md` 第二类（建筑相性、插槽改塔、元素反应） | Claude / GPT |
 | P1 | 美术：受击碎块、角色动作、界面插画化、雪地岩壁造型 | Codex |
 | P2 | 界面缩放、手柄图示按设备区分、拍照模式 | Claude |
