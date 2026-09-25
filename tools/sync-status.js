@@ -13,7 +13,7 @@ const touched = {};   // 文件 -> [分支]
 console.log(`集成基线：${base}  (${sh(`git log -1 --format=%h·%cr ${base}`)})\n`);
 for (const b of branches) {
   const ahead = sh(`git rev-list --count ${base}..${b}`), behind = sh(`git rev-list --count ${b}..${base}`);
-  const who = b.includes('/codex/') ? 'Codex' : b.includes('/gpt/') ? 'GPT' : b.includes('/cursor/') ? 'Cursor' : b.includes('/claude/') ? 'Claude' : (b.endsWith('/main') ? 'main' : '其他');
+  const who = b.includes('/codex/') ? 'Codex' : b.includes('/grok/') ? 'Grok' : b.includes('/gpt/') ? 'GPT' : b.includes('/cursor/') ? 'Cursor' : b.includes('/claude/') ? 'Claude' : (b.endsWith('/main') ? 'main' : '其他');
   console.log(`■ ${b}  [${who}]  领先 ${ahead} · 落后 ${behind} · 最后提交 ${sh(`git log -1 --format=%cr ${b}`)}`);
   if (+ahead === 0) { console.log('    （已全部包含在基线里）\n'); continue; }
   console.log(sh(`git log --format="%h %s" ${base}..${b}`).split('\n').map(l => '    ' + l).join('\n'));
