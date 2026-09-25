@@ -77,6 +77,10 @@ function collect() {
   await page.goto(`http://localhost:${server.address().port}/preview.html`);
   await page.waitForFunction(() => window.RW && RW.Draw && RW.UI && RW.game, null, { timeout: 60000 });
   await page.evaluate(hook);
+  // 商店卡片的说明行：每种建筑每一阶都生成一遍（审计：兵营科技卡引用了已删除的字段，只在随机刷到时才崩）
+  const statErr = await page.evaluate(() => { const bad = []; for (const id of RW.TOWER_ORDER) for (let t = 1; t <= RW.TOWER_TIER.dmg.length; t++) { try { const l = RW.UI.towerStatLine(id, t); if (!l || /NaN|undefined/.test(l)) bad.push(id + t + '：' + l); } catch (e) { bad.push(id + t + '：' + e.message); } } return bad; });
+  if (statErr.length) errors.push('建筑说明行：' + statErr.join('；'));
+  console.log(statErr.length ? '✗ 建筑说明行 ' + statErr.join('；') : '✓ 建筑说明行（每种建筑每一阶）');
   const report = { screens: {}, perf: {}, errors };
   // 一个界面：先做准备，等画面稳定，再录一帧的文字
   // cond：进入这个界面该有的状态（比如 mode === 'shop'）。CI 上软件渲染很慢，靠固定延时会在界面切过去之前就操作

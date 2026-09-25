@@ -424,7 +424,7 @@
     var rg = Math.round(d.range * RW.TOWER_TIER.range[ti]);
     if (d.kind === 'sentry') return '伤害 ' + Math.round(d.dmg * RW.TOWER_TIER.dmg[ti] * 10) / 10 + ' · 间隔 ' + d.cd + 's · 射程 ' + rg + ' · 耐久 ' + hp;
     if (d.kind === 'pylon') return '减速 ' + Math.round(d.slow * 100) + '% · 半径 ' + rg + ' · 耐久 ' + hp;
-    if (d.kind === 'barracks') return '士兵 ' + d.soldiers[ti] + ' 名 · 士兵伤害 ' + Math.round(d.soldier.dmg * RW.TOWER_TIER.dmg[ti] * 10) / 10 + ' · 耐久 ' + hp;
+    if (d.kind === 'barracks') { var k = RW.TOWER_TIER.dmg[ti]; return '士兵 ' + d.soldiers[ti] + ' 名 · 伤害 盾卫 ' + Math.round(RW.TROOPS.guard.dmg * k * 10) / 10 + ' / 枪兵 ' + Math.round(RW.TROOPS.spear.dmg * k * 10) / 10 + ' / 弓手 ' + Math.round(RW.TROOPS.archer.dmg * k * 10) / 10 + ' · 耐久 ' + hp; }
     return '吸取半径 ' + rg + ' · 加成 +' + Math.round(d.bonus[ti] * 100) + '% · 耐久 ' + hp;
   };
   UI.prosCons = function (x, y, w, pros, cons, note) {
