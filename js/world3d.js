@@ -13,29 +13,31 @@
 
   // ================= 调色 =================
   var PAL = {
-    grass: hex('#6a9a3e'), grass2: hex('#6f9f41'), grassDark: hex('#65943b'),
-    dirt: hex('#b08652'), dirt2: hex('#aa8250'), stone: hex('#aaa498'), stone2: hex('#b3ada1'),
-    rock: hex('#7b7f86'), rock2: hex('#8d9098'), rockDark: hex('#5f636b'), moss: hex('#5f8f3a'),
-    bed: hex('#3d5a6e'), water: hex('#2f8fd0'), plank: hex('#8a5a34'), plank2: hex('#9b6a3f'), wood: hex('#6b4428'),
-    trunk: hex('#6b4a2e'), leaf: hex('#3f7f35'), leaf2: hex('#4d9440'), leaf3: hex('#356b2e'),
-    wall: hex('#e8dcc4'), wallWood: hex('#8a6440'), roofBlue: hex('#3f5f9e'), roofRed: hex('#b5523a'),
-    lamp: hex('#ffcf6b'), banner: hex('#2a2440'), gold: hex('#e0a83a'), flower: [hex('#ffffff'), hex('#ffd6f0'), hex('#fff1a8')]
+    grass: hex('#6F9A4E'), grass2: hex('#7BA85A'), grassDark: hex('#557D40'),
+    dirt: hex('#C9A27A'), dirt2: hex('#B68F69'), stone: hex('#B8A38D'), stone2: hex('#D0B99A'),
+    rock: hex('#786A60'), rock2: hex('#998571'), rockDark: hex('#55443D'), moss: hex('#668542'),
+    bed: hex('#1E2A4A'), water: hex('#5FA8C8'), plank: hex('#9A6943'), plank2: hex('#B47D50'), wood: hex('#7A5234'),
+    trunk: hex('#65442F'), leaf: hex('#355C36'), leaf2: hex('#467343'), leaf3: hex('#2C4D31'),
+    wall: hex('#D9C4A5'), wallWood: hex('#987453'), roofBlue: hex('#355070'), roofRed: hex('#A8483A'),
+    lamp: hex('#C98A3C'), banner: hex('#1E2A4A'), gold: hex('#FFB547'),
+    flower: [hex('#D8C6A4'), hex('#BC8C8B'), hex('#D0BB7E')]
   };
 
   // ================= 地貌 =================
   // 每张地图一套地貌调色（Codex 可以直接改这里的颜色）；未写的键沿用上面的默认调色
-  PAL.skirt = hex('#22402a');
+  PAL.skirt = hex('#1E2A4A');
   var BASE_PAL = {};
   for (var pk in PAL) BASE_PAL[pk] = PAL[pk];
   var BIOMES = {
     meadow: {},
-    forest: { grass: '#5f9440', grass2: '#58893a', grassDark: '#4f7f35', leaf: '#2f6a2c', leaf2: '#3b7a33', leaf3: '#2a5a26',
-      dirt: '#9c7a4a', dirt2: '#957346', moss: '#4f7f35', skirt: '#17331d' },
-    snow: { grass: '#e6edf3', grass2: '#dde6ee', grassDark: '#d0dbe6', moss: '#cfd9e4', dirt: '#b7b0a4', dirt2: '#afa89c',
-      stone: '#b9bec6', stone2: '#c3c8cf', rock: '#8a93a0', rock2: '#9aa3b0', leaf: '#2f5a4a', leaf2: '#3a6a58', leaf3: '#284d40',
-      water: '#a9dcf0', bed: '#7897ad', skirt: '#c7d3de', pine: 1 },
-    marsh: { grass: '#4f6b3a', grass2: '#56713c', grassDark: '#465f34', moss: '#4a6232', dirt: '#6e5f3e', dirt2: '#66583a',
-      water: '#3f6a4a', bed: '#2f3f2a', leaf: '#3d5a2a', leaf2: '#4a6a32', leaf3: '#34502a', trunk: '#4a3a26', skirt: '#1f2c18', willow: 1 }
+    forest: { grass: '#64894B', grass2: '#5E8246', grassDark: '#4D713C', leaf: '#2F5A36', leaf2: '#3C6B40', leaf3: '#274B30',
+      dirt: '#AA8962', dirt2: '#9C7B56', moss: '#567A3F', skirt: '#182B25' },
+    snow: { grass: '#B9C8D0', grass2: '#C9D4D5', grassDark: '#9EAFBC', moss: '#8DA9A9', dirt: '#AFA08E', dirt2: '#A29483',
+      stone: '#C4C8C5', stone2: '#D7D6CB', rock: '#778493', rock2: '#8B9AA4', leaf: '#355A4A', leaf2: '#426A57', leaf3: '#2D4D41',
+      water: '#5FA8C8', bed: '#49677D', skirt: '#26364A', pine: 1 },
+    marsh: { grass: '#586D3F', grass2: '#647846', grassDark: '#465B35', moss: '#50623A', dirt: '#786447', dirt2: '#6D5C42',
+      water: '#345B60', bed: '#273D3D', leaf: '#405B36', leaf2: '#4B6940', leaf3: '#354C2F', trunk: '#59422F',
+      skirt: '#202C26', willow: 1 }
   };
   function applyBiome(name) {
     var B = BIOMES[name] || BIOMES.meadow, k;
@@ -181,13 +183,13 @@
   }
   function tree(gb, x, z, s, seed) {
     if (PAL.pine) { pine(gb, x, z, s, seed); return; }
-    var R = rnd(seed * 97 + 13);
-    var trunk = 52 * s;
-    gb.cyl(x, 0, z, 4.4 * s, 2.6 * s, trunk, 6, PAL.trunk);
+    var R = rnd(seed * 97 + 13), trunk = 50 * s;
+    gb.cyl(x, 0, z, 4.4 * s, 2.8 * s, trunk, 6, PAL.trunk);
     var lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3];
-    gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
-    gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
-    if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    // Three overlapping low-poly leaf clusters make a scalloped crown instead of one round ball.
+    gb.blob(x, trunk * 0.92, z, 14 * s, 13 * s, 14 * s, lc, 0, seed, 0.16);
+    gb.blob(x - 8 * s, trunk * 1.04, z + 5 * s, 10 * s, 10 * s, 10 * s, shade(lc, 1.08), 0, seed + 5, 0.14);
+    gb.blob(x + 8 * s, trunk * 1.02, z - 5 * s, 10 * s, 10 * s, 10 * s, shade(lc, 0.88), 0, seed + 9, 0.14);
   }
   function tufts(gb, x, z, c, r) {
     var R = rnd(c * 977 + r * 131 + 5);
@@ -218,7 +220,7 @@
     gb.box(x, 0, z, 3, h, 3, PAL.wood);
     gb.box(x, h - 3, z + 5, 1.5, 1.5, 12, PAL.wood);
     gb.box(x + 1, h - 22, z + 5, 1, 19, 10, PAL.banner);
-    gb.box(x + 1.6, h - 15, z + 5, 0.6, 5, 5, PAL.gold, 0.6);
+    gb.box(x + 1.6, h - 15, z + 5, 0.6, 5, 5, PAL.wall, 0.15);
   }
   function gate(gb, x, z, c, r, cols, rows, lamps) {
     var vertical = c === 0 || c === cols - 1;
@@ -244,47 +246,83 @@
     if (ch(c, r + 1) !== '=' && ch(c, r + 1) !== '~') { if (left) lantern(gb, x0 + 2, z0 + C + 6, lamps); if (right) lantern(gb, x0 + C - 12, z0 + C + 6, lamps); }
   }
   function house(gb, x0, z0, w, d, blue, lamps) {
-    var cx = x0 + w / 2, cz = z0 + d / 2, wall = blue ? PAL.wall : PAL.wallWood, roof = blue ? PAL.roofBlue : PAL.roofRed;
-    var span = Math.min(w, d);
-    var wallH = Math.max(52, Math.min(78, span * 0.72));
-    var roofH = Math.max(28, Math.min(50, span * 0.4));
-    var doorH = 36;
-    gb.box(cx, 0, cz, w - 8, 4, d - 6, PAL.stone2);
-    gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall);
-    gb.box(x0 + 7, 4, cz, 3, wallH, d - 10, PAL.wood); gb.box(x0 + w - 7, 4, cz, 3, wallH, d - 10, PAL.wood);
-    gb.box(cx, wallH, cz, w - 10, 4, d - 10, PAL.wood);
-    gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof);
-    gb.box(cx - w * 0.2, wallH + roofH * 0.45, cz - 4, 7, 20, 7, PAL.rockDark);
-    gb.box(cx, 4, z0 + d - 5.5, 12, doorH, 1.4, PAL.wood);
-    var winY = 4 + doorH * 0.45;
-    for (var i = -1; i <= 1; i += 2) gb.box(cx + i * w * 0.25, winY, z0 + d - 5.8, 9, 11, 1, PAL.lamp, 0.9);
-    gb.box(cx, doorH + 8, z0 + d - 3, w * 0.55, 2, 7, PAL.wood);
-    lamps.push({ x: cx - w * 0.25, y: winY + 5, z: z0 + d - 3, s: 0.8 });
-    lamps.push({ x: cx + w * 0.25, y: winY + 5, z: z0 + d - 3, s: 0.8 });
-    gb.box(x0 + w - 4, 0, z0 + d - 2, 9, 9, 9, PAL.plank2);
+    var cx = x0 + w / 2, cz = z0 + d / 2;
+    var wall = blue ? PAL.wall : PAL.wallWood, roof = PAL.roofRed;
+    var span = Math.min(w, d), bodyW = w * 0.68, bodyD = d * 0.70;
+    var roofW = Math.min(w + 8, bodyW * 1.42), roofD = Math.min(d + 8, bodyD * 1.42);
+    var wallH = Math.max(52, Math.min(78, span * 0.74));
+    var roofH = Math.max(38, Math.min(58, span * 0.54));
+    var roofY = wallH + 7, front = cz + bodyD / 2, doorH = Math.min(34, wallH * 0.58);
+    // Broad stone plinth, narrow timber walls and a wide roof create the requested mushroom silhouette.
+    gb.box(cx, 0, cz, w - 5, 6, d - 5, PAL.stone2);
+    gb.box(cx, 5, cz, bodyW, wallH, bodyD, wall);
+    gb.box(cx, wallH * 0.45, cz, bodyW + 2, 4, bodyD + 2, PAL.wood);
+    // Four visible corner posts and a warm front beam keep the small building readable at distance.
+    for (var sx = -1; sx <= 1; sx += 2) for (var sz = -1; sz <= 1; sz += 2) {
+      gb.box(cx + sx * (bodyW / 2 - 3), 7, cz + sz * (bodyD / 2 - 3), 4, wallH - 3, 4, PAL.wood);
+    }
+    gb.box(cx, wallH + 3, cz, roofW, 5, roofD, PAL.wood);
+    gb.roof(cx, roofY, cz, roofW, roofH, roofD, roof);
+    // Raised ridge, eaves and short tile courses add roof depth without texture assets.
+    gb.box(cx, roofY + roofH, cz, 5, 3, 5, shade(roof, 0.82));
+    for (var side = -1; side <= 1; side += 2) for (var row = 0; row < 3; row++) {
+      var tz = cz + side * (roofD * 0.44 - row * roofD * 0.13);
+      var slope = 1 - Math.abs(tz - cz) / (roofD / 2);
+      var ty = roofY + roofH * slope + 1.2;
+      gb.box(cx, ty, tz, roofW * 0.84, 1.6, 2.2, shade(roof, row % 2 ? 0.84 : 1.06));
+    }
+    // Chimney, framed windows and a recessed door.
+    gb.box(cx - roofW * 0.22, roofY + roofH * 0.42, cz - roofD * 0.08, 8, 17, 8, PAL.rock2);
+    var winY = 7 + doorH * 0.52;
+    for (var i = -1; i <= 1; i += 2) {
+      var wx = cx + i * bodyW * 0.28;
+      gb.box(wx, winY, front + 1, 12, 14, 2.2, PAL.wood);
+      gb.box(wx, winY, front + 2.3, 7.5, 9.5, 0.7, PAL.lamp, 0.35);
+      gb.box(wx, winY, front + 2.8, 1.4, 12, 0.6, PAL.wood);
+      lamps.push({ x: wx, y: winY + 4, z: front + 4, s: 0.55 });
+    }
+    gb.box(cx, 6 + doorH / 2, front + 1.5, 13, doorH, 2.2, PAL.wood);
+    gb.box(cx, 6 + doorH / 2, front + 2.8, 8, doorH - 5, 0.7, shade(PAL.wood, 0.72));
+    gb.box(cx, doorH + 10, front + 3, bodyW * 0.75, 3, 4, PAL.wood);
   }
 
   // ================= 模型 =================
   function model(fn) { var gb = new GB(); fn(gb); return GL.upload(gb); }
   var SKIN = hex('#f1c9a5'), HAIR = hex('#4a2f1f');
+  var HERO_CAPES = {
+    mage: '#E8702A', ranger: '#C9A27A', knight: '#A8483A', rogue: '#7A5234', engineer: '#9A6943',
+    berserker: '#C4522E', priest: '#E6D3B6', bomber: '#B95E35', merchant: '#FFB547', gambler: '#A87943'
+  };
+  function heroCape(d) {
+    for (var i = 0; i < RW.CLASS_ORDER.length; i++) {
+      var id = RW.CLASS_ORDER[i];
+      if (RW.CLASSES[id] === d) return hex(HERO_CAPES[id]);
+    }
+    return hex(d.cape || '#C9A27A');
+  }
   function buildModels() {
     var M = W3.meshes;
     // ---- 主角（分部件，方便做走路/披风动画）----
     M.heroLeg = model(function (g) { g.box(0, 0, 0, 4.5, 5, 4.8, hex('#4a3020')); g.box(0, 5, 0, 4.2, 7, 4.4, hex('#2b2622')); });
     M.heroBody = model(function (g) {
-      g.box(0, 11, 0, 7.5, 12, 11, hex('#2d2a33'));
-      g.box(0, 11, 0, 7.9, 2, 11.4, hex('#5a3a22'));
-      g.box(3.9, 12, 0, 0.6, 10, 2, hex('#c8963c'), 0.3);
-      g.box(0, 11, 5.8, 3, 11, 1.5, hex('#2d2a33')); g.box(0, 11, -5.8, 3, 11, 1.5, hex('#2d2a33'));
-      g.box(0.5, 8, 6.2, 3.2, 4, 2.6, hex('#3a2a20')); g.box(0.5, 8, -6.2, 3.2, 4, 2.6, hex('#3a2a20'));
-      g.box(0, 23, 0, 7, 7, 7, SKIN);
-      g.box(3.6, 25, 1.6, 0.4, 1.4, 1.2, hex('#2a1a10')); g.box(3.6, 25, -1.6, 0.4, 1.4, 1.2, hex('#2a1a10'));
-      g.blob(-0.8, 29.5, 0, 4.8, 3.2, 4.8, HAIR, 0, 3, 0.3);
-      g.blob(-2.5, 26, 0, 3, 3.5, 4.2, HAIR, 0, 7, 0.3);
+      // Soft toy-like torso, broad shoulders and a readable warm chest sash.
+      g.blob(0, 12, 0, 6.5, 8, 6.8, hex('#4A382F'), 0, 21, 0.08);
+      g.box(0, 12, 6.1, 0.7, 9, 1.2, hex('#A8483A'));
+      g.box(0, 8, 0, 6.8, 2.2, 7.1, hex('#C9A27A'));
+      g.box(4.1, 13, 0, 0.8, 11, 1.9, hex('#FFB547'), 0.15);
+      g.blob(0, 24, 0, 6.8, 7.2, 6.4, SKIN, 0, 23, 0.08);
+      g.box(5.3, 25, 1.7, 0.5, 1.5, 1.1, hex('#372C32'));
+      g.box(5.3, 25, -1.7, 0.5, 1.5, 1.1, hex('#372C32'));
+      g.blob(-1.1, 30, 0, 5.2, 3.1, 5.2, HAIR, 0, 24, 0.12);
+      g.blob(-3.2, 26.5, 0, 2.8, 3.5, 4.1, HAIR, 0, 25, 0.1);
     });
     // 斗篷与兜帽/尖帽做成白色，绘制时按英雄的 cape 颜色着色；其余帽子、手持物自带颜色
     var CLOTH = hex('#ffffff'), STEEL = hex('#c8d2e0'), WOOD = hex('#6b4428'), GOLDC = hex('#e0a83a');
-    M.cape = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, CLOTH); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, CLOTH, 0, 5, 0.2); });
+    M.cape = model(function (g) {
+      g.box(-5.2, 10, 0, 2.1, 16, 12, CLOTH);
+      g.blob(-6.7, 5, 0, 1.7, 6, 8.5, CLOTH, 0, 27, 0.1);
+      g.blob(-4.8, 21, 0, 3.5, 3.3, 7.4, CLOTH, 0, 28, 0.1);
+    });
     M.hat_wizard = model(function (g) { g.cyl(-0.3, 29.4, 0, 6.8, 6.4, 0.9, 8, CLOTH); g.cyl(-0.8, 30.3, 0, 4.2, 0, 11, 7, CLOTH); });
     M.hat_hood = model(function (g) { g.blob(-1, 27.5, 0, 4.9, 4.4, 4.9, CLOTH, 0, 9, 0.12); g.cyl(-2.2, 29, 0, 3.2, 0, 6, 5, CLOTH); });
     M.hat_helm = model(function (g) {
@@ -330,136 +368,157 @@
     M.prop_bomb = model(function (g) { g.blob(5, 12, 7, 3.6, 3.6, 3.6, hex('#2a2a30'), 0, 3, 0.05); g.box(5, 15.4, 7, 0.8, 2.6, 0.8, hex('#c8963c')); g.blob(5, 18.4, 7, 1.1, 1.1, 1.1, hex('#ffb347'), 2.5, 2, 0.1); });
     M.prop_coin = model(function (g) { g.blob(2.5, 9, 7, 3.6, 3.8, 3.6, hex('#8a6440'), 0, 5, 0.12); g.box(2.5, 12.6, 7, 1.8, 1.4, 1.8, hex('#5a3a22')); g.cyl(5.5, 15, 7, 2.2, 2.2, 0.8, 8, GOLDC, 0.8); });
     M.prop_dice = model(function (g) { g.box(5, 10, 7, 3.6, 3.6, 3.6, hex('#f4f0e0')); g.box(6.9, 11.2, 7, 0.3, 0.9, 0.9, hex('#1f5a4a')); g.box(4, 14, 8.5, 2.6, 2.6, 2.6, hex('#ffd6d6')); });
-    // ---- 敌人 ----
+    // ---- 敌人：冷紫身体，红色只留给眼睛与攻击预警 ----
     M.imp = model(function (g) {
-      var b = hex('#6a3f8e');
-      g.box(-1, 0, 2.2, 2.4, 4, 2.4, b); g.box(-1, 0, -2.2, 2.4, 4, 2.4, b);
-      g.blob(0, 7, 0, 5.5, 4.6, 5, b, 0, 11, 0.2);
-      g.blob(4, 10, 0, 3.4, 3.2, 3.4, hex('#7d4ea3'), 0, 3, 0.15);
+      var b = hex('#6B3FA0');
+      g.box(-1, 0, 2.2, 2.4, 4, 2.4, hex('#442B6B')); g.box(-1, 0, -2.2, 2.4, 4, 2.4, hex('#442B6B'));
+      g.blob(0, 7, 0, 5.5, 4.6, 5, b, 0, 11, 0.16);
+      g.blob(4, 10, 0, 3.4, 3.2, 3.4, hex('#7B55B7'), 0, 3, 0.12);
       g.cyl(3, 12.5, 2, 1, 0, 4, 4, hex('#1d1028')); g.cyl(3, 12.5, -2, 1, 0, 4, 4, hex('#1d1028'));
-      g.box(6.8, 10, 1.2, 0.6, 1, 1, hex('#ff3b3b'), 2); g.box(6.8, 10, -1.2, 0.6, 1, 1, hex('#ff3b3b'), 2);
+      g.box(6.8, 10, 1.2, 0.6, 1, 1, hex('#FF3B3B'), 2); g.box(6.8, 10, -1.2, 0.6, 1, 1, hex('#FF3B3B'), 2);
       g.box(3, 5, 4.5, 4, 1.4, 1.4, b); g.box(3, 5, -4.5, 4, 1.4, 1.4, b);
     });
-    M.batBody = model(function (g) { g.blob(0, 0, 0, 3.5, 3, 3, hex('#5a3a8a'), 0, 2, 0.15); g.box(2.8, 0.8, 1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); g.box(2.8, 0.8, -1, 0.5, 0.7, 0.7, hex('#ff5a8a'), 2); });
+    M.batBody = model(function (g) {
+      g.blob(0, 0, 0, 5.2, 5, 4.8, hex('#563383'), 0, 2, 0.12);
+      g.box(4.6, 1.2, 1.4, 0.7, 1, 0.8, hex('#FF3B3B'), 2);
+      g.box(4.6, 1.2, -1.4, 0.7, 1, 0.8, hex('#FF3B3B'), 2);
+    });
     M.batWing = model(function (g) {
-      var c = hex('#7a4ab0');
-      g.tri([1, 0, 1.5], [-2, 0, 9], [2, 3, 7], c); g.tri([1, 0, 1.5], [2, 3, 7], [-2, 0, 9], c);
-      g.tri([1, 0, -1.5], [2, 3, -7], [-2, 0, -9], c); g.tri([1, 0, -1.5], [-2, 0, -9], [2, 3, -7], c);
+      var c = hex('#6B3FA0');
+      g.tri([1, 0, 1.5], [-2, 0, 11], [2, 4, 8], c); g.tri([1, 0, 1.5], [2, 4, 8], [-2, 0, 11], c);
+      g.tri([1, 0, -1.5], [2, 4, -8], [-2, 0, -11], c); g.tri([1, 0, -1.5], [-2, 0, -11], [2, 4, -8], c);
     });
     M.brute = model(function (g) {
-      var st = hex('#6d7486'), dk = hex('#454a58');
-      g.box(-1, 0, 4, 5, 7, 5, dk); g.box(-1, 0, -4, 5, 7, 5, dk);
-      g.box(0, 6, 0, 14, 13, 16, st);
-      g.box(0, 6, 0, 14.6, 3, 16.6, hex('#8c5a34'));
-      g.blob(0, 18, 7.5, 5, 4, 4, dk, 0, 3, 0.2); g.blob(0, 18, -7.5, 5, 4, 4, dk, 0, 4, 0.2);
+      var st = hex('#6B3FA0'), dk = hex('#442B6B');
+      g.box(-1, 0, 4, 6, 8, 6, dk); g.box(-1, 0, -4, 6, 8, 6, dk);
+      g.blob(0, 8, 0, 10, 8, 11, st, 0, 31, 0.08);
+      g.box(0, 9, 0, 20, 4, 22, hex('#563383'));
+      g.blob(0, 18, 7.5, 5.5, 4.5, 4.6, dk, 0, 32, 0.08); g.blob(0, 18, -7.5, 5.5, 4.5, 4.6, dk, 0, 33, 0.08);
       g.box(5, 16, 0, 7, 7, 8, dk);
-      g.box(8.6, 18, 2, 0.6, 1.2, 1.4, hex('#ff4a2a'), 2); g.box(8.6, 18, -2, 0.6, 1.2, 1.4, hex('#ff4a2a'), 2);
-      g.box(5, 8, 9.5, 3, 10, 3, dk); g.box(7, 4, 9.5, 10, 4, 4, hex('#5a3a22'));
+      g.box(8.6, 18, 2, 0.6, 1.2, 1.4, hex('#FF3B3B'), 2); g.box(8.6, 18, -2, 0.6, 1.2, 1.4, hex('#FF3B3B'), 2);
+      g.box(5, 8, 11, 3, 10, 3, dk); g.box(7, 4, 11, 10, 4, 4, hex('#563383'));
+      g.cyl(-4, 19, 9, 3, 0, 12, 5, hex('#7B55B7')); g.cyl(-4, 19, -9, 3, 0, 12, 5, hex('#7B55B7'));
     });
     M.wolf = model(function (g) {
-      var f = hex('#6b4a30');
-      for (var i = 0; i < 4; i++) g.box(i < 2 ? 5 : -5, 0, i % 2 ? 2.8 : -2.8, 2.4, 5, 2.4, shade(f, 0.8));
-      g.box(0, 5, 0, 16, 7, 7.5, f);
-      g.box(9.5, 7, 0, 6, 6, 6, f); g.box(13.5, 7, 0, 4, 3.5, 4, shade(f, 1.1));
-      g.cyl(9, 12.5, 2, 1.2, 0, 3.5, 4, shade(f, 0.7)); g.cyl(9, 12.5, -2, 1.2, 0, 3.5, 4, shade(f, 0.7));
-      g.box(12.6, 10, 1.6, 0.5, 1, 1, hex('#ffd24a'), 2); g.box(12.6, 10, -1.6, 0.5, 1, 1, hex('#ffd24a'), 2);
-      g.box(-9.5, 8, 0, 5, 2, 2, shade(f, 0.9));
-      g.box(-1, 12, 0, 5, 7, 5, hex('#3a2e2a')); g.box(-1, 19, 0, 4.4, 4.4, 4.4, hex('#5a5f6a'));
-      g.box(4, 16, 3.5, 14, 1, 1, hex('#8a6440')); g.cyl(11.5, 16, 3.5, 1.2, 0, 3, 4, hex('#c9ccd6'));
+      var f = hex('#563383');
+      for (var i = 0; i < 4; i++) g.box(i < 2 ? 5 : -5, 0, i % 2 ? 2.8 : -2.8, 2.4, 5, 2.4, hex('#442B6B'));
+      g.blob(0, 6, 0, 8, 5, 4.5, f, 0, 34, 0.08);
+      g.blob(9.5, 8, 0, 4.5, 4.5, 3.8, f, 0, 35, 0.08);
+      g.blob(13.5, 7, 0, 3, 2.6, 3, hex('#7B55B7'), 0, 36, 0.06);
+      g.cyl(9, 12.5, 2, 1.2, 0, 3.5, 4, hex('#442B6B')); g.cyl(9, 12.5, -2, 1.2, 0, 3.5, 4, hex('#442B6B'));
+      g.box(12.6, 10, 1.6, 0.5, 1, 1, hex('#FF3B3B'), 2); g.box(12.6, 10, -1.6, 0.5, 1, 1, hex('#FF3B3B'), 2);
+      g.box(-9.5, 8, 0, 5, 2, 2, f);
+      g.box(-1, 12, 0, 5, 7, 5, hex('#442B6B')); g.box(-1, 19, 0, 4.4, 4.4, 4.4, hex('#7B55B7'));
+      g.box(4, 16, 3.5, 14, 1, 1, PAL.wood); g.cyl(11.5, 16, 3.5, 1.2, 0, 3, 4, PAL.stone2);
     });
     M.sack = model(function (g) {
-      var c = hex('#7a2e9e');
-      g.blob(0, 10, 0, 11, 10, 11, c, 0, 5, 0.18);
-      g.blob(-3, 16, 5, 4, 4, 4, shade(c, 1.2), 0, 8, 0.2); g.blob(-4, 12, -6, 4, 3.5, 4, shade(c, 1.2), 0, 9, 0.2);
-      g.box(10, 12, 2.5, 0.8, 2, 2, hex('#ffe14a'), 2); g.box(10, 12, -2.5, 0.8, 2, 2, hex('#ffe14a'), 2);
+      var c = hex('#563383');
+      g.blob(0, 10, 0, 11, 10, 11, c, 0, 5, 0.14);
+      g.blob(-3, 16, 5, 4, 4, 4, hex('#7B55B7'), 0, 8, 0.12); g.blob(-4, 12, -6, 4, 3.5, 4, hex('#7B55B7'), 0, 9, 0.12);
+      g.box(10, 12, 2.5, 0.8, 2, 2, hex('#FF3B3B'), 2); g.box(10, 12, -2.5, 0.8, 2, 2, hex('#FF3B3B'), 2);
     });
     M.goblin = model(function (g) {
-      var s = hex('#6fbf3a');
-      g.box(0, 0, 2, 2, 4, 2, hex('#4a3020')); g.box(0, 0, -2, 2, 4, 2, hex('#4a3020'));
-      g.box(0, 4, 0, 5.5, 6, 6, hex('#7a5a3a'));
-      g.box(1, 10, 0, 6, 5, 6, s);
-      g.tri([0, 13, 3], [0, 11, 3], [-1, 14, 8], s); g.tri([0, 11, 3], [0, 13, 3], [-1, 14, 8], s);
-      g.tri([0, 11, -3], [0, 13, -3], [-1, 14, -8], s); g.tri([0, 13, -3], [0, 11, -3], [-1, 14, -8], s);
-      g.box(4.1, 12, 1.4, 0.6, 1, 1, hex('#ffe14a'), 2); g.box(4.1, 12, -1.4, 0.6, 1, 1, hex('#ffe14a'), 2);
-      g.blob(-5, 8, 0, 5, 5, 5, hex('#1c1c22'), 0, 6, 0.08);
-      g.box(-5, 13, 0, 1, 3, 1, hex('#caa46a')); g.box(-5, 16, 0, 1.8, 1.8, 1.8, hex('#ffb040'), 2.5);
+      var c = hex('#6B3FA0');
+      g.box(0, 0, 2, 2, 4, 2, hex('#442B6B')); g.box(0, 0, -2, 2, 4, 2, hex('#442B6B'));
+      g.blob(0, 5, 0, 5.5, 5, 5.5, hex('#563383'), 0, 37, 0.08);
+      g.blob(1, 11, 0, 6, 5, 6, c, 0, 38, 0.08);
+      g.tri([0, 13, 3], [0, 11, 3], [-1, 14, 8], hex('#7B55B7')); g.tri([0, 11, 3], [0, 13, 3], [-1, 14, 8], hex('#7B55B7'));
+      g.tri([0, 11, -3], [0, 13, -3], [-1, 14, -8], hex('#7B55B7')); g.tri([0, 13, -3], [0, 11, -8], [-1, 14, -8], hex('#7B55B7'));
+      g.box(4.1, 12, 1.4, 0.6, 1, 1, hex('#FF3B3B'), 2); g.box(4.1, 12, -1.4, 0.6, 1, 1, hex('#FF3B3B'), 2);
+      g.blob(-5, 8, 0, 5, 5, 5, hex('#442B6B'), 0, 39, 0.06);
+      g.box(-5, 13, 0, 1, 3, 1, PAL.wood); g.box(-5, 16, 0, 1.8, 1.8, 1.8, hex('#7B55B7'), 0.3);
     });
     M.archer = model(function (g) {
-      var c = hex('#39445c');
-      g.box(0, 0, 1.8, 2, 6, 2, hex('#2a2a33')); g.box(0, 0, -1.8, 2, 6, 2, hex('#2a2a33'));
+      var c = hex('#563383');
+      g.box(0, 0, 1.8, 2, 6, 2, hex('#442B6B')); g.box(0, 0, -1.8, 2, 6, 2, hex('#442B6B'));
       g.cyl(0, 5, 0, 5, 3.5, 10, 6, c);
-      g.box(0, 15, 0, 4.5, 4.5, 4.5, hex('#2a2e3c'));
+      g.blob(0, 15, 0, 4.8, 4.8, 4.8, hex('#442B6B'), 0, 40, 0.08);
       g.cyl(0, 17, 0, 3.5, 0, 6, 5, c);
-      g.box(2.4, 16, 0, 0.5, 0.8, 3, hex('#ffe066'), 2);
-      g.box(4, 8, 0, 1.2, 14, 1.2, hex('#6b4428')); g.box(4.5, 15, 0, 1.2, 2, 1.2, hex('#8a6440'));
+      g.box(2.4, 16, 0, 0.5, 0.8, 3, hex('#FF3B3B'), 2);
+      g.box(4, 8, 0, 1.2, 14, 1.2, PAL.wood); g.box(4.5, 15, 0, 1.2, 2, 1.2, PAL.plank2);
     });
     M.shaman = model(function (g) {
-      var c = hex('#2e4f9e');
+      var c = hex('#563383');
       g.cyl(0, 0, 0, 7, 4, 13, 7, c);
-      g.box(0, 13, 0, 5, 5, 5, hex('#e8e2d0'));
-      g.box(2.6, 14.5, 1.1, 0.4, 1, 1, hex('#3a2a20')); g.box(2.6, 14.5, -1.1, 0.4, 1, 1, hex('#3a2a20'));
-      g.cyl(-1, 18, 0, 1.5, 0, 6, 4, hex('#ff6b4a'));
-      g.box(4, 0, 5, 1.2, 22, 1.2, hex('#6b4428')); g.blob(4, 23, 5, 2.4, 3.2, 2.4, hex('#6fc3ff'), 1.8, 2, 0.1);
+      g.blob(0, 14, 0, 5.5, 5.5, 5.5, hex('#7B55B7'), 0, 41, 0.08);
+      g.box(2.6, 14.5, 1.1, 0.5, 1.2, 1, hex('#FF3B3B'), 2); g.box(2.6, 14.5, -1.1, 0.5, 1.2, 1, hex('#FF3B3B'), 2);
+      g.cyl(-1, 20, 0, 1.8, 0, 7, 5, hex('#7B55B7'));
+      g.box(4, 0, 5, 1.2, 22, 1.2, PAL.wood); g.blob(4, 25, 5, 2.8, 3.5, 2.8, hex('#5FA8C8'), 0.8, 42, 0.1);
     });
     M.warlock = model(function (g) {
-      var c = hex('#4a0f24');
+      var c = hex('#442B6B');
       g.cyl(0, 0, 0, 11, 5, 26, 8, c);
-      g.box(0, 26, 0, 7, 8, 7, hex('#2a0812'));
+      g.blob(0, 27, 0, 7, 8, 7, hex('#563383'), 0, 43, 0.08);
       g.cyl(0, 28, 0, 6, 0, 13, 6, c);
-      g.box(3.6, 29, 1.5, 0.5, 1.2, 1.4, hex('#ff3b8c'), 2.5); g.box(3.6, 29, -1.5, 0.5, 1.2, 1.4, hex('#ff3b8c'), 2.5);
-      g.box(4, 12, 8, 1.4, 28, 1.4, hex('#2a1a10')); g.blob(4, 42, 8, 3.5, 3.5, 3.5, hex('#ff3b8c'), 1.8, 3, 0.1);
-      g.box(0, 22, 0, 12, 2, 16, hex('#6a1a36'));
+      g.box(3.6, 29, 1.5, 0.5, 1.2, 1.4, hex('#FF3B3B'), 2); g.box(3.6, 29, -1.5, 0.5, 1.2, 1.4, hex('#FF3B3B'), 2);
+      g.box(4, 12, 8, 1.4, 28, 1.4, PAL.wood); g.blob(4, 42, 8, 3.5, 3.5, 3.5, hex('#7B55B7'), 0.8, 44, 0.1);
+      g.box(0, 22, 0, 12, 2, 16, hex('#563383'));
+      g.cyl(-4, 26, 8, 3, 0, 12, 5, hex('#7B55B7')); g.cyl(-4, 26, -8, 3, 0, 12, 5, hex('#7B55B7'));
     });
     M.brood = model(function (g) {
-      var c = hex('#3c1f5c');
-      g.blob(0, 16, 0, 16, 13, 14, c, 0, 5, 0.2);
-      g.blob(12, 20, 0, 8, 7, 8, shade(c, 1.2), 0, 6, 0.2);
-      g.box(19, 21, 3, 1, 2, 2, hex('#ff5a8a'), 2); g.box(19, 21, -3, 1, 2, 2, hex('#ff5a8a'), 2);
-      for (var i = 0; i < 4; i++) g.box(i < 2 ? 6 : -6, 0, i % 2 ? 6 : -6, 3, 8, 3, shade(c, 0.7));
-      g.blob(-6, 26, 0, 7, 5, 9, hex('#9b4dff'), 0.4, 9, 0.3);
+      var c = hex('#563383');
+      g.blob(0, 16, 0, 16, 13, 14, c, 0, 45, 0.14);
+      g.blob(12, 20, 0, 8, 7, 8, hex('#7B55B7'), 0, 46, 0.12);
+      g.box(19, 21, 3, 1, 2, 2, hex('#FF3B3B'), 2); g.box(19, 21, -3, 1, 2, 2, hex('#FF3B3B'), 2);
+      for (var i = 0; i < 4; i++) g.box(i < 2 ? 6 : -6, 0, i % 2 ? 6 : -6, 3, 8, 3, hex('#442B6B'));
+      g.blob(-6, 26, 0, 7, 5, 9, hex('#7B55B7'), 0.2, 47, 0.14);
     });
     M.broodWing = model(function (g) {
-      var c = hex('#5a2e8a');
+      var c = hex('#6B3FA0');
       g.tri([2, 0, 6], [-10, 0, 34], [6, 10, 28], c); g.tri([2, 0, 6], [6, 10, 28], [-10, 0, 34], c);
       g.tri([2, 0, -6], [6, 10, -28], [-10, 0, -34], c); g.tri([2, 0, -6], [-10, 0, -34], [6, 10, -28], c);
     });
     M.golem = model(function (g) {
-      var s = hex('#6a6660'), s2 = hex('#7d7870'), lava = hex('#ff6a2e');
-      g.blob(-4, 10, 12, 10, 12, 9, s, 0, 3, 0.2); g.blob(-4, 10, -12, 10, 12, 9, s, 0, 4, 0.2);
-      g.blob(0, 38, 0, 26, 20, 24, s2, 0, 5, 0.2);
-      g.blob(16, 50, 0, 11, 10, 11, s, 0, 6, 0.2);
-      g.box(26, 52, 4, 1.2, 3, 3, lava, 3); g.box(26, 52, -4, 1.2, 3, 3, lava, 3);
-      g.blob(8, 34, 28, 11, 16, 10, s, 0, 7, 0.25); g.blob(12, 16, 30, 10, 9, 10, s2, 0, 8, 0.25);
-      g.blob(8, 34, -28, 11, 16, 10, s, 0, 9, 0.25); g.blob(12, 16, -30, 10, 9, 10, s2, 0, 10, 0.25);
-      g.box(18, 36, 0, 6, 10, 20, lava, 2.2);
-      g.box(10, 44, 12, 8, 2, 2, lava, 2.2); g.box(8, 30, -14, 8, 2, 2, lava, 2.2); g.box(-6, 46, 6, 2, 10, 2, lava, 2.2);
+      var s = hex('#563383'), s2 = hex('#7B55B7'), spike = hex('#442B6B');
+      g.blob(-4, 10, 12, 10, 12, 9, s, 0, 48, 0.12); g.blob(-4, 10, -12, 10, 12, 9, s, 0, 49, 0.12);
+      g.blob(0, 38, 0, 26, 20, 24, s2, 0, 50, 0.12);
+      g.blob(16, 50, 0, 11, 10, 11, s, 0, 51, 0.1);
+      g.box(26, 52, 4, 1.2, 3, 3, hex('#FF3B3B'), 2); g.box(26, 52, -4, 1.2, 3, 3, hex('#FF3B3B'), 2);
+      g.blob(8, 34, 28, 11, 16, 10, s, 0, 52, 0.12); g.blob(12, 16, 30, 10, 9, 10, s2, 0, 53, 0.12);
+      g.blob(8, 34, -28, 11, 16, 10, s, 0, 54, 0.12); g.blob(12, 16, -30, 10, 9, 10, s2, 0, 55, 0.12);
+      g.box(18, 36, 0, 6, 10, 20, spike);
+      g.box(10, 44, 12, 8, 2, 2, spike); g.box(8, 30, -14, 8, 2, 2, spike); g.box(-6, 46, 6, 2, 10, 2, spike);
     });
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
     M.sentry = model(function (g) {
-      g.box(0, 0, 0, 22, 26, 22, PAL.rock2, 0, PAL.stone);
-      g.box(0, 26, 0, 16, 62, 16, PAL.wallWood);
-      g.box(0, 58, 8.2, 7, 8, 0.8, hex('#1a120c'));
-      g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed);
-      g.box(0, 40, 8.4, 8, 28, 0.8, PAL.banner); g.box(0, 52, 8.9, 4, 6, 0.4, PAL.gold, 0.6);
+      g.box(0, 0, 0, 26, 8, 26, PAL.stone2);
+      g.box(0, 8, 0, 18, 54, 18, PAL.wallWood);
+      for (var i = -1; i <= 1; i += 2) g.box(i * 9, 14, 0, 3, 52, 3, PAL.wood);
+      g.box(0, 53, 0, 30, 5, 30, PAL.plank2);
+      g.box(0, 58, 9.2, 10, 9, 1.2, PAL.banner);
+      g.roof(0, 60, 0, 36, 30, 36, PAL.roofRed);
+      g.box(0, 90, 0, 5, 3, 36, shade(PAL.roofRed, 0.88));
     });
     M.pylon = model(function (g) {
-      g.box(0, 0, 0, 20, 10, 20, PAL.rock2, 0, PAL.stone);
-      g.box(0, 10, 0, 10, 70, 10, PAL.rock);
-      g.blob(0, 92, 0, 8, 22, 8, hex('#8fe3ff'), 1.1, 3, 0.15);
-      g.blob(6, 48, 4, 4, 16, 4, hex('#8fe3ff'), 0.9, 5, 0.2); g.blob(-6, 36, -4, 4, 14, 4, hex('#8fe3ff'), 0.9, 6, 0.2);
+      g.cyl(0, 0, 0, 18, 14, 9, 8, PAL.stone2);
+      g.box(0, 9, 0, 10, 47, 10, PAL.wallWood);
+      for (var i = -1; i <= 1; i += 2) g.box(i * 7, 14, 0, 3, 42, 3, PAL.wood);
+      g.cyl(0, 56, 0, 14, 10, 6, 8, PAL.plank2);
+      // The crystal floats above the cap; small shards preserve a clear gap around it.
+      g.blob(0, 84, 0, 8, 18, 8, hex('#5FA8C8'), 1.1, 3, 0.12);
+      g.blob(7, 68, 4, 3.4, 8, 3.4, hex('#5FA8C8'), 0.6, 5, 0.12);
+      g.blob(-7, 66, -4, 3.4, 8, 3.4, hex('#5FA8C8'), 0.6, 6, 0.12);
     });
     M.siphon = model(function (g) {
-      g.box(0, 0, 0, 16, 6, 16, PAL.stone);
-      g.box(0, 6, 0, 5, 78, 5, PAL.wood);
-      g.box(0, 78, 0, 16, 3, 3, PAL.wood);
-      g.cyl(0, 92, 0, 7, 7, 2, 8, PAL.gold, 1.0);
+      g.cyl(0, 0, 0, 17, 13, 8, 8, PAL.stone2);
+      g.cyl(0, 8, 0, 13, 10, 18, 8, PAL.wood);
+      g.box(0, 24, 0, 5, 32, 5, PAL.wood);
+      g.cyl(0, 53, 0, 14, 9, 9, 8, PAL.plank2);
+      g.cyl(0, 62, 0, 9, 5, 4, 8, PAL.gold, 0.25);
+      g.cyl(0, 71, 0, 6, 6, 2, 8, PAL.gold, 0.55);
+      for (var i = 0; i < 4; i++) {
+        var a = i * Math.PI / 2, x = Math.cos(a) * 12, z = Math.sin(a) * 12;
+        g.box(x, 24, z, 2.4, 31, 2.4, PAL.plank);
+      }
     });
     M.barracks = model(function (g) {
-      g.box(0, 0, 0, 32, 4, 28, PAL.stone2);
-      g.box(0, 4, 0, 28, 48, 24, PAL.wallWood);
-      g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed);
-      g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
-      banner(g, -15, 13, 72);
+      g.box(0, 0, 0, 38, 7, 34, PAL.stone2);
+      g.box(0, 7, 0, 27, 42, 24, PAL.wallWood);
+      for (var i = -1; i <= 1; i += 2) g.box(i * 11, 7, 12.5, 4, 40, 2.5, PAL.wood);
+      g.box(0, 7, 13, 12, 27, 2, PAL.wood);
+      g.roof(0, 50, 0, 40, 34, 36, PAL.roofRed);
+      g.box(0, 84, -1, 5, 3, 34, shade(PAL.roofRed, 0.9));
+      banner(g, -18, 13, 70);
     });
     M.soldier = model(function (g) {
       g.box(0, 0, 1.6, 1.8, 4, 1.8, hex('#5a5f6a')); g.box(0, 0, -1.6, 1.8, 4, 1.8, hex('#5a5f6a'));
@@ -517,6 +576,12 @@
     splitter: { m: 'sack', base: 12 }, bomber: { m: 'goblin', base: 10 }, spitter: { m: 'archer', base: 9 }, shielder: { m: 'shaman', base: 11 },
     warden: { m: 'warlock', base: 22 }, brood: { m: 'brood', base: 26 }, boss: { m: 'golem', base: 38 }
   };
+  // Visual-only scale multipliers bring ordinary enemies toward 0.6x hero height,
+  // elites toward 1.1x and heavy shells/bosses toward 1.4x without changing hitboxes.
+  var ENEMY_RENDER_SCALE = {
+    mite: 2.15, spore: 2.8, shell: 3.4, dasher: 1.45, splitter: 1.75,
+    bomber: 1.85, spitter: 1.8, shielder: 1.5, warden: 1.35, brood: 1.9, boss: 1.2
+  };
   var TMODEL = { sentry: 'sentry', pylon: 'pylon', siphon: 'siphon', barracks: 'barracks' };
 
   // ================= 昼夜 =================
@@ -524,14 +589,14 @@
     // grade = [饱和度, 对比度, 边缘光, 亮度偏移]；shadowDark = 阴影里保留多少直射光；line = 描边颜色；
     // bloom = 泛光强度，thr = 泛光阈值（越低越多东西发光）
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
-        grade: [1.12, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6,
-        grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
-        grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62 },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9,
-        grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66 }
+      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#C9A27A'), 0.78), ground: shade(hex('#6F9A4E'), 0.7), fog: hex('#B8C7C6'), clear: hex('#8DB1C8'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
+        grade: [1.08, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#3A2E3C'), bloom: 0.35, thr: 0.9 },
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#E8702A'), 0.85), sky: shade(hex('#5A496A'), 0.78), ground: shade(hex('#3A344A'), 0.55), fog: hex('#4A425E'), clear: hex('#28364E'), fogNear: 1300, fogFar: 3000, em: 1.1, lamp: 0.55,
+        grade: [1.04, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#302638'), bloom: 0.6, thr: 0.78 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#5FA8C8'), 0.77), sky: hex('#3F5475'), ground: hex('#30415F'), fog: hex('#223451'), clear: hex('#111A31'), fogNear: 850, fogFar: 2300, em: 1.35, lamp: 0.95,
+        grade: [1.02, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#1E2A4A'), bloom: 0.95, thr: 0.62 },
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#5FA8C8'), 0.45), sky: shade(hex('#34213F'), 0.8), ground: shade(hex('#1E2A4A'), 1.2), fog: hex('#291C38'), clear: hex('#11152B'), fogNear: 850, fogFar: 2300, em: 1.3, lamp: 0.8,
+        grade: [1.04, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#241A31'), bloom: 0.85, thr: 0.66 }
     };
     var e = P[kind], l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
     return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp,
@@ -649,7 +714,7 @@
   };
 
   // ================= 每帧绘制 =================
-  var WHITE = [1, 1, 1], BLACK = [0, 0, 0];
+  var WHITE = [1, 1, 1], BLACK = hex('#1E2A4A');
   // 帧率自适应：平均帧时间持续超过 30ms，按 泛光 -> 描边 -> 阴影 的顺序逐个关掉
   var perf = { avg: 1 / 60, slowT: 0, locked: false };
   function adaptQuality(dt) {
@@ -719,13 +784,13 @@
     }
     // 设置：主角脚下光圈（不受受击闪烁影响，人多时也能一眼找到自己）
     if (RW.opt.ring && g.mode !== 'down') {
-      var rc = C((g.cls || RW.CLASSES.mage).color);
+      var rc = C('#FFB547');
       GL.ground(false, p.x, 0.6, p.y, p.r * 2.1 + 7, 1, 0.3, [0.02, 0.02, 0.03], 0.35);
       GL.ground(false, p.x, 0.7, p.y, p.r * 2.1 + 6, 1, 0.16, rc, 0.8);
     }
     if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) return;
     var d = g.cls || RW.CLASSES.mage, look = d.look || { hat: 'wizard', prop: 'staff' };
-    var sc = p.r / 10 * 1.35, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    var sc = p.r / 10 * 1.75, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     var mv = Math.min(1, speed / 120), t = W3.t;
     var sw = mv * 0.6 * Math.sin(t * 14), bob = Math.abs(Math.sin(t * 14)) * mv * 1.5;
     var cx = p.x, cz = p.y, cs = Math.cos(face), sn = Math.sin(face);
@@ -746,7 +811,7 @@
     var by = fall > 0 ? 3 * fall : bob;
     GL.put(M.heroBody, cx, by, cz, face, sc, sy, sc, lean);
     var capeLift = mv * 0.9 + (p.dashT > 0 ? 0.4 : 0) + Math.sin(t * 6) * 0.05;
-    var cc = hex(d.cape);
+    var cc = heroCape(d);
     GL.put(M.cape, cx, by, cz, face, sc, sy, sc, -Math.min(0.9, capeLift) * 0.6 + lean, cc[0], cc[1], cc[2]);
     var hat = M['hat_' + look.hat];
     if (hat) {
@@ -761,12 +826,12 @@
     if (g.mode === 'down') return;
     // 影子 + 脚下光圈（位阶颜色）
     GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, (0.35) * W3.blobShadow());
-    var ec = hex(RW.EVO[p.stage].color);
+    var ec = [hex('#FFB547'), hex('#D7A052'), hex('#E8702A'), hex('#B95736')][Math.max(0, Math.min(3, p.stage || 0))];
     GL.ground(true, cx, 1, cz, 16 * sc, 1, 0.15, ec, 0.45);
     if (g.momTier > 0) GL.ground(true, cx, 1.2, cz, (22 + g.momTier * 5) * sc, 0, 0, g.momTier >= 3 ? hex('#ff5a2e') : hex('#ffc861'), 0.25 + 0.1 * Math.sin(W3.t * 10));
     if (g.cls && g.cls.focus && g.focus > 0) {
       var fk = g.focus / g.cls.focus.max;
-      GL.ground(true, cx, 1.3, cz, 24 * sc - fk * 8, 1, 0.08, fk >= 1 ? WHITE : hex('#9dff7a'), 0.3 + 0.5 * fk);
+      GL.ground(true, cx, 1.3, cz, 24 * sc - fk * 8, 1, 0.08, fk >= 1 ? WHITE : hex('#C9A27A'), 0.3 + 0.5 * fk);
     }
     // 冲刺残影
     if (p.trailT > 0 && p.trailN > 1) {
@@ -798,7 +863,7 @@
     for (var i = 0; i < g.enemies.length; i++) {
       var e = g.enemies[i];
       if (!e.on || !W3.inView(e.x, e.y, 60)) continue;
-      var em = EMODEL[e.type], mesh = M[em.m], s = e.r / em.base * 1.25;
+      var em = EMODEL[e.type], mesh = M[em.m], shapeScale = ENEMY_RENDER_SCALE[e.type] || 1.7, s = e.r / em.base * 1.25 * shapeScale;
       var sp = e.spawnT > 0 ? 1 - e.spawnT / 0.18 * 0.8 : 1;
       s *= sp;
       var yaw, tilt = 0, y = 0, tint = tintOf(e), fl = flashOf(e);
@@ -813,7 +878,7 @@
       if (e.type === 'dasher' && e.state === 1 && Math.sin(t * 40) > 0) fl = 0.7;
       if (e.type === 'dasher' && e.state === 2) tilt = -0.25;
       if (e.type === 'boss' && e.state === 1) tilt = 0.12;
-      if (e.type === 'boss' && e.enraged) { tint = [1.25, 0.8, 0.7]; }
+      if (e.type === 'boss' && e.enraged) { tint = [0.8, 0.72, 1.25]; }
       if (em.fly) y = em.fly + Math.sin(t * 8 + e.seq) * 4;
       else y = Math.abs(Math.sin(walkPh)) * (e.elite ? 1 : 2);
       GL.put(mesh, e.x, y, e.y, yaw, s * sq, s / sq, s * sq, tilt, tint[0], tint[1], tint[2], fl);
@@ -821,16 +886,16 @@
       if (e.type === 'brood') GL.put(M.broodWing, e.x, 26 * s, e.y, yaw, s, s * (0.6 + 0.5 * Math.sin(t * 5 + e.seq)), s, 0, 1, 1, 1, fl);
       // 影子
       GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.3, BLACK, (em.fly ? 0.18 : 0.3) * W3.blobShadow());
-      if (!em.fly) GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#ff3b5c') : C('#ff6a4a'), e.elite ? 0.55 : 0.22);
+      if (!em.fly) GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#9B62D4') : C('#6B3FA0'), e.elite ? 0.55 : 0.22);
       // 特殊光效
-      if (e.type === 'bomber') GL.glow(e.x - Math.cos(yaw) * 5 * s, 16 * s, e.y - Math.sin(yaw) * 5 * s, e.state === 1 ? 14 : 6, hex('#ffb040'), 0.9);
+      if (e.type === 'bomber') GL.glow(e.x - Math.cos(yaw) * 5 * s, 16 * s, e.y - Math.sin(yaw) * 5 * s, e.state === 1 ? 14 : 6, e.state === 1 ? hex('#FF3B3B') : hex('#6B3FA0'), 0.9);
       if (e.type === 'shielder') GL.glow(e.x + Math.cos(yaw) * 4 * s, 23 * s, e.y + Math.sin(yaw) * 4 * s, 10, hex('#6fc3ff'), 0.7);
       if (e.type === 'warden') {
-        for (var o = 0; o < 3; o++) { var oa = t * 2 + o * TAU / 3; GL.glow(e.x + Math.cos(oa) * 26, 30 + Math.sin(t * 3 + o) * 4, e.y + Math.sin(oa) * 26, e.charging ? 14 : 8, hex('#ff3b8c'), 0.85); }
-        if (e.charging) GL.ground(true, e.x, 1, e.y, e.r + 30, 1, 0.2, hex('#ff3b8c'), 0.6);
+        for (var o = 0; o < 3; o++) { var oa = t * 2 + o * TAU / 3; GL.glow(e.x + Math.cos(oa) * 26, 30 + Math.sin(t * 3 + o) * 4, e.y + Math.sin(oa) * 26, e.charging ? 14 : 8, e.charging ? hex('#FF3B3B') : hex('#7B55B7'), 0.85); }
+        if (e.charging) GL.ground(true, e.x, 1, e.y, e.r + 30, 1, 0.2, hex('#FF3B3B'), 0.6);
       }
       if (e.type === 'boss') {
-        GL.glow(e.x, 40, e.y, e.r * 1.2, e.enraged ? hex('#ff4a1a') : hex('#ff8a3a'), 0.25 + 0.15 * Math.sin(t * 5));
+        GL.glow(e.x, 40, e.y, e.r * 1.2, e.enraged ? hex('#FF3B3B') : hex('#6B3FA0'), 0.25 + 0.15 * Math.sin(t * 5));
       }
       if (e.shieldT > 0) GL.glow(e.x, e.r, e.y, e.r * 1.8, hex('#6fa8ff'), 0.28);
     }
