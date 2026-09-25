@@ -368,7 +368,7 @@
     M.prop_bomb = model(function (g) { g.blob(5, 12, 7, 3.6, 3.6, 3.6, hex('#2a2a30'), 0, 3, 0.05); g.box(5, 15.4, 7, 0.8, 2.6, 0.8, hex('#c8963c')); g.blob(5, 18.4, 7, 1.1, 1.1, 1.1, hex('#ffb347'), 2.5, 2, 0.1); });
     M.prop_coin = model(function (g) { g.blob(2.5, 9, 7, 3.6, 3.8, 3.6, hex('#8a6440'), 0, 5, 0.12); g.box(2.5, 12.6, 7, 1.8, 1.4, 1.8, hex('#5a3a22')); g.cyl(5.5, 15, 7, 2.2, 2.2, 0.8, 8, GOLDC, 0.8); });
     M.prop_dice = model(function (g) { g.box(5, 10, 7, 3.6, 3.6, 3.6, hex('#f4f0e0')); g.box(6.9, 11.2, 7, 0.3, 0.9, 0.9, hex('#1f5a4a')); g.box(4, 14, 8.5, 2.6, 2.6, 2.6, hex('#ffd6d6')); });
-    // ---- 敌人：冷紫身体，红色只留给眼睛与攻击预警 ----
+    // Enemy bodies stay cool; red marks eyes and attack warnings.
     M.imp = model(function (g) {
       var b = hex('#6B3FA0');
       g.box(-1, 0, 2.2, 2.4, 4, 2.4, hex('#442B6B')); g.box(-1, 0, -2.2, 2.4, 4, 2.4, hex('#442B6B'));
