@@ -1,9 +1,10 @@
 // 提交前快速自检（不需要浏览器，几秒跑完）：node tools/check.js
 // 1. 所有 js 语法检查  2. json 可解析  3. game.js 与 preview.html 加载的脚本清单与顺序一致
 // 4. 无头模拟冒烟：两种职业各跑 3 波，确认逻辑不抛异常；玩法闭环测试（tools/simtest.js）  5. 统计桌面版游戏文件体积
-// 6. 字体子集没有缺字；安装包只收白名单里的目录，除字体外没有图片 / 模型 / 音频文件（硬规则 1）
+// 6. 字体子集没有缺字；安装包只收白名单里的目录，图片只允许原创生成的场景贴图
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
@@ -18,6 +19,20 @@ function walk(dir, ext, acc = []) {
     if (f.isDirectory()) walk(p, ext, acc); else if (p.endsWith(ext)) acc.push(p);
   }
   return acc;
+}
+
+// PNG 不入 Git；首次检出、清理产物后或 CI 中先按已提交清单补齐。
+const textureDir = path.join(root, 'assets', 'textures');
+const textureManifestFile = path.join(textureDir, 'manifest.json');
+let textureManifest = null;
+try { textureManifest = JSON.parse(fs.readFileSync(textureManifestFile, 'utf8')); } catch (_) {}
+if (!textureManifest || !textureManifest.textures) {
+  console.error('assets/textures/manifest.json 缺失或无效，无法校验确定性输出');
+  process.exit(1);
+}
+if (textureManifest.textures.some(t => !fs.existsSync(path.join(textureDir, t.file)))) {
+  console.log('场景贴图缺失，正在确定性生成');
+  execFileSync(process.execPath, [path.join(__dirname, 'gen_textures.js')], { stdio: 'inherit' });
 }
 
 console.log('语法');
@@ -63,7 +78,7 @@ function sizeOf(p) {
   if (!st.isDirectory()) return st.size;
   return fs.readdirSync(p).reduce((n, f) => n + sizeOf(path.join(p, f)), 0);
 }
-for (const f of ['preview.html', 'js', 'vendor', 'desktop', 'fonts']) if (fs.existsSync(path.join(root, f))) bytes += sizeOf(path.join(root, f));
+for (const f of ['preview.html', 'js', 'vendor', 'desktop', 'fonts', 'assets/textures']) if (fs.existsSync(path.join(root, f))) bytes += sizeOf(path.join(root, f));
 ok(`游戏文件约 ${(bytes / 1024).toFixed(0)} KB（不含 Electron 运行时）`);
 
 // 字体：游戏里用到的每个字都要在子集里，否则会退回系统字体（改了文案后跑 npm run fonts）
@@ -76,11 +91,24 @@ console.log('字体与素材');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const files = pkg.build.files;
   if (files.some(f => /^docs|^shots|^tools/.test(f))) bad('安装包白名单里不能有 docs/、shots/、tools/：' + files.join(', '));
-  const media = [];
+  const media = [], badTextureFiles = [];
   for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
-    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f)) media.push(path.relative(root, f));
-  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1）：' + media.join(', '));
-  else ok('安装包白名单：' + files.join('、') + '；除字体外没有外部素材');
+    for (const f of walk(path.join(root, d), '')) {
+      const rel = path.relative(root, f).replace(/\\/g, '/');
+      if (/^assets\/textures\//.test(rel)) { if (!/\.(png|json)$/i.test(rel)) badTextureFiles.push(rel); }
+      else if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f)) media.push(rel);
+    }
+  if (badTextureFiles.length) bad('assets/textures/ 只允许 png/json：' + badTextureFiles.join(', '));
+  if (media.length) bad('安装包里有未放行的图片 / 模型 / 音频文件：' + media.join(', '));
+  if (!badTextureFiles.length && !media.length) ok('安装包白名单：' + files.join('、') + '；场景贴图仅限 assets/textures/** 的 png/json');
+  const hashErrors = [];
+  for (const t of textureManifest.textures) {
+    const file = path.join(textureDir, t.file);
+    const actual = fs.existsSync(file) ? crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') : 'missing';
+    if (!t.sha256 || actual !== t.sha256) hashErrors.push(t.file);
+  }
+  if (hashErrors.length) bad('场景贴图与 manifest sha256 不一致：' + hashErrors.join(', '));
+  else ok(`场景贴图 ${textureManifest.textures.length} 张 sha256 与 manifest 一致`);
 }
 
 if (failed) { console.log(`\n${failed} 项失败`); process.exit(1); }
