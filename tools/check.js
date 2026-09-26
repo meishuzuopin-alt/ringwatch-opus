@@ -1,7 +1,7 @@
 // 提交前快速自检（不需要浏览器，几秒跑完）：node tools/check.js
 // 1. 所有 js 语法检查  2. json 可解析  3. game.js 与 preview.html 加载的脚本清单与顺序一致
 // 4. 无头模拟冒烟：两种职业各跑 3 波，确认逻辑不抛异常；玩法闭环测试（tools/simtest.js）  5. 统计桌面版游戏文件体积
-// 6. 字体子集没有缺字；安装包只收白名单里的目录，除字体外没有图片 / 模型 / 音频文件（硬规则 1）
+// 6. 字体子集没有缺字；安装包只收白名单里的目录，除字体、登记过的精灵图和六张地表贴图外没有图片 / 模型 / 音频（硬规则 1）
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -95,6 +95,34 @@ const spriteOK = new Set();
   if (others.length) bad('assets/sprites/ 下只能放图集 png 和 json：' + others.map(f => path.relative(root, f)).join(', '));
   if (spriteOK.size) ok(`${spriteOK.size} 套图集（${[...spriteOK].map(f => path.basename(f, '.png')).join('、')}）都有元数据、有 ART.md 记录、与 SPR.META 一致`);
 }
+
+// 柔光地表贴图（负责人批准的 AI 生成素材，docs/ART.md）：只许这六张 jpg 进包，_src 审阅图不许进
+console.log('地表贴图');
+const texOK = new Set();
+{
+  const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
+  const expect = [
+    ['grass', '#8b9874'], ['dirt', '#c4a194'], ['plaza', '#b7a89e'],
+    ['roof', '#a86a58'], ['canopy', '#6d8658'], ['wall', '#e3d4c2']
+  ];
+  if (!artDoc.includes('ChatGPT image generation (AI-assisted, original, prompted by team), 2026-09-26')) bad('docs/ART.md 没有写六张地表贴图的来源');
+  if (!artDoc.includes('soft hand-painted seamless top-down texture, base color')) bad('docs/ART.md 没有写地表贴图的提示词');
+  const dir = path.join(root, 'assets', 'textures', 'soft');
+  for (const [name, hex] of expect) {
+    const rel = `assets/textures/soft/soft_${name}_1024.jpg`;
+    if (!fs.existsSync(path.join(root, rel))) { bad('缺 ' + rel); continue; }
+    if (!artDoc.includes(rel) || !artDoc.includes(hex)) { bad(`docs/ART.md 没有记录 ${rel}（底色 ${hex}）`); continue; }
+    texOK.add(rel);
+  }
+  if (fs.existsSync(dir)) {
+    for (const name of fs.readdirSync(dir)) {
+      if (name === '_src' || name.startsWith('.')) continue;
+      const rel = path.join('assets', 'textures', 'soft', name);
+      if (!texOK.has(rel)) bad('assets/textures/soft/ 里有未登记的文件：' + rel);
+    }
+  }
+  if (texOK.size === expect.length) ok(`${texOK.size} 张地表贴图都在，ART.md 有来源和底色`);
+}
 function sortKeys(v) {
   if (Array.isArray(v)) return v.map(sortKeys);
   if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v).sort()) o[k] = sortKeys(v[k]); return o; }
@@ -111,11 +139,26 @@ console.log('字体与素材');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const files = pkg.build.files;
   if (files.some(f => /^docs|^shots|^tools/.test(f))) bad('安装包白名单里不能有 docs/、shots/、tools/：' + files.join(', '));
+  if (!files.includes('assets/textures/soft/*.jpg')) bad('安装包白名单要收 assets/textures/soft/*.jpg');
+  if (files.some(f => !f.startsWith('!') && /_src/.test(f))) bad('安装包白名单不能收贴图审阅目录 _src：' + files.join(', '));
+  const pack = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json'), 'utf8'));
+  const ignored = JSON.stringify((pack.packOptions && pack.packOptions.ignore) || []);
+  if (!ignored.includes('_src')) bad('project.config.json 的 packOptions.ignore 没有忽略 _src');
   const media = [];
+  const allowed = rel => spriteOK.has(rel) || texOK.has(rel);
   for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
-    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(path.relative(root, f))) media.push(path.relative(root, f));
-  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集除外）：' + media.join(', '));
-  else ok('安装包白名单：' + files.join('、') + '；除字体和批准过的精灵图集外没有外部素材');
+    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !allowed(path.relative(root, f))) media.push(path.relative(root, f));
+  for (const pat of files) {
+    const m = /^(.*)\/\*\.jpg$/.exec(pat);
+    if (!m || !fs.existsSync(path.join(root, m[1]))) continue;
+    for (const name of fs.readdirSync(path.join(root, m[1]))) {
+      if (!name.endsWith('.jpg')) continue;
+      const rel = path.join(m[1], name);
+      if (!allowed(rel)) media.push(rel);
+    }
+  }
+  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集和地表贴图除外）：' + media.join(', '));
+  else ok('安装包白名单：' + files.join('、') + '；除字体、批准过的精灵图集和六张地表贴图外没有外部素材');
 }
 
 if (failed) { console.log(`\n${failed} 项失败`); process.exit(1); }
