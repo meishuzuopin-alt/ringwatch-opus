@@ -1,0 +1,13 @@
+菜,材料,增益_起步,增益_调平,代价_起步,代价_调平,净战力(调平),data_js_field,依据
+巨像骨汤,巨像碎石1+木柴1,守卫生命+40%,守卫生命+30%,移速-20%,移速-20%,+17%,NEW_FIELD RW.STEW.dishes.boneSoup{maxHpPct:0.3,speedPct:-0.2},1.3×0.9（移速-20%≈近战出手率-10%）；起步 +26% 超预算
+焦糖蝠翼,蝠翼2,伙伴攻速+30%,伙伴攻速+35%,次日白天该伙伴不干活,同左,+35%（夜）/ −1 天伙伴收益,NEW_FIELD RW.STEW.dishes.batWing{mateRatePct:0.35,skipDay:1},代价在经济侧：驮羊少 1 天 +30% 采集≈36 份木石（120s/3s×30%×… ASSUMPTION）
+狼骑辣肉,狼骑肉1+余烬1,暴击+15%,暴击+25%,受到伤害+10%,受到伤害+10%,+14%,NEW_FIELD RW.STEW.dishes.wolfChili{crit:0.25,dmgTakenPct:0.1},critMul=2（RW.TUNE.player.critMul）→DPS+25%；1.25/1.10；起步只有 +4.5%
+墨影冻,墨屑3,攻击附 0.5 s 减速,攻击附 0.5 s 减速 35%,伤害-10%,伤害-10%,+8~+14%,NEW_FIELD RW.STEW.dishes.inkJelly{slow:0.35,slowT:0.5,dmgPct:-0.1},减速 35% 对齐弓手+霜青 30%（§5.8）；估算团队效率 +20%×0.9
+萨满药粥,萨满羽毛1+谷物1,每秒回 2% 生命,每秒回 1% 生命,不能被圣火治疗,同左,+20~+25%,NEW_FIELD RW.STEW.dishes.shamanCongee{regenPct:0.01,noCoreHeal:1},2%/s×180s=360% 生命，太强；1%/s 盾卫 1 阶=2 HP/s
+余烬烤薯,余烬1+薯1,超载期间伤害×2,超载期间伤害×2.5,平时伤害-15%,平时伤害-10%,+8%（配初火之冠 +17%）,NEW_FIELD RW.STEW.dishes.emberPotato{overloadDmgMul:2.5,dmgPct:-0.1},超载覆盖率 = 8s×2.5 次/180s ≈ 11%；起步 0.89×0.85+0.11×2 = 0.98（亏）
+—,掉落：墨屑,—,每 10 杀 1 份（首夜 ≈22）,—,—,—,NEW_FIELD RW.STEW.drop.ink=0.1,首夜 ≈222 只（M0_NUMBERS）
+—,掉落：余烬,—,每 20 杀 1 份（≈11）,—,—,—,NEW_FIELD RW.STEW.drop.ember=0.05,碎裂 1–3 粒是视觉，资源另算
+—,掉落：狼骑肉,—,狼骑击杀 20%（≈8）,—,—,—,NEW_FIELD RW.STEW.drop.wolfMeat=0.2,首夜狼骑 ≈40
+—,掉落：蝠翼 / 萨满羽毛 / 巨像碎石,—,蝙蝠·蝠母 10% / 护盾萨满 25% / 崩山巨像必掉 1,—,—,—,NEW_FIELD RW.STEW.drop.*,首夜没有这些怪 → 骨汤最早第 5 夜（Boss 夜）
+—,锅容量,每白天 1 道（圣火 5 级起 2 道）,同左,—,—,—,NEW_FIELD RW.STEW.perDay=[1,1,1,1,2…],§5.7
+—,预算线,—,每道菜净战力 +8%~+20%，只管一夜,—,—,—,NEW_FIELD（文档约束）,守卫合一阶 ≈ +110%；一道菜应 < 1/5 次合成
