@@ -4,8 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 // 去掉 /* */ 块注释和行尾 // 注释（// 前面是行首或空白才算，避开字符串里的网址）
+// Windows 上 core.autocrlf=true 会把源码检出成 CRLF。按 \n 切开后行尾还留着 \r，
+// 而 JS 的 . 不匹配 \r、$ 也不认单独的行尾 \r，行注释就剥不掉，注释里的字会被当成缺字。
 function stripComments(src) {
-  return src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/(^|\s)\/\/.*$/, '$1')).join('\n');
+  src = String(src).replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/(^|\s)\/\/[^\n]*/, '$1')).join('\n');
 }
 function usedChars(root) {
   const set = new Set();

@@ -1,0 +1,14 @@
+# 检出一律 LF。Windows 上 core.autocrlf=true 会把源码变成 CRLF，
+# tools/lib/chars.js 的缺字检查会因此把注释里的字算进字体子集。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
