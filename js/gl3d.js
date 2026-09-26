@@ -179,6 +179,49 @@
   //   卡通三段色阶（MeshToonMaterial + 3 格渐变图）· 顶点色渐变（下暗上亮）· 冷色边缘光 · 世界坐标噪声斑驳
   //   · 圣火暖光圈（半径 = 圣域半径，边缘清楚）· 光圈外贴地的低矮冷雾（自发光部分穿透雾，远处敌人先露红眼）
   //   + 每顶点自发光强度（aEm）+ 每实例闪白（iFlash）
+  // 纯代码程序化质感贴图（256×256 无缝平铺）：为石板、木质、草地带来细腻画意笔触与表面质感（0 外部素材，纯原生 JS 数学计算）
+  function buildProceduralTexture() {
+    var size = 256, data = new Uint8Array(size * size * 4);
+    function h2(x, y) {
+      var n = ((x + 137) * 374761393 + (y + 539) * 668265263) | 0;
+      n = (n ^ (n >>> 13)) * 1274126177;
+      return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+    }
+    function smoothNoise(x, y, freq) {
+      var fx = (x * freq) % size, fy = (y * freq) % size;
+      if (fx < 0) fx += size; if (fy < 0) fy += size;
+      var ix = Math.floor(fx), iy = Math.floor(fy);
+      var rx = fx - ix, ry = fy - iy;
+      var sx = rx * rx * (3 - 2 * rx), sy = ry * ry * (3 - 2 * ry);
+      var x1 = (ix + 1) % size, y1 = (iy + 1) % size;
+      var b0 = h2(ix, iy) * (1 - sx) + h2(x1, iy) * sx;
+      var b1 = h2(ix, y1) * (1 - sx) + h2(x1, y1) * sx;
+      return b0 * (1 - sy) + b1 * sy;
+    }
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        var idx = (y * size + x) * 4;
+        // R 通道：石块与木纹微细颗粒
+        var nFine = smoothNoise(x, y, 0.25) * 0.6 + smoothNoise(x, y, 0.5) * 0.4;
+        // G 通道：手绘笔触晕染（大色块柔和斑驳）
+        var nWash = smoothNoise(x, y, 0.08) * 0.7 + smoothNoise(x, y, 0.16) * 0.3;
+        // B 通道：树荫漏光斑驳 / 柔和微漫射
+        var nDapple = smoothNoise(x, y, 0.04) * 0.75 + smoothNoise(x, y, 0.12) * 0.25;
+        data[idx] = Math.floor(nFine * 255);
+        data[idx + 1] = Math.floor(nWash * 255);
+        data[idx + 2] = Math.floor(nDapple * 255);
+        data[idx + 3] = 255;
+      }
+    }
+    var tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
   var U = {
     uTime: { value: 0 }, uEmBoost: { value: 1 }, uGrade: { value: null }, uLineW: { value: 1.2 }, uLineWB: { value: 0.9 },
     uRim: { value: null }, uNoise: { value: 0.12 }, uCore: { value: null }, uCoreCol: { value: null },
@@ -189,7 +232,8 @@
     uCool: { value: new THREE.Vector3(0.46, 0.40, 1.06) }, uGreen: { value: new THREE.Vector2(0.78, 0.25) },
     uWarmAdd: { value: 1.25 }, uFall: { value: 1.4 }, uChill: { value: 0 },
     uFogWarm: { value: new THREE.Vector3(1.0, 0.45, 0.12) }, uFogK: { value: new THREE.Vector3(0.78, 1.05, 0.42) },
-    uEnemyGain: { value: 0.42 }
+    uEnemyGain: { value: 0.42 },
+    uProcTex: { value: null }
   };
   // 固有色随距离收向去饱和冷蓝。圈内只压暗并杀掉亮柠绿，留下更深的绿褐，饱和不降。宽 smoothstep。
   var C1_ALBEDO = [
@@ -233,7 +277,7 @@
   // sprite = true 是贴图立牌（精灵图）：没有顶点色和 aEm，颜色来自图集贴图；每实例 iFrame 选图集里的一格
   //   （iFrame = [u0, v0, u 宽（负数 = 水平镜像）, v 高]）；不加斑驳和顶点渐变，画好的画面不再叠笔触
   function fgInject(sh, water, sprite) {
-    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uCool', 'uGreen', 'uWarmAdd', 'uFall', 'uChill', 'uFogWarm', 'uFogK', 'uEnemyGain'].forEach(function (k) { sh.uniforms[k] = U[k]; });
+    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uCool', 'uGreen', 'uWarmAdd', 'uFall', 'uChill', 'uFogWarm', 'uFogK', 'uEnemyGain', 'uProcTex'].forEach(function (k) { sh.uniforms[k] = U[k]; });
     sh.uniforms.uEnemy = { value: sprite === 'enemy' ? 1.0 : 0.0 };
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + (sprite ? 'attribute vec4 iFrame;\n' : 'attribute float aEm;\n') + 'varying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
@@ -245,11 +289,13 @@
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
     if (sprite) sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv = vec2(iFrame.x + uv.x * iFrame.z, iFrame.y + uv.y * iFrame.w);\n#endif');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uCool;\nuniform vec2 uGreen;\nuniform float uWarmAdd;\nuniform float uFall;\nuniform float uChill;\nuniform vec3 uFogWarm;\nuniform vec3 uFogK;\nuniform float uEnemy;\nuniform float uEnemyGain;\n' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uCool;\nuniform vec2 uGreen;\nuniform float uWarmAdd;\nuniform float uFall;\nuniform float uChill;\nuniform vec3 uFogWarm;\nuniform vec3 uFogK;\nuniform float uEnemy;\nuniform float uEnemyGain;\nuniform sampler2D uProcTex;\n' + NOISE_GLSL)
       .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' +
         // 圣火暖光圈：圈内是暖光，边缘在最后 6% 半径内收掉，圈外全交给冷色环境光
         '{ float cd = length(vWp.xz - uCore.xy);\n  float cm = uCore.w * (1.0 - smoothstep(uCore.z * 0.94, uCore.z, cd)) * (0.55 + 0.45 * (1.0 - cd / max(uCore.z, 1.0)));\n  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * cm; }\n' +
         C1_FILL + '\n' +
+        // 树荫漏光斑驳与漫射起伏
+        '{ vec4 pTexL = texture2D(uProcTex, vWp.xz * 0.012);\n  reflectedLight.directDiffuse *= (0.88 + 0.24 * pTexL.b); }\n' +
         // 冷色边缘光：掠射角的面亮一圈月青色
         '{ float fr = 1.0 - saturate(dot(normalize(geometryNormal), normalize(geometryViewDir)));\n  reflectedLight.indirectDiffuse += uRim.rgb * uRim.w * smoothstep(0.5, 0.95, fr); }')
       .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0), vFlash);')
@@ -271,11 +317,11 @@
       return;
     }
     sh.fragmentShader = sh.fragmentShader
-      // 斑驳：两层世界坐标噪声，石头、木头、茅草、草地都带一点笔触感。C1 色温接在斑驳之后。
-      .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);\n' + C1_ALBEDO)
+      // 斑驳：两层世界坐标噪声 + 程序化画意笔触贴图采样，呈现手绘油画/水彩厚涂质感
+      .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\nvec4 pTex = texture2D(uProcTex, vWp.xz * 0.012);\nfloat pBrush = (0.86 + 0.28 * pTex.g) * (0.92 + 0.16 * pTex.r);\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN) * pBrush;\n' + C1_ALBEDO)
       // 自发光进 HDR（乘 uEmHDR），只有它和法术光效能过泛光阈值
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost * uEmHDR * mix(1.0, 0.4, smoothstep(0.02, 0.18, vColor.g - max(vColor.r, vColor.b)));' +
-        (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.85 + 0.25*s1;\ntotalEmissiveRadiance += vec3(0.35,0.6,0.9) * smoothstep(0.82, 0.98, s1) * 0.8;' : ''));
+        (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.88 + 0.22*s1;\ntotalEmissiveRadiance += vec3(0.38,0.76,0.95) * smoothstep(0.80, 0.98, s1) * 0.9;' : ''));
   }
   // toon = true 用三段色阶，false 用原版的 MeshStandardMaterial（平直着色、粗糙 0.92）
   function meshMaterial(water, toon) {
@@ -452,6 +498,7 @@
     U.uRim.value = new THREE.Vector4(0.37, 0.66, 0.78, 0.2);
     U.uCore.value = new THREE.Vector4(0, 0, 0, 0); U.uCoreCol.value = new THREE.Color(1, 0.5, 0.16);   // 圣火金偏余烬橙（线性空间）
     U.uFogLow.value = new THREE.Vector4(0, 40, 900, 1400);
+    U.uProcTex.value = buildProceduralTexture();
     GL.mats = { std: [meshMaterial(false, false), meshMaterial(false, true)], water: [meshMaterial(true, false), meshMaterial(true, true)] };
     GL.matStd = GL.mats.std[0];
     GL.matWater = GL.mats.water[0];
@@ -487,14 +534,16 @@
         '  float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));',
         '  c.rgb = mix(vec3(l), c.rgb, uGrade.x);',
         '  c.rgb = max(vec3(0.0), (c.rgb - 0.18) * uGrade.y + 0.18 + uGrade.w);',
-        '  float sh = 1.0 - smoothstep(0.03, 0.46, l);',
-        '  float hi = smoothstep(0.4, 0.9, l);',
-        '  vec3 shCol = mix(c.rgb, uShad * max(l, 0.015), 0.9);',
-        '  shCol.g = min(shCol.g, mix(shCol.r, shCol.b, 0.55));',
+        '  float sh = 1.0 - smoothstep(0.02, 0.48, l);',
+        '  float hi = smoothstep(0.42, 0.92, l);',
+        '  vec3 shCol = mix(c.rgb, uShad * max(l, 0.02), 0.88);',
+        '  shCol.g = min(shCol.g, mix(shCol.r, shCol.b, 0.52));',
         '  c.rgb = mix(c.rgb, shCol, sh * uSplit.x);',
         '  c.rgb = mix(c.rgb, c.rgb * uHigh, hi * uSplit.y);',
+        '  // 圣经与硬指标：蓝紫阴影，永无死黑 (never pure black)',
+        '  c.rgb = max(c.rgb, vec3(0.016, 0.020, 0.045));',
         '  vec2 vd = (vUv - 0.5) * vec2(1.0, 0.78);',
-        '  c.rgb *= 1.0 - uVig * smoothstep(0.28, 0.62, length(vd));',
+        '  c.rgb *= 1.0 - uVig * smoothstep(0.30, 0.65, length(vd));',
         '  gl_FragColor = c;',
         '}'
       ].join('\n')
@@ -716,7 +765,7 @@
     var lc = env.line || [0.08, 0.06, 0.1];
     GL.matLine.color.setRGB(0.24 + lc[0] * 0.5, 0.22 + lc[1] * 0.5, 0.26 + lc[2] * 0.5); GL.matLineB.color.copy(GL.matLine.color);
     var perPx = 2 * Math.tan(GL.camera.fov * Math.PI / 360) / 540;
-    U.uLineW.value = 2.0 * perPx; U.uLineWB.value = 1.5 * perPx;
+    U.uLineW.value = 1.6 * perPx; U.uLineWB.value = 0.5 * perPx;
     GL.matLineB.visible = GL.matLine.visible = GL.fx.outline;
     var gr = env.grade || [1, 1, 0, 0];
     U.uGrade.value.set(gr[0], gr[1], gr[2], gr[3]);

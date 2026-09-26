@@ -78,7 +78,8 @@
     if (RW.QA) {
       var search = (typeof location !== 'undefined' && location.search) ? location.search : '';
       RW.QA.boot(search);
-      if (RW.QA.wantNight) g.startNight({ seed: RW.QA.seed, bench: RW.QA.bench, god: RW.QA.bench });
+      if (RW.QA.wantDay) g.startNight({ seed: RW.QA.seed, bench: RW.QA.bench, god: RW.QA.bench, day: true });
+      else if (RW.QA.wantNight) g.startNight({ seed: RW.QA.seed, bench: RW.QA.bench, god: RW.QA.bench });
     }
     P.onPointer(onPointer);
     P.onKey = onKey;

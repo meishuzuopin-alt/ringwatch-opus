@@ -5,7 +5,7 @@ const path = require('path');
 
 // 去掉 /* */ 块注释和行尾 // 注释（// 前面是行首或空白才算，避开字符串里的网址）
 function stripComments(src) {
-  return src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/(^|\s)\/\/.*$/, '$1')).join('\n');
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/(^|\s)\/\/.*?\r?$/, '$1')).join('\n');
 }
 function usedChars(root) {
   const set = new Set();

@@ -93,12 +93,12 @@ const brandOK = new Set();
     const j = JSON.parse(fs.readFileSync(json, 'utf8'));
     if (META && JSON.stringify(sortKeys(j)) !== JSON.stringify(sortKeys(META[n] || null))) { bad(`js/sprites.js 里 SPR.META.${n} 与 assets/sprites/${n}/${n}.json 不一致`); continue; }
     if (j.image !== n + '.png' || j.cols !== 4 || !j.rows || j.rows.attack !== 5) { bad(`assets/sprites/${n}/${n}.json 格式不对（4 列 6 行、attack 行 = 5）`); continue; }
-    spriteOK.add(path.relative(root, png));
+    spriteOK.add(path.relative(root, png).replace(/\\/g, '/'));
   }
   const extra = META ? Object.keys(META).filter(n => !names.includes(n)) : [];
   if (extra.length) bad('js/sprites.js 的 SPR.META 里有图集没有对应文件：' + extra.join(', '));
   const others = fs.existsSync(dir) ? walk(dir, '').filter(f => !/\.(png|json)$/.test(f)) : [];
-  if (others.length) bad('assets/sprites/ 下只能放图集 png 和 json：' + others.map(f => path.relative(root, f)).join(', '));
+  if (others.length) bad('assets/sprites/ 下只能放图集 png 和 json：' + others.map(f => path.relative(root, f).replace(/\\/g, '/')).join(', '));
   if (spriteOK.size) ok(`${spriteOK.size} 套图集（${[...spriteOK].map(f => path.basename(f, '.png')).join('、')}）都有元数据、有 ART.md 记录、与 SPR.META 一致`);
 }
 function sortKeys(v) {
@@ -132,7 +132,7 @@ console.log('字体与素材');
   }
   const brandDir = path.join(root, 'assets', 'branding');
   if (fs.existsSync(brandDir)) {
-    const stray = walk(brandDir, '').map(f => path.relative(root, f)).filter(f => !brandOK.has(f));
+    const stray = walk(brandDir, '').map(f => path.relative(root, f).replace(/\\/g, '/')).filter(f => !brandOK.has(f));
     if (stray.length) bad('assets/branding/ 只放正式图标：' + stray.join(', '));
   }
   if (!artDoc.includes('assets/branding/icon_1024.png') || !artDoc.includes('ChatGPT') || !artDoc.includes('2026-09-26') || !artDoc.includes('石台')) bad('docs/ART.md 没有登记正式图标的来源、日期和候选 2（石台 / 火盆）');
@@ -141,7 +141,7 @@ console.log('字体与素材');
   const media = [];
   for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
     for (const f of walk(path.join(root, d), '')) {
-      const rel = path.relative(root, f);
+      const rel = path.relative(root, f).replace(/\\/g, '/');
       if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(rel) && !brandOK.has(rel)) media.push(rel);
     }
   if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集和正式图标除外）：' + media.join(', '));

@@ -387,21 +387,21 @@
   // band：固有色从「圈内更深的绿褐、饱和」收到「圈外低饱和冷蓝」。inner/outer 是圣域半径的倍数，smoothstep，很宽。
   // greenKill：圈内把过亮的绿草收到褐绿。fog 在圈外才加浓，近火是暖雾，远处是淡蓝灰。
   // enemy：圈外的敌人立牌再压暗、去饱和。bloom 阈值抬高，绿萤火不过阈值。
-  // veil：旧的圣域黑盘，关掉。ring：圣域金圈的透明度，只留一条很淡的软边。
+  // veil：旧的圣域黑盘，关掉。ring：圣域金圈的透明度，0 为全柔光渐变、无生硬描边圈（对齐 H1/H3 真实光感）
   RW.C1_LIGHT = {
-    // gain 仍是 [1.63, 2.40]。颜色从浅黄收回到橙金，避免广场漂成米色。
-    flame: { color: [1.0, 0.62, 0.22], fall: 1.35, gain: [1.63, 2.4] },
-    band: { inner: 0.2, outer: 1.7 },
-    // 圈外大约比上一档暗 35%。目标：白天远处 (40,52,86)，夜晚 (24,32,62)。
-    albedo: { inSat: 1.25, outSat: 0.14, inGain: 0.96, outGain: [0.72, 0.62], greenKill: [0.7, 0.18] },
-    cool: [0.42, 0.56, 0.88],
-    fog: { warm: [1.0, 0.62, 0.22], start: 0.95, thick: 1.5, amount: [0.30, 0.34] },
-    grade: { shadow: 0.36, high: 0.24, shad: [0.18, 0.26, 0.46], highCol: [1.0, 0.64, 0.24] },
+    // 圣火主光：温暖饱满的橙金核心，柔和指数衰减，无生硬光斑切边
+    flame: { color: [1.0, 0.64, 0.24], fall: 1.35, gain: [1.65, 2.50] },
+    band: { inner: 0.18, outer: 1.80 },
+    // 圈外过渡：由暖向低饱和冷靛蓝渐变，保持通透
+    albedo: { inSat: 1.25, outSat: 0.16, inGain: 0.98, outGain: [0.74, 0.64], greenKill: [0.65, 0.18] },
+    cool: [0.36, 0.46, 0.94],
+    fog: { warm: [1.0, 0.68, 0.26], start: 0.95, thick: 1.5, amount: [0.28, 0.36] },
+    grade: { shadow: 0.48, high: 0.22, shad: [0.18, 0.22, 0.52], highCol: [1.06, 0.72, 0.32] },
     enemy: { gain: 0.66 },
-    bloom: { thr: 0.92, radius: 0.5, add: 0.06 },
-    exposure: 1.02,
+    bloom: { thr: 0.88, radius: 0.55, add: 0.08 },
+    exposure: 1.04,
     veil: 0,
-    ring: 0.06
+    ring: 0
   };
   RW.SANCTUARY.dim = RW.C1_LIGHT.veil;
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。

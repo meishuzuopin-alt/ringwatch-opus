@@ -15,6 +15,7 @@
       this.perf = Object.prototype.hasOwnProperty.call(q, 'perf');
       this.bench = Object.prototype.hasOwnProperty.call(q, 'fxbench');
       this.wantNight = this.bench || Object.prototype.hasOwnProperty.call(q, 'night');
+      this.wantDay = Object.prototype.hasOwnProperty.call(q, 'day');
       if (Object.prototype.hasOwnProperty.call(q, 'seed') && q.seed !== '') this.seed = +q.seed;
       else this.seed = this.bench ? 1 : null;
       this.log = []; this.frames = [];

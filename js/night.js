@@ -134,6 +134,7 @@
     p.x = post.x; p.y = post.y; p.vx = p.vy = p.pvx = p.pvy = 0; p.face = -Math.PI / 2; p.dead = false;
     this.nightPost = post;
     this.nightOn = true;
+    this.nightDay = !!opts.day;
     this.nightBench = !!opts.bench;
     this.nightGod = !!(opts.god || opts.bench);
     this.nightPhase = 'intro';
@@ -150,7 +151,7 @@
     this.numTimes = []; this._benchOv = -1; this.nightLock = 0; this._winClear = 0;
     this.slashSrc = { name: '挥砍', color: '#ffe7c2', dmg: 0, kills: 0, crit: false, nightSlash: true };
     this.shockSrc = { name: '超载', color: '#ffa24a', dmg: 0, kills: 0, crit: false, nightShock: true };
-    this.banner = N.introSec; this.bannerText = '守桥一夜';
+    this.banner = N.introSec; this.bannerText = opts.day ? '守桥之日' : '守桥一夜';
     this.enemyCount = 0;
     if (opts.bench) {
       this.spawnQ = [];
