@@ -2,7 +2,7 @@
 // 世界坐标：x = 模拟 x，z = 模拟 y，y 朝上。所有模型在本地坐标里面朝 +X，脚底 y = 0。
 (function (root) {
   var RW = root.RW;
-  var GL = RW.GL, GB = GL.GB, hex = GL.hex, shade = GL.shade;
+  var GL = RW.GL, GB = GL.GB, hex = GL.hex, shade = GL.shade, SPR = RW.SPR, SA = root.SpriteAnim;
   var T = RW.TUNE, V = T.VIEW, TAU = Math.PI * 2;
 
   var W3 = { ready: false, t: 0, meshes: {}, lamps: [], env: null, envTarget: null, camT: { x: 0, z: 0 }, snap: true,
@@ -586,6 +586,7 @@
     if (!GL.ok) return false;
     W3.setMap();
     buildModels();
+    if (SPR) SPR.init();   // 手绘精灵图（英雄 / 小鬼 / 暗弓手 / 巨像 / 盾卫）；贴图没到之前先画方块低模
     // 发光小物件不描边、不投影，保持干净的光点
     ['coin', 'crystal'].forEach(function (k) { if (W3.meshes[k]) { W3.meshes[k].outline = false; W3.meshes[k].shadow = false; } });
     // 建筑类用 1.5 像素描边，角色和敌人 2 像素（圣经第 3 节）
@@ -706,6 +707,7 @@
     env.fogNear += open * 500; env.fogFar += open * 1100;
     W3.updateCamera(g, dt, orbit, viewport[2] / viewport[3]);
     var M = W3.meshes, k;
+    if (GL.lamp) GL.lamp.intensity = 0;   // 英雄提灯：画英雄时再点亮
     drawCore(g, M);
     drawTowers(g, M);
     drawSoldiers(g, M);
@@ -746,7 +748,76 @@
       GL.ground(false, p.x, 0.6, p.y, p.r * 2.1 + 7, 1, 0.3, [0.02, 0.02, 0.03], 0.35);
       GL.ground(false, p.x, 0.7, p.y, p.r * 2.1 + 6, 1, 0.16, rc, 0.8);
     }
-    if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) return;
+    if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) { if (GL.lamp) GL.lamp.intensity = 0; return; }
+    var sc = p.r / 10 * 1.35, cx = p.x, cz = p.y, ec = hex(RW.EVO[p.stage].color);
+    if (SPR && SPR.has('hero')) { if (!heroSprite(g, p)) return; }
+    else { if (GL.lamp) GL.lamp.intensity = 0; if (!heroModel(g, M, p)) return; }
+    // 影子 + 脚下光圈（位阶颜色）
+    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, 0.35 * (SPR && SPR.has('hero') ? 1 : W3.blobShadow()));
+    GL.ground(true, cx, 1, cz, 16 * sc, 1, 0.15, ec, 0.45);
+    if (g.momTier > 0) GL.ground(true, cx, 1.2, cz, (22 + g.momTier * 5) * sc, 0, 0, g.momTier >= 3 ? hex('#ff5a2e') : hex('#ffc861'), 0.25 + 0.1 * Math.sin(W3.t * 10));
+    if (g.cls && g.cls.focus && g.focus > 0) {
+      var fk = g.focus / g.cls.focus.max;
+      GL.ground(true, cx, 1.3, cz, 24 * sc - fk * 8, 1, 0.08, fk >= 1 ? WHITE : hex('#9dff7a'), 0.3 + 0.5 * fk);
+    }
+    // 冲刺残影
+    if (p.trailT > 0 && p.trailN > 1) {
+      for (var i = 0; i < p.trailN - 1; i++) {
+        var k = p.trailT / 0.3 * (1 - i / p.trailN);
+        GL.streak(true, p.trail[i * 2], 8, p.trail[i * 2 + 1], p.trail[i * 2 + 2], p.trail[i * 2 + 3], 12 * sc * (1 - i / p.trailN), ec, 0.6 * k);
+      }
+    }
+    // 护身剑环
+    for (var w = 0; w < g.weapons.length; w++) {
+      var wp = g.weapons[w];
+      if (wp.d.kind === 'blades' && wp.bladeN) {
+        for (var b = 0; b < wp.bladeN; b++) {
+          var a = wp.phase + b * TAU / wp.bladeN, bx = p.x + Math.cos(a) * wp.bladeR, bz = p.y + Math.sin(a) * wp.bladeR;
+          GL.beam3(true, bx - Math.sin(a) * 9, 12, bz + Math.cos(a) * 9, bx + Math.sin(a) * 9, 12, bz - Math.cos(a) * 9, 4, hex('#bff5ff'), 0.95);
+          GL.streak(true, bx, 10, bz, p.x + Math.cos(a - 0.5) * wp.bladeR, p.y + Math.sin(a - 0.5) * wp.bladeR, 5, hex('#bff5ff'), 0.35);
+        }
+      }
+      if (wp.d.kind === 'lance' && wp.charge > 0) {
+        var k2 = 1 - wp.charge / wp.d.charge, len = wp.d.range * g.st.range;
+        GL.streak(true, p.x, 2, p.y, p.x + Math.cos(wp.ang) * len, p.y + Math.sin(wp.ang) * len, 3 + 5 * k2, hex('#b58cff'), 0.2 + 0.5 * k2);
+        GL.glow(p.x, 20, p.y, 12 + 16 * k2, hex('#b58cff'), 0.5 * k2);
+      }
+    }
+  }
+  // 英雄精灵图：hero 图集（兜帽余烬红斗篷的提灯法师）。方向按屏幕速度选行，站着待机，施法 / 站桩开火用攻击行；
+  // 提灯是一盏会闪烁的小暖光（GL.lamp），施法时按 castFlash 闪一下。返回 false 表示倒地、后面的脚下光圈不画
+  var LANTERN = [[-0.2, 0.72], [-0.22, 0.72], [-0.2, 0.72], [0.15, 0.7], [-0.2, 0.72], [-0.18, 0.72]], LANTERN_ATK = [0.27, 0.52];
+  var LP = [0, 0, 0], HERO_LAMP = { day: 320, night: 2600, glow: 9, out: 16, retrig: 0.9 };   // out：灯往镜头方向挪，照得到立牌正面
+  function heroSprite(g, p) {
+    var t = W3.t, st = SPR.state(p, 0), speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    var moving = speed >= SPR.CFG.still && g.mode !== 'clear', bodyH = p.r * SPR.CFG.heroH;
+    // 施法（技能）→ 攻击行；站着开火（武器刚出手）也播一遍攻击行
+    var kick = 0;
+    for (var wi = 0; wi < g.weapons.length; wi++) kick = Math.max(kick, g.weapons[wi].kick || 0);
+    if (p.castT > 0 && !(st.castT > 0)) SPR.trigger(st, t);
+    if (!moving && kick > 0.7 && t - st.atk0 > SPR.atkTotal('hero') + HERO_LAMP.retrig) SPR.trigger(st, t);   // 站桩开火：隔一会儿播一遍，中间留呼吸
+    st.castT = p.castT;
+    var mode = p.castT > 0 || (!moving && SPR.attacking(st, t, 'hero')) ? SPR.ATTACK : (moving ? SPR.WALK : SPR.IDLE);
+    if (g.mode === 'down') mode = SPR.IDLE;
+    var o = SPR.animate('hero', st, t, mode, p.vx, p.vy, 0, false);
+    var y = o.y * bodyH, sx = o.sx, sy = o.sy, roll = 0, flash = 0;
+    if (p.dashT > 0) { sx *= 1.1; sy *= 0.92; }                                              // 冲刺：横向拉长
+    if (p.hurtT > 0) { var hk = p.hurtT / 0.3; sy *= 1 - 0.1 * hk; flash = 0.35 * hk; }        // 受击：压扁、泛白
+    if (g.mode === 'clear') y += Math.abs(Math.sin(t * 9)) * 5;                               // 过波：欢呼跳
+    var fall = 0;
+    if (g.mode === 'down') { fall = Math.min(1, (1.1 - (g.downT || 0)) / 0.45); roll = -1.45 * fall; y = 0; }   // 倒地：向右倒
+    SPR.put('hero', p.x, y, p.y, o.row, o.frame, false, bodyH, sx, sy, roll, 1, 1, 1, flash);
+    // 提灯：位置跟着当前那一格里的灯走；亮度 = 昼夜基础值 × 闪烁 (+ 施法闪光)
+    var lp = mode === SPR.ATTACK && o.frame >= 2 ? LANTERN_ATK : LANTERN[o.row];
+    SPR.point('hero', p.x, y, p.y, bodyH, lp[0] * sx, lp[1] * sy, LP);
+    var lamp = W3.env ? W3.env.lamp : 0.5, base = HERO_LAMP.day + (HERO_LAMP.night - HERO_LAMP.day) * lamp;
+    var flick = SA.lanternFlicker(t, 1, 0.8), cast = mode === SPR.ATTACK && p.castT > 0 ? SA.castFlash(st.aF, st.aU) : 0;
+    if (GL.lamp) { var B = GL.camBack; GL.lamp.position.set(LP[0] + B[0] * HERO_LAMP.out, LP[1] + B[1] * HERO_LAMP.out, LP[2] + B[2] * HERO_LAMP.out); GL.lamp.intensity = fall > 0.5 ? 0 : base * (flick + cast * 0.6); }
+    if (fall < 0.5) GL.glow(LP[0], LP[1], LP[2], HERO_LAMP.glow * (0.85 + 0.15 * flick) * (1 + cast * 0.25), hex('#ffb347'), 0.55 + 0.25 * lamp);
+    return g.mode !== 'down';
+  }
+  // 英雄方块低模（精灵图没加载时的退路）
+  function heroModel(g, M, p) {
     var d = g.cls || RW.CLASSES.mage, look = d.look || { hat: 'wizard', prop: 'staff' };
     var sc = p.r / 10 * 1.35, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     var mv = Math.min(1, speed / 120), t = W3.t;
@@ -781,46 +852,59 @@
     var pg = PROP_GLOW[look.prop];
     if (pg && fall < 0.5 && Math.abs(propTilt) < 0.3) GL.glow(cx + (cs * pg[0] - sn * pg[2]) * sc, pg[1] * sc + by, cz + (sn * pg[0] + cs * pg[2]) * sc, pg[4], hex(pg[3]), 0.8);
     if (look.hat === 'halo' && fall < 0.5) GL.glow(cx, 35 * sc + by, cz, 10, hex('#fff1a8'), 0.35);
-    if (g.mode === 'down') return;
-    // 影子 + 脚下光圈（位阶颜色）
-    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, (0.35) * W3.blobShadow());
-    var ec = hex(RW.EVO[p.stage].color);
-    GL.ground(true, cx, 1, cz, 16 * sc, 1, 0.15, ec, 0.45);
-    if (g.momTier > 0) GL.ground(true, cx, 1.2, cz, (22 + g.momTier * 5) * sc, 0, 0, g.momTier >= 3 ? hex('#ff5a2e') : hex('#ffc861'), 0.25 + 0.1 * Math.sin(W3.t * 10));
-    if (g.cls && g.cls.focus && g.focus > 0) {
-      var fk = g.focus / g.cls.focus.max;
-      GL.ground(true, cx, 1.3, cz, 24 * sc - fk * 8, 1, 0.08, fk >= 1 ? WHITE : hex('#9dff7a'), 0.3 + 0.5 * fk);
-    }
-    // 冲刺残影
-    if (p.trailT > 0 && p.trailN > 1) {
-      for (var i = 0; i < p.trailN - 1; i++) {
-        var k = p.trailT / 0.3 * (1 - i / p.trailN);
-        GL.streak(true, p.trail[i * 2], 8, p.trail[i * 2 + 1], p.trail[i * 2 + 2], p.trail[i * 2 + 3], 12 * sc * (1 - i / p.trailN), ec, 0.6 * k);
-      }
-    }
-    // 护身剑环
-    for (var w = 0; w < g.weapons.length; w++) {
-      var wp = g.weapons[w];
-      if (wp.d.kind === 'blades' && wp.bladeN) {
-        for (var b = 0; b < wp.bladeN; b++) {
-          var a = wp.phase + b * TAU / wp.bladeN, bx = p.x + Math.cos(a) * wp.bladeR, bz = p.y + Math.sin(a) * wp.bladeR;
-          GL.beam3(true, bx - Math.sin(a) * 9, 12, bz + Math.cos(a) * 9, bx + Math.sin(a) * 9, 12, bz - Math.cos(a) * 9, 4, hex('#bff5ff'), 0.95);
-          GL.streak(true, bx, 10, bz, p.x + Math.cos(a - 0.5) * wp.bladeR, p.y + Math.sin(a - 0.5) * wp.bladeR, 5, hex('#bff5ff'), 0.35);
-        }
-      }
-      if (wp.d.kind === 'lance' && wp.charge > 0) {
-        var k2 = 1 - wp.charge / wp.d.charge, len = wp.d.range * g.st.range;
-        GL.streak(true, p.x, 2, p.y, p.x + Math.cos(wp.ang) * len, p.y + Math.sin(wp.ang) * len, 3 + 5 * k2, hex('#b58cff'), 0.2 + 0.5 * k2);
-        GL.glow(p.x, 20, p.y, 12 + 16 * k2, hex('#b58cff'), 0.5 * k2);
-      }
-    }
+    return g.mode !== 'down';
   }
 
+  // 敌人 → 精灵图：小鬼用 grunt（暗影地精），暗弓手用 elite（面具巫弓手），巨像用 boss；
+  // 炸药地精借 grunt 加黄绿着色、护盾萨满借 elite 加蓝着色、暗影术士借 elite 放大 1.7 倍加品红着色。
+  // 铁甲兽 / 狼骑 / 蝙蝠 / 蝠囊怪 / 蝠母不是人形，沿用方块低模。k = 身高倍率
+  var ESPRITE = {
+    mite: { set: 'grunt', k: 1 }, bomber: { set: 'grunt', k: 1.1, tint: [1, 1.12, 0.78] },
+    spitter: { set: 'elite', k: 1 }, shielder: { set: 'elite', k: 1.05, tint: [0.72, 0.9, 1.35] }, warden: { set: 'elite', k: 1.7, tint: [1.3, 0.72, 1.1] },
+    boss: { set: 'boss', k: 1 }
+  };
+  var TT = [1, 1, 1];
+  // 画一只精灵图敌人；返回 false 表示这类敌人不用精灵图（或图还没到），交回方块低模
+  function enemySprite(g, e, t) {
+    var es = ESPRITE[e.type];
+    if (!es || !SPR.has(es.set)) return false;
+    var st = SPR.state(e, e.seq), sp = e.spawnT > 0 ? 1 - e.spawnT / 0.18 * 0.8 : 1;
+    var bodyH = SPR.bodyH(es.set, es.k) * sp, speed = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
+    var mode = speed >= SPR.CFG.still ? SPR.WALK : SPR.IDLE, vx = e.vx, vy = e.vy, loop = false;
+    // 攻击状态：点火 / 瞄准 / 连结护盾 / 蓄力弹幕 / 巨像砸地与弹幕；巨像瞄准冲锋时朝冲锋方向站定
+    if (e.type === 'bomber' && e.state === 1) mode = SPR.ATTACK;
+    else if (e.type === 'spitter' && e.state === 1) mode = SPR.ATTACK;
+    else if (e.type === 'shielder' && e.lkN > 0) { mode = SPR.ATTACK; loop = true; }
+    else if (e.type === 'warden' && e.charging) { mode = SPR.ATTACK; loop = true; }
+    else if (e.type === 'boss' && (e.state === 1 || e.state === 2)) { mode = SPR.ATTACK; loop = e.state === 2; }
+    else if (e.type === 'boss' && e.state === 3) { mode = SPR.FACE; vx = e.dx; vy = e.dy; }
+    if (mode === SPR.ATTACK && st.mode !== SPR.ATTACK) SPR.trigger(st, t);
+    var o = SPR.animate(es.set, st, t, mode, vx, vy, e.seq * 0.37, loop);
+    var tint = tintOf(e), fl = flashOf(e), sx = o.sx, sy = o.sy;
+    if (e.type === 'bomber' && e.state === 1) { sx *= 1.08; sy *= 1.08; if (Math.sin(t * 40) > 0) fl = 0.6; }
+    if (e.type === 'boss' && e.enraged) tint = [1.25, 0.8, 0.7];
+    if (es.tint) { TT[0] = tint[0] * es.tint[0]; TT[1] = tint[1] * es.tint[1]; TT[2] = tint[2] * es.tint[2]; tint = TT; }
+    SPR.put(es.set, e.x, o.y * bodyH, e.y, o.row, o.frame, false, bodyH, sx, sy, 0, tint[0], tint[1], tint[2], fl);
+    // 接触阴影 + 脚下红圈（精英更亮）
+    GL.ground(false, e.x, 0.6, e.y, e.r * 1.15, 2, 0.3, BLACK, 0.3);
+    GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#ff3b5c') : C('#ff6a4a'), e.elite ? 0.55 : 0.22);
+    // 特殊光效（位置改成立牌上大致的手 / 法器处）
+    if (e.type === 'bomber') GL.glow(e.x, bodyH * 0.45, e.y, e.state === 1 ? 14 : 6, hex('#ffb040'), 0.9);
+    if (e.type === 'shielder') GL.glow(e.x, bodyH * 0.8, e.y, 10, hex('#6fc3ff'), 0.7);
+    if (e.type === 'warden') {
+      for (var o2 = 0; o2 < 3; o2++) { var oa = t * 2 + o2 * TAU / 3; GL.glow(e.x + Math.cos(oa) * 26, 30 + Math.sin(t * 3 + o2) * 4, e.y + Math.sin(oa) * 26, e.charging ? 14 : 8, hex('#ff3b8c'), 0.85); }
+      if (e.charging) GL.ground(true, e.x, 1, e.y, e.r + 30, 1, 0.2, hex('#ff3b8c'), 0.6);
+    }
+    if (e.type === 'boss') GL.glow(e.x, bodyH * 0.5, e.y, e.r * 1.2, e.enraged ? hex('#ff4a1a') : hex('#ff8a3a'), 0.2 + 0.12 * Math.sin(t * 5));
+    if (e.shieldT > 0) GL.glow(e.x, e.r, e.y, e.r * 1.8, hex('#6fa8ff'), 0.28);
+    return true;
+  }
   function drawEnemies(g, M) {
     var t = W3.t;
     for (var i = 0; i < g.enemies.length; i++) {
       var e = g.enemies[i];
       if (!e.on || !W3.inView(e.x, e.y, 60)) continue;
+      if (SPR && enemySprite(g, e, t)) continue;
       var em = EMODEL[e.type], mesh = M[em.m], s = e.r / em.base * 1.25;
       var sp = e.spawnT > 0 ? 1 - e.spawnT / 0.18 * 0.8 : 1;
       s *= sp;
@@ -864,6 +948,13 @@
       if (!c.on || !W3.inView(c.x, c.y, 40)) continue;
       var em = EMODEL[c.type], s = c.r / em.base * 1.25, k = c.life / c.max;
       var sink = k < 0.3 ? (0.3 - k) / 0.3 : 0;
+      var es = SPR && ESPRITE[c.type];
+      if (es && SPR.has(es.set)) {
+        // 精灵图敌人的尸体：待机第 0 帧，向一侧倒下（绕视线滚 90°），变灰后沉进地里
+        var bh = SPR.bodyH(es.set, es.k), side = Math.cos(c.rot) < 0 ? -1 : 1, fk = Math.min(1, (1 - k) * 6);
+        SPR.put(es.set, c.x, c.z - sink * bh * 0.6, c.y, SPR.META[es.set].rows.idle_down, 0, false, bh * (1 - sink * 0.3), 1, 1, side * fk * Math.PI / 2, 0.55, 0.5, 0.55, k > 0.9 ? 0.5 : 0);
+        continue;
+      }
       var y = c.z - sink * c.r * 1.5 + (em.fly ? 0 : 0);
       GL.put(M[em.m], c.x, y, c.y, c.rot, s * (1 - sink * 0.3), s * (1 - sink * 0.5), s * (1 - sink * 0.3), c.tilt, 0.55, 0.5, 0.55, k > 0.9 ? 0.5 : 0);
     }
@@ -908,9 +999,21 @@
       var sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
       // 兵种：盾卫高大偏蓝、枪兵原色、弓手瘦小偏绿；脚下一圈兵种色
       var ty = s.type, sc = ty === 'guard' ? 1.3 : (ty === 'archer' ? 0.95 : 1.1), tr = RW.TROOPS[ty];
-      var tc = ty === 'guard' ? TINT_GUARD : (ty === 'archer' ? TINT_ARCHER : WHITE);
-      GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, sc, sc, sc, 0, tc[0], tc[1], tc[2], s.flash > 0 ? 0.7 : 0);
-      GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, (0.3) * W3.blobShadow());
+      var ss = SPR && SSPRITE[ty];
+      if (ss && SPR.has(ss.set)) {
+        // 盾卫（枪兵借同一套图加暖色）：出手时播攻击行，目标在左边就水平镜像（图里是往右刺）
+        var st = SPR.state(s, 0), t = W3.t, bh = SPR.bodyH(ss.set, ss.k), atkCd = tr ? tr.atkCd : 0.6;
+        if (s.cd > atkCd - 0.06 && t - st.atk0 > 0.1) SPR.trigger(st, t);
+        var atk = SPR.attacking(st, t, ss.set), mode = atk ? SPR.ATTACK : (sp >= SPR.CFG.still ? SPR.WALK : SPR.IDLE);
+        var o = SPR.animate(ss.set, st, t, mode, s.vx, s.vy, i * 0.53, false);
+        var tc2 = ss.tint || WHITE;
+        SPR.put(ss.set, s.x, o.y * bh, s.y, o.row, o.frame, atk && Math.cos(s.ang) < 0, bh, o.sx, o.sy, 0, tc2[0], tc2[1], tc2[2], s.flash > 0 ? 0.7 : 0);
+        GL.ground(false, s.x, 0.6, s.y, 8, 2, 0.3, BLACK, 0.3);
+      } else {
+        var tc = ty === 'guard' ? TINT_GUARD : (ty === 'archer' ? TINT_ARCHER : WHITE);
+        GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, sc, sc, sc, 0, tc[0], tc[1], tc[2], s.flash > 0 ? 0.7 : 0);
+        GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, (0.3) * W3.blobShadow());
+      }
       if (tr) GL.ground(true, s.x, 0.8, s.y, 9, 1, 0.2, C(tr.color), 0.45);
     }
     // 兵营布防点：兵种色的旗帜光与地面圈，和兵营之间一道淡淡的连线
@@ -927,6 +1030,8 @@
     }
   }
   var TINT_GUARD = [0.75, 0.85, 1.25], TINT_ARCHER = [0.8, 1.15, 0.8];
+  // 士兵 → 精灵图：盾卫用 guard（红辫村姑枪盾手）；枪兵借同一套图加暖橙着色、矮一点；弓手沿用低模
+  var SSPRITE = { guard: { set: 'guard', k: 0.95 }, spear: { set: 'guard', k: 0.88, tint: [1.22, 0.86, 0.68] } };
   function drawCore(g, M) {
     var co = g.core;
     var lv = co.lv || 1, fl = co.flash > 0 ? 0.4 : 0, F = RW.CORE_FORMS[co.form];
