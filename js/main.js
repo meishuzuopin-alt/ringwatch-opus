@@ -9,7 +9,7 @@
   var js = { active: false, id: null, ox: 0, oy: 0, kx: 0, ky: 0, mx: 0, my: 0 };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: 0 };
-  var portalLive = false;
+  var portalLive = false, openingSeen = false;
   // 只有网页包加载了 js/ads-crazygames.js 才有这些回调；没有 SDK 时静默跳过
   function portalCall(name) {
     var a = RW.AdsCrazy;
@@ -17,7 +17,7 @@
     try { a[name](); } catch (e) { /* 广告脚本被拦也不影响游戏 */ }
   }
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts, map: UI.runMap }, opt: RW.opt, keys: RW.keys, lang: RW.I18n ? RW.I18n.lang : 'zh' }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts, map: UI.runMap }, opt: RW.opt, keys: RW.keys, lang: RW.I18n ? RW.I18n.lang : 'zh', openingSeen: openingSeen }); }
   // 设置生效：音量三条总线、特效亮度（其余由渲染层直接读 RW.opt）
   function applyOpt() {
     var o = RW.opt;
@@ -38,7 +38,7 @@
     else g.startRun(hero, { danger: Math.min(UI.runDanger, UI.maxDanger(g, hero)), mutators: UI.runMuts, map: RW.mapOpen(UI.runMap, g.prog) ? UI.runMap : 'village' });
     resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
   }
-  function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
+  function inBattle() { return g.mode === 'opening' || g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
   // 离开结算前：crazygames 适配器自己决定要不要中插（前两局、看过激励、间隔不够都会跳过）。
   function afterResult(next) {
     if (g.mode === 'result' && P.adProvider === 'crazygames' && RW.AdsCrazy && RW.AdsCrazy.midgame) {
@@ -73,12 +73,18 @@
     S.setMuted(muted);
     musicOff = !!save.musicOff; S.setMusicOff(musicOff); UI.musicOff = musicOff;
     if (RW.I18n && (save.lang === 'en' || save.lang === 'zh')) RW.I18n.setLang(save.lang);
+    openingSeen = !!save.openingSeen;
     UI.runInfo = runInfoOf(P.load(RUN_KEY, null));
     RW.game = g;
     if (RW.QA) {
       var search = (typeof location !== 'undefined' && location.search) ? location.search : '';
       RW.QA.boot(search);
       if (RW.QA.wantNight) g.startNight({ seed: RW.QA.seed, bench: RW.QA.bench, god: RW.QA.bench });
+    }
+    var skipOpening = typeof location !== 'undefined' && /[?&]skipopening\b/.test(location.search || '');
+    if (!openingSeen && !skipOpening && !(RW.QA && RW.QA.wantNight)) {
+      RW.loadMap('village'); new RW.Opening(g);
+      D.camSnap = true; if (RW.W3) RW.W3.snap = true;
     }
     P.onPointer(onPointer);
     P.onKey = onKey;
@@ -518,7 +524,17 @@
     if (!paused && !showHow && !overlay && !adHold) {
       acc += dt;
       var steps = 0;
-      while (acc >= DT && steps < 5) { g.update(getInput()); drain(); acc -= DT; steps++; }
+      while (acc >= DT && steps < 5) {
+        if (g.mode === 'opening' && g.opening) {
+          g.opening.update(getInput()); drain();
+          if (g.opening.done) {
+            openingSeen = true; persist();
+            g.opening = null; g.startNight({ seed: 1701 });
+            resetStick(); D.camSnap = true; if (RW.W3) RW.W3.snap = true;
+          }
+        } else { g.update(getInput()); drain(); }
+        acc -= DT; steps++;
+      }
       if (steps >= 5) acc = 0;
     } else acc = 0;
     var intensity = Math.min(1, g.wave / 10 + (g.player.hp / g.player.maxHp < 0.35 ? 0.3 : 0) + g.momTier * 0.12);   // 战意越高音乐越猛
@@ -555,6 +571,10 @@
     switch (g.mode) {
       case 'title': UI.title(g, muted); if (showHow) UI.howto(); break;
       case 'pick': UI.pick(g); break;
+      case 'opening':
+        if (gl3) D.overlay3D(g); else D.world(g);
+        UI.opening(g); D.joystick(js);
+        break;
       case 'battle': case 'clear': case 'down':
         if (gl3) D.overlay3D(g); else D.world(g);
         D.hud(g, UI, buildMenu); D.joystick(js);

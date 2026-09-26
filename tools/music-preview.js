@@ -24,7 +24,7 @@ function wav(chans, sr) {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`http://localhost:${server.address().port}/preview.html?lowfx`);
+  await page.goto(`http://localhost:${server.address().port}/preview.html?lowfx&skipopening`);
   await page.waitForTimeout(300);
   // 每个音乐状态用圣火村主题渲染一遍；另外每张地图用自己的主题渲染一段战斗音乐（名字写成 battle1@地图）
   const songs = (await page.evaluate(() => RW.SONGS)).concat(await page.evaluate(() => RW.MAP_ORDER.filter(m => m !== 'village').map(m => 'battle1@' + m)));

@@ -48,7 +48,7 @@ function serve(dir) {
     const fail = () => { throw new Error('localStorage blocked'); };
     Object.defineProperty(window, 'localStorage', { configurable: true, get: fail });
   });
-  await page.goto('http://127.0.0.1:' + port + '/index.html?2d', { waitUntil: 'load' });
+  await page.goto('http://127.0.0.1:' + port + '/index.html?2d&skipopening', { waitUntil: 'load' });
   await page.waitForFunction(() => window.RW && RW.game && RW.game.mode === 'title' && RW.I18n && RW.I18n.lang === 'en' && RW.UI.btns.some(b => b.id === 'start'), null, { timeout: 30000 });
   const title = await page.title();
   if (title !== 'Ringwatch') errors.push('title ' + title);
@@ -95,7 +95,7 @@ function serve(dir) {
       return orig.apply(this, arguments);
     };
   });
-  await page2.goto('http://127.0.0.1:' + port + '/index.html', { waitUntil: 'load' });
+  await page2.goto('http://127.0.0.1:' + port + '/index.html?skipopening', { waitUntil: 'load' });
   await page2.waitForSelector('#rw-webgl2', { timeout: 30000 });
   const note = await page2.locator('#rw-webgl2').innerText();
   if (!/WebGL 2/.test(note) || !/Three\.js r186/.test(note)) errors.push('WebGL2 提示不够清楚: ' + note);

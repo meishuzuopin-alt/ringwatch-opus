@@ -9,7 +9,7 @@ const { serve, CHROMIUM_ARGS } = require('./lib/serve');
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`http://localhost:${server.address().port}/preview.html?lowfx`);
+  await page.goto(`http://localhost:${server.address().port}/preview.html?lowfx&skipopening`);
   await page.waitForTimeout(500);
   const maps = await page.evaluate(() => RW.MAP_ORDER);
   let bad = 0, n = 0;

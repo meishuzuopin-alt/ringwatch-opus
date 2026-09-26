@@ -551,6 +551,7 @@
   }
   W3.envFor = function (g) {
     if (g.nightOn) return 'night';
+    if (g.mode === 'opening') return 'night';
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
     if (g.wave > 0 && g.wave % RW.BOSS_WAVES.every === 0 && g.mode !== 'shop') return 'boss';
     if (g.mut && g.mut.night) return 'night';   // 变异器「夜行」
@@ -702,8 +703,9 @@
     lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
     var env = W3.env; env.time = W3.t;
     // 圣火暖光圈：半径就是圣域半径，光圈外是敌人的地盘；夜里（lamp 高）更亮
-    var co = g.core;
-    env.coreLight = co ? { x: co.x, z: co.y, r: Math.max(co.aura || 0, 160), k: 0.12 + 1.5 * env.lamp } : null;
+    var co = g.core, opening = g.mode === 'opening' && g.opening;
+    env.coreLight = co ? { x: opening && !opening.ignited ? g.player.x : co.x, z: opening && !opening.ignited ? g.player.y : co.y,
+      r: opening && !opening.ignited ? 115 : Math.max(co.aura || 0, 160), k: opening && !opening.ignited ? 0.75 : 0.12 + 1.5 * env.lamp } : null;
     var open = W3.openK(g);
     env.fogNear += open * 500; env.fogFar += open * 1100;
     W3.updateCamera(g, dt, orbit, viewport[2] / viewport[3]);
@@ -737,6 +739,9 @@
   function drawHero(g, M) {
     var p = g.player;
     if (g.mode === 'revive' || g.mode === 'result') return;
+    if (g.mode === 'opening' && g.opening && !g.opening.ignited) {
+      GL.glow(p.x + Math.cos(p.face) * 10, 25, p.y + Math.sin(p.face) * 10, 15 + Math.sin(W3.t * 9) * 2, hex('#ffb347'), 0.9);
+    }
     if (p.dead) {   // 倒下：圣火旁一圈复活进度
       var rk2 = 1 - Math.max(0, p.respawnT / (p.respawnMax || 1));
       GL.ground(true, p.x, 1.2, p.y, 26, 1, 0.12, hex('#ffd27a'), 0.25);
@@ -1038,6 +1043,10 @@
     var lv = co.lv || 1, fl = co.flash > 0 ? 0.4 : 0, F = RW.CORE_FORMS[co.form];
     var grow = 1 + (lv - 1) * 0.06;   // 每升一级整座神龛长大一点
     GL.put(M.core, co.x, 0, co.y, 0, grow, grow, grow, 0, 1, 1, 1, fl);
+    if (g.mode === 'opening' && g.opening && !g.opening.ignited) {
+      GL.ground(true, co.x, 1.2, co.y, 34, 1, 0.1, hex('#6a7680'), 0.22);
+      return;
+    }
     if (lv >= 2) GL.put(M.coreRing, co.x, 0, co.y, W3.t * 0.05, grow, grow, grow, 0, 1, 1, 1, fl);
     if (F && M['core_' + co.form]) GL.put(M['core_' + co.form], co.x, 0, co.y, co.form === 'star' ? W3.t * 0.6 : 0, grow * 1.3, grow * 1.3, grow * 1.3, 0, 1, 1, 1, fl);
     var t = W3.t, k = co.hp / co.maxHp;

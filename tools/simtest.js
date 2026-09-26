@@ -3,6 +3,7 @@
 require('../js/data.js');
 require('../js/map.js');
 require('../js/sim.js');
+require('../js/opening.js');
 var RW = globalThis.RW;
 
 var failed = 0, passed = 0;
@@ -32,6 +33,20 @@ function newGame(hero, opts, seed) {
   g.startRun(hero, opts);
   return g;
 }
+
+// 0. 首次序章：机器人拿着火种走到祭坛，点火后标题淡入并在目标时长内结束
+(function () {
+  var g = new RW.Game({ seed: 1 }), o = new RW.Opening(g), sawTitle = false;
+  for (var f = 0; f < 60 * 46 && !o.done; f++) {
+    var dx = o.target.x - g.player.x, dy = o.target.y - g.player.y, l = Math.sqrt(dx * dx + dy * dy) || 1;
+    o.update({ mx: dx / l, my: dy / l });
+    if (o.titleAlpha() > 0.5) sawTitle = true;
+    g.events.length = 0;
+  }
+  ok(o.ignited, '序章机器人把火种送到祭坛并点燃圣火');
+  ok(sawTitle, '点火后标题才淡入');
+  ok(o.done && o.time >= 30 && o.time <= 45, '序章在 30–45 秒结束（实际 ' + o.time.toFixed(1) + ' 秒）');
+})();
 
 // 1. 每个英雄跑 20 秒：数值全部有限
 RW.CLASS_ORDER.forEach(function (id, i) {

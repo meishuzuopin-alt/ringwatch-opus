@@ -17,7 +17,7 @@ fs.mkdirSync(out, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`http://localhost:${server.address().port}/preview.html?hifx` + (process.argv[3] ? '&art=' + process.argv[3] : ''));   // 第 2 个参数：风格化光照开关，如 all
+  await page.goto(`http://localhost:${server.address().port}/preview.html?hifx&skipopening` + (process.argv[3] ? '&art=' + process.argv[3] : ''));   // 第 2 个参数：风格化光照开关，如 all
   await page.waitForFunction(() => window.RW && RW.game && RW.W3 && RW.W3.ready, null, { timeout: 60000 });
   await page.evaluate(() => {
     RW.Main.action('start'); RW.Main.action('pick:' + RW.game.offers[0]);
