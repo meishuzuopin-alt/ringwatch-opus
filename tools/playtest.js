@@ -2,7 +2,7 @@
 // 用鼠标拖动（走真实的浮动摇杆输入链路）来操作，按阶段截图，收集控制台报错与帧时间。
 const { chromium } = require('playwright');
 const path = require('path');
-const http = require('http');
+const { serve, CHROMIUM_ARGS } = require('./lib/serve');
 const fs = require('fs');
 
 const root = path.resolve(__dirname, '..');
@@ -10,20 +10,12 @@ const out = path.resolve(process.argv[2] || 'shots');
 const waves = +process.argv[3] || 2;
 fs.mkdirSync(out, { recursive: true });
 
-const server = http.createServer((req, res) => {
-  const f = path.join(root, decodeURIComponent(req.url.split('?')[0]) === '/' ? 'preview.html' : decodeURIComponent(req.url.split('?')[0]));
-  fs.readFile(f, (err, data) => {
-    if (err) { res.writeHead(404); res.end(); return; }
-    const ext = path.extname(f);
-    res.writeHead(200, { 'Content-Type': ext === '.html' ? 'text/html; charset=utf-8' : 'application/javascript; charset=utf-8' });
-    res.end(data);
-  });
-}).listen(0);
 
 (async () => {
+  const server = await serve();
   const port = server.address().port;
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-  const page = await browser.newPage({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 });
+  const browser = await chromium.launch({ args: CHROMIUM_ARGS });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const errors = [];
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
@@ -36,15 +28,20 @@ const server = http.createServer((req, res) => {
   // 逻辑坐标 -> 屏幕坐标
   const toScreen = async (x, y) => page.evaluate(([x, y]) => { const v = RW.Plat.view; return [v.ox + x * v.s, v.oy + y * v.s]; }, [x, y]);
   const tap = async (x, y) => { const [sx, sy] = await toScreen(x, y); await page.mouse.click(sx, sy); await page.waitForTimeout(120); };
+  // 按按钮 id 点击（等按钮画出来再点它的中心）
+  const press = async id => {
+    await page.waitForFunction(id => RW.UI.btns.some(b => b.id === id), id, { timeout: 30000, polling: 50 });
+    const r = await page.evaluate(id => { const b = RW.UI.btns.find(b => b.id === id); return [b.x + b.w / 2, b.y + b.h / 2]; }, id);
+    await tap(r[0], r[1]);
+  };
   const state = async () => page.evaluate(() => { const g = RW.game; return { mode: g.mode, wave: g.wave, hp: g.player.hp, shards: g.shardCount, t: g.wt, kills: g.kills, enemies: g.enemyCount }; });
 
   await shot('01_title');
-  await tap(210, 511);            // 开始值守
-  await page.waitForTimeout(300);
+  await press('start');           // 开始值守
   await shot('02_pick');
-  const pickArg = process.env.PICK ? +process.env.PICK : 0;
-  if (process.env.PICKID) await page.evaluate(id => RW.Main.action('pick:' + id), process.env.PICKID);
-  else await tap(210, 120 + pickArg * 176 + 80);
+  // 默认英雄：PICKID 环境变量可指定（测试时绕过解锁）
+  if (process.env.PICKID) await page.evaluate(id => { RW.game.prog.unlocked[id] = 1; RW.Main.action('pick:' + id); }, process.env.PICKID);
+  else await press('pick:mage');
   await page.waitForTimeout(200);
 
   const log = [];
@@ -87,13 +84,11 @@ const server = http.createServer((req, res) => {
     // 买一件最贵但买得起的
     const pick = await page.evaluate(() => { const g = RW.game; let bi = -1, bp = -1; g.shop.slots.forEach((s, i) => { if (s && !s.sold && s.kind !== 'none' && s.price <= g.shardCount && s.price > bp) { bp = s.price; bi = i; } }); return bi; });
     if (pick >= 0) {
-      await tap(404 - 55, 262 + pick * 106 + 32);
-      const pl = await page.evaluate(() => RW.game.shop.placing);
-      if (pl >= 0) { await shot(`w${wv}_placing`); await tap(16 + 60, 190 + 12 + 23); }
+      await press('buy:' + pick);
       await shot(`w${wv}_bought`);
       log.push('bought slot ' + pick + ' -> ' + JSON.stringify(await page.evaluate(() => ({ w: RW.game.weapons.map(w => w.id + w.tier), mods: RW.game.mods, towers: RW.game.towers.map(t => t.id), shards: RW.game.shardCount }))));
     }
-    await tap(340, 715);         // 开始下一波
+    await press('next');         // 开始下一波
     await page.waitForTimeout(200);
   }
   const avg = frameTimes.reduce((a, b) => a + b, 0) / Math.max(1, frameTimes.length);
@@ -103,4 +98,6 @@ const server = http.createServer((req, res) => {
   console.log('errors:', errors.length ? errors.join('\n') : 'none');
   await browser.close();
   server.close();
+  // 只有页面报错才算失败；swiftshader 的性能 warning 只记录不拦截
+  if (errors.some(e => !e.startsWith('warning:'))) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exit(1); });

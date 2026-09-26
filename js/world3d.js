@@ -1,4 +1,4 @@
-// 环带值守 · 3D 场景：地形与道具（读 js/map.js）、角色/怪物/建筑的低模、特效、镜头、昼夜。
+// 圣火守护者 · 3D 场景：地形与道具（读 js/map.js）、角色/怪物/建筑的低模、特效、镜头、昼夜。
 // 世界坐标：x = 模拟 x，z = 模拟 y，y 朝上。所有模型在本地坐标里面朝 +X，脚底 y = 0。
 (function (root) {
   var RW = root.RW;
@@ -22,15 +22,45 @@
     lamp: hex('#ffcf6b'), banner: hex('#2a2440'), gold: hex('#e0a83a'), flower: [hex('#ffffff'), hex('#ffd6f0'), hex('#fff1a8')]
   };
 
+  // ================= 地貌 =================
+  // 每张地图一套地貌调色（Codex 可以直接改这里的颜色）；未写的键沿用上面的默认调色
+  PAL.skirt = hex('#22402a');
+  var BASE_PAL = {};
+  for (var pk in PAL) BASE_PAL[pk] = PAL[pk];
+  var BIOMES = {
+    meadow: {},
+    forest: { grass: '#5f9440', grass2: '#58893a', grassDark: '#4f7f35', leaf: '#2f6a2c', leaf2: '#3b7a33', leaf3: '#2a5a26',
+      dirt: '#9c7a4a', dirt2: '#957346', moss: '#4f7f35', skirt: '#17331d' },
+    snow: { grass: '#e6edf3', grass2: '#dde6ee', grassDark: '#d0dbe6', moss: '#cfd9e4', dirt: '#b7b0a4', dirt2: '#afa89c',
+      stone: '#b9bec6', stone2: '#c3c8cf', rock: '#8a93a0', rock2: '#9aa3b0', leaf: '#2f5a4a', leaf2: '#3a6a58', leaf3: '#284d40',
+      water: '#a9dcf0', bed: '#7897ad', skirt: '#c7d3de', pine: 1 },
+    marsh: { grass: '#4f6b3a', grass2: '#56713c', grassDark: '#465f34', moss: '#4a6232', dirt: '#6e5f3e', dirt2: '#66583a',
+      water: '#3f6a4a', bed: '#2f3f2a', leaf: '#3d5a2a', leaf2: '#4a6a32', leaf3: '#34502a', trunk: '#4a3a26', skirt: '#1f2c18', willow: 1 }
+  };
+  function applyBiome(name) {
+    var B = BIOMES[name] || BIOMES.meadow, k;
+    for (k in BASE_PAL) PAL[k] = BASE_PAL[k];
+    PAL.pine = PAL.willow = 0;
+    for (k in B) PAL[k] = typeof B[k] === 'string' ? hex(B[k]) : B[k];
+  }
+
   // ================= 地形 =================
   function buildTerrain() {
     var G = RW.GRID, M = RW.MAP, C = G.cell, cols = G.cols, rows = G.rows;
-    var gb = new GB(), water = new GB(), R = rnd(12345), lamps = [];
+    // 地形按 CHUNK×CHUNK 格切块：大地图上只画镜头里的那几块（审计：整图一块时每帧 60 多万三角形）
+    var CHUNK = 12, chunks = {}, list = [];
+    function chunkAt(c, r) {
+      var key = Math.floor(c / CHUNK) + ',' + Math.floor(r / CHUNK);
+      if (!chunks[key]) { chunks[key] = new GB(); list.push(chunks[key]); }
+      return chunks[key];
+    }
+    var gb = null, water = new GB(), R = rnd(12345), lamps = [];
     function ch(c, r) { if (c < 0 || r < 0 || c >= cols || r >= rows) return '#'; return M.rows[r][c]; }
     function isWater(k) { return k === '~' || k === 'w' || k === '='; }
     var WY = -14, BED = -40;
     for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
       var k = ch(c, r), x0 = c * C, z0 = r * C, x1 = x0 + C, z1 = z0 + C, cx = x0 + C / 2, cz = z0 + C / 2, h = h2(c, r);
+      gb = chunkAt(c, r);
       if (isWater(k)) {
         // 河床 + 水面
         gb.quad([x0, BED, z1], [x1, BED, z1], [x1, BED, z0], [x0, BED, z0], shade(PAL.bed, 0.9 + h * 0.2));
@@ -69,6 +99,12 @@
       for (var q = 0; q < 4; q++) {
         var nk = ch(c + nb[q][0], r + nb[q][1]);
         if (!isWater(nk)) continue;
+        // 沼泽：水边长芦苇（只是装饰，不挡路）
+        if (PAL.willow && nk !== '=' && k !== '=' && h > 0.3) for (var rd = 0; rd < 3; rd++) {
+          var rx = cx + nb[q][0] * 14 + (h2(c * 3 + rd, r) - 0.5) * 22, rz = cz + nb[q][1] * 14 + (h2(c, r * 3 + rd) - 0.5) * 22;
+          gb.box(rx, 0, rz, 1.6, 16 + rd * 5, 1.6, hex('#6f7a3a'));
+          gb.box(rx, 16 + rd * 5, rz, 2.4, 5, 2.4, hex('#5a3e24'));
+        }
         var bank = shade(PAL.rock, 0.85 + h * 0.2);
         if (nb[q][1] === 1) { gb.quad([x0, BED, z1], [x1, BED, z1], [x1, 0, z1], [x0, 0, z1], bank); if (nk !== '=') fence(gb, x0, z1 - 3, x1, z1 - 3); }
         if (nb[q][1] === -1) { gb.quad([x1, BED, z0], [x0, BED, z0], [x0, 0, z0], [x1, 0, z0], bank); if (nk !== '=') fence(gb, x0, z0 + 3, x1, z0 + 3); }
@@ -77,6 +113,7 @@
       }
       if (k === 'T') tree(gb, cx + (h - 0.5) * 12, cz + (h2(r, c) - 0.5) * 12, 1.25 + h * 0.5, c * 7 + r * 13);
       if (k === 'L') { lantern(gb, cx, cz, lamps); }
+      if (k === 'A') altar(gb, cx, cz, lamps);
       if (k === 'S') gate(gb, cx, cz, c, r, cols, rows, lamps);
       if (k === '.' && h > 0.72) flowers(gb, cx, cz, c, r);
       if (k === '.' || k === 'L') tufts(gb, cx, cz, c, r);
@@ -91,12 +128,15 @@
       while (ch(c + w, r) === 'H') w++;
       while (ch(c, r + hh) === 'H') hh++;
       for (var yy = 0; yy < hh; yy++) for (var xx = 0; xx < w; xx++) seen[(r + yy) * cols + c + xx] = 1;
-      house(gb, c * C, r * C, w * C, hh * C, (c + r) % 2 === 0, lamps);
+      house(chunkAt(c, r), c * C, r * C, w * C, hh * C, (c + r) % 2 === 0, lamps);
     }
     // 地图外的一圈暗色森林（远景）
     var W = cols * C, H = rows * C;
-    var skirt = hex('#22402a');
+    var skirt = PAL.skirt;
+    gb = new GB(); list.push(gb);
     gb.quad([-900, -3, H + 900], [W + 900, -3, H + 900], [W + 900, -3, -900], [-900, -3, -900], skirt);
+    var sides = [new GB(), new GB(), new GB(), new GB()];
+    list.push(sides[0], sides[1], sides[2], sides[3]);
     var R2 = rnd(777);
     for (var i = 0; i < 160; i++) {
       var side = i % 4, tx, tz;
@@ -104,27 +144,50 @@
       else if (side === 1) { tx = W + 40 + R2() * 260; tz = R2() * H; }
       else if (side === 2) { tx = R2() * W; tz = -40 - R2() * 200; }
       else { tx = R2() * W; tz = H + 40 + R2() * 260; }
-      tree(gb, tx, tz, 1.1 + R2() * 0.8, i * 11);
+      tree(sides[side], tx, tz, 1.1 + R2() * 0.8, i * 11);
     }
-    return { land: gb, water: water, lamps: lamps };
+    return { lands: list, water: water, lamps: lamps };
   }
   function fence(gb, x0, z0, x1, z1) {
     var n = 3;
     for (var i = 0; i <= n; i++) {
       var t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t;
-      gb.box(x, 0, z, 2.4, 11, 2.4, PAL.wood);
+      gb.box(x, 0, z, 2.6, 22, 2.6, PAL.wood);
     }
     var dx = x1 - x0, dz = z1 - z0;
-    if (Math.abs(dx) > Math.abs(dz)) { gb.box((x0 + x1) / 2, 7, z0, Math.abs(dx), 1.6, 1.4, PAL.plank2); gb.box((x0 + x1) / 2, 3.5, z0, Math.abs(dx), 1.4, 1.2, PAL.plank); }
-    else { gb.box(x0, 7, (z0 + z1) / 2, 1.4, 1.6, Math.abs(dz), PAL.plank2); }
+    if (Math.abs(dx) > Math.abs(dz)) { gb.box((x0 + x1) / 2, 14, z0, Math.abs(dx), 1.8, 1.6, PAL.plank2); gb.box((x0 + x1) / 2, 8, z0, Math.abs(dx), 1.6, 1.4, PAL.plank); }
+    else { gb.box(x0, 14, (z0 + z1) / 2, 1.6, 1.8, Math.abs(dz), PAL.plank2); }
+  }
+  // 野外祭坛：石台 + 三根矮石柱（中间留空可以站人）
+  function altar(gb, x, z, lamps) {
+    gb.cyl(x, 0, z, 30, 32, 3, 10, PAL.stone2);
+    gb.cyl(x, 3, z, 22, 24, 2, 10, PAL.stone);
+    for (var i = 0; i < 3; i++) {
+      var a = i * Math.PI * 2 / 3 + 0.4, px = x + Math.cos(a) * 34, pz = z + Math.sin(a) * 34;
+      gb.box(px, 0, pz, 7, 30, 7, PAL.rock2, 0, PAL.stone);
+      gb.box(px, 30, pz, 4, 5, 4, hex('#9fe8ff'), 1.1);
+      lamps.push({ x: px, y: 33, z: pz, s: 0.8 });
+    }
+  }
+  // 雪岭的松树：三层圆锥，顶上压雪
+  function pine(gb, x, z, s, seed) {
+    var R = rnd(seed * 53 + 7), lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3], snowC = hex('#f4f8fb');
+    gb.cyl(x, 0, z, 3.6 * s, 2.4 * s, 20 * s, 6, PAL.trunk);
+    for (var i = 0; i < 3; i++) {
+      var y = (16 + i * 17) * s, r = (22 - i * 6) * s;
+      gb.cyl(x, y, z, r, 0.8, 24 * s, 7, shade(lc, 0.95 + R() * 0.1));
+      gb.cyl(x, y + 12 * s, z, r * 0.52, 0.6, 12 * s, 7, snowC);
+    }
   }
   function tree(gb, x, z, s, seed) {
+    if (PAL.pine) { pine(gb, x, z, s, seed); return; }
     var R = rnd(seed * 97 + 13);
-    gb.cyl(x, 0, z, 3.2 * s, 2.4 * s, 16 * s, 6, PAL.trunk);
+    var trunk = 52 * s;
+    gb.cyl(x, 0, z, 4.4 * s, 2.6 * s, trunk, 6, PAL.trunk);
     var lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3];
-    gb.blob(x, 22 * s, z, 15 * s, 12 * s, 15 * s, lc, 0, seed, 0.22);
-    gb.blob(x + (R() - 0.5) * 10 * s, 31 * s, z + (R() - 0.5) * 8 * s, 10 * s, 9 * s, 10 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
-    if (R() < 0.5) gb.blob(x + 8 * s, 18 * s, z + 6 * s, 8 * s, 7 * s, 8 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
+    gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
+    if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
   }
   function tufts(gb, x, z, c, r) {
     var R = rnd(c * 977 + r * 131 + 5);
@@ -135,7 +198,7 @@
       gb.tri(a, b, t, col); gb.tri(b, a, t, col);
     }
   }
-  function bush(gb, x, z, seed) { gb.blob(x, 4, z, 7, 6, 7, PAL.leaf2, 0, seed, 0.3); }
+  function bush(gb, x, z, seed) { gb.blob(x, 9, z, 16, 14, 16, PAL.leaf2, 0, seed, 0.3); }
   function flowers(gb, x, z, c, r) {
     var R = rnd(c * 131 + r * 7);
     for (var i = 0; i < 4; i++) {
@@ -145,11 +208,11 @@
     }
   }
   function lantern(gb, x, z, lamps) {
-    gb.box(x, 0, z, 3, 26, 3, PAL.wood);
-    gb.box(x + 5, 24, z, 11, 2, 2, PAL.wood);
-    gb.box(x + 9, 15, z, 5, 7, 5, PAL.lamp, 1.2);
-    gb.box(x + 9, 22, z, 6.5, 1.4, 6.5, PAL.wood);
-    lamps.push({ x: x + 9, y: 18, z: z, s: 1 });
+    gb.box(x, 0, z, 3.2, 46, 3.2, PAL.wood);
+    gb.box(x + 8, 42, z, 16, 2.2, 2.2, PAL.wood);
+    gb.box(x + 14, 30, z, 6, 9, 6, PAL.lamp, 1.2);
+    gb.box(x + 14, 39, z, 8, 1.8, 8, PAL.wood);
+    lamps.push({ x: x + 14, y: 34, z: z, s: 1.1 });
   }
   function banner(gb, x, z, h) {
     gb.box(x, 0, z, 3, h, 3, PAL.wood);
@@ -161,12 +224,12 @@
     var vertical = c === 0 || c === cols - 1;
     for (var s = -1; s <= 1; s += 2) {
       var px = vertical ? x : x + s * 24, pz = vertical ? z + s * 24 : z;
-      gb.box(px, 0, pz, 9, 30, 9, PAL.rock2, 0, PAL.stone);
-      gb.box(px, 30, pz, 11, 3, 11, PAL.stone2);
-      gb.box(px, 33, pz, 4, 5, 4, PAL.lamp, 1.3);
-      lamps.push({ x: px, y: 35, z: pz, s: 1.2 });
+      gb.box(px, 0, pz, 12, 68, 12, PAL.rock2, 0, PAL.stone);
+      gb.box(px, 68, pz, 15, 4, 15, PAL.stone2);
+      gb.box(px, 72, pz, 5, 7, 5, PAL.lamp, 1.3);
+      lamps.push({ x: px, y: 75, z: pz, s: 1.3 });
     }
-    banner(gb, x + (vertical ? 0 : -12), z + (vertical ? -12 : 0), 34);
+    banner(gb, x + (vertical ? 0 : -14), z + (vertical ? -14 : 0), 76);
   }
   function buildBridgeCell(gb, c, r, ch, lamps) {
     var C = 40, x0 = c * C, z0 = r * C, cx = x0 + C / 2;
@@ -174,28 +237,31 @@
     for (var i = 0; i < 5; i++) gb.box(cx, -2, z0 + 4 + i * 8, C, 3, 7, i % 2 ? PAL.plank : PAL.plank2);
     gb.box(cx, -18, z0 + C / 2, C, 16, 4, PAL.wood);
     var left = ch(c - 1, r) !== '=', right = ch(c + 1, r) !== '=';
-    if (left) { gb.box(x0 + 2, 1, z0 + C / 2, 2.5, 10, C, PAL.plank2); for (var j = 0; j < 2; j++) gb.box(x0 + 2, 0, z0 + 6 + j * 28, 3.4, 12, 3.4, PAL.wood); }
-    if (right) { gb.box(x0 + C - 2, 1, z0 + C / 2, 2.5, 10, C, PAL.plank2); for (var k = 0; k < 2; k++) gb.box(x0 + C - 2, 0, z0 + 6 + k * 28, 3.4, 12, 3.4, PAL.wood); }
+    if (left) { gb.box(x0 + 2, 1, z0 + C / 2, 2.5, 20, C, PAL.plank2); for (var j = 0; j < 2; j++) gb.box(x0 + 2, 0, z0 + 6 + j * 28, 3.6, 24, 3.6, PAL.wood); }
+    if (right) { gb.box(x0 + C - 2, 1, z0 + C / 2, 2.5, 20, C, PAL.plank2); for (var k = 0; k < 2; k++) gb.box(x0 + C - 2, 0, z0 + 6 + k * 28, 3.6, 24, 3.6, PAL.wood); }
     // 桥头灯笼
     if (ch(c, r - 1) !== '=' && ch(c, r - 1) !== '~') { if (left) lantern(gb, x0 + 2, z0 - 6, lamps); if (right) lantern(gb, x0 + C - 12, z0 - 6, lamps); }
     if (ch(c, r + 1) !== '=' && ch(c, r + 1) !== '~') { if (left) lantern(gb, x0 + 2, z0 + C + 6, lamps); if (right) lantern(gb, x0 + C - 12, z0 + C + 6, lamps); }
   }
   function house(gb, x0, z0, w, d, blue, lamps) {
     var cx = x0 + w / 2, cz = z0 + d / 2, wall = blue ? PAL.wall : PAL.wallWood, roof = blue ? PAL.roofBlue : PAL.roofRed;
-    gb.box(cx, 0, cz, w - 8, 3, d - 6, PAL.stone2);
-    gb.box(cx, 3, cz, w - 12, 30, d - 12, wall);
-    // 木梁
-    gb.box(x0 + 7, 3, cz, 3, 30, d - 10, PAL.wood); gb.box(x0 + w - 7, 3, cz, 3, 30, d - 10, PAL.wood);
-    gb.box(cx, 30, cz, w - 10, 3, d - 10, PAL.wood);
-    gb.roof(cx, 33, cz, w - 2, 20, d + 2, roof);
-    gb.box(cx - w * 0.2, 40, cz - 4, 6, 14, 6, PAL.rockDark);
-    // 门、窗（窗会发光）
-    gb.box(cx, 3, z0 + d - 5.5, 9, 15, 1.2, PAL.wood);
-    for (var i = -1; i <= 1; i += 2) gb.box(cx + i * w * 0.25, 15, z0 + d - 5.8, 7, 7, 1, PAL.lamp, 0.9);
-    gb.box(cx, 18, z0 + d - 3, w * 0.6, 1.5, 6, PAL.wood);
-    lamps.push({ x: cx - w * 0.25, y: 18, z: z0 + d - 3, s: 0.7 });
-    lamps.push({ x: cx + w * 0.25, y: 18, z: z0 + d - 3, s: 0.7 });
-    gb.box(x0 + w - 4, 0, z0 + d - 2, 7, 6, 7, PAL.plank2);
+    var span = Math.min(w, d);
+    var wallH = Math.max(52, Math.min(78, span * 0.72));
+    var roofH = Math.max(28, Math.min(50, span * 0.4));
+    var doorH = 36;
+    gb.box(cx, 0, cz, w - 8, 4, d - 6, PAL.stone2);
+    gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall);
+    gb.box(x0 + 7, 4, cz, 3, wallH, d - 10, PAL.wood); gb.box(x0 + w - 7, 4, cz, 3, wallH, d - 10, PAL.wood);
+    gb.box(cx, wallH, cz, w - 10, 4, d - 10, PAL.wood);
+    gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof);
+    gb.box(cx - w * 0.2, wallH + roofH * 0.45, cz - 4, 7, 20, 7, PAL.rockDark);
+    gb.box(cx, 4, z0 + d - 5.5, 12, doorH, 1.4, PAL.wood);
+    var winY = 4 + doorH * 0.45;
+    for (var i = -1; i <= 1; i += 2) gb.box(cx + i * w * 0.25, winY, z0 + d - 5.8, 9, 11, 1, PAL.lamp, 0.9);
+    gb.box(cx, doorH + 8, z0 + d - 3, w * 0.55, 2, 7, PAL.wood);
+    lamps.push({ x: cx - w * 0.25, y: winY + 5, z: z0 + d - 3, s: 0.8 });
+    lamps.push({ x: cx + w * 0.25, y: winY + 5, z: z0 + d - 3, s: 0.8 });
+    gb.box(x0 + w - 4, 0, z0 + d - 2, 9, 9, 9, PAL.plank2);
   }
 
   // ================= 模型 =================
@@ -216,10 +282,54 @@
       g.blob(-0.8, 29.5, 0, 4.8, 3.2, 4.8, HAIR, 0, 3, 0.3);
       g.blob(-2.5, 26, 0, 3, 3.5, 4.2, HAIR, 0, 7, 0.3);
     });
-    M.capeMage = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, hex('#ff8a2a')); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, hex('#ff8a2a'), 0, 5, 0.2); g.box(-5.6, 12, 0, 0.3, 4, 4, hex('#ffd27a'), 0.8); });
-    M.capeRanger = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, hex('#3e7a3a')); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, hex('#3e7a3a'), 0, 5, 0.2); g.cyl(-1.5, 26, 0, 4.5, 0, 7, 5, hex('#3e7a3a')); });
-    M.staff = model(function (g) { g.box(2, 0, 7, 1.6, 30, 1.6, hex('#6b4428')); g.blob(2, 32, 7, 3, 3, 3, hex('#ffb347'), 1.4, 2, 0.1); g.box(2, 28, 7, 3, 1.5, 3, hex('#c8963c'), 0.3); });
-    M.crossbow = model(function (g) { g.box(6, 15, 3, 12, 2, 2, hex('#6b4428')); g.box(11, 15.5, 3, 1.5, 1.5, 12, hex('#4a3020')); g.box(12, 16, 3, 0.4, 0.4, 11, hex('#f6e2b0'), 0.5); g.box(4, 12, 3, 2, 4, 2, hex('#6b4428')); });
+    // 斗篷与兜帽/尖帽做成白色，绘制时按英雄的 cape 颜色着色；其余帽子、手持物自带颜色
+    var CLOTH = hex('#ffffff'), STEEL = hex('#c8d2e0'), WOOD = hex('#6b4428'), GOLDC = hex('#e0a83a');
+    M.cape = model(function (g) { g.box(-4.8, 7, 0, 1.4, 16, 12, CLOTH); g.blob(-2, 21, 0, 4.2, 2.6, 6.4, CLOTH, 0, 5, 0.2); });
+    M.hat_wizard = model(function (g) { g.cyl(-0.3, 29.4, 0, 6.8, 6.4, 0.9, 8, CLOTH); g.cyl(-0.8, 30.3, 0, 4.2, 0, 11, 7, CLOTH); });
+    M.hat_hood = model(function (g) { g.blob(-1, 27.5, 0, 4.9, 4.4, 4.9, CLOTH, 0, 9, 0.12); g.cyl(-2.2, 29, 0, 3.2, 0, 6, 5, CLOTH); });
+    M.hat_helm = model(function (g) {
+      g.box(-0.2, 25.5, 0, 8, 6.2, 8, STEEL); g.box(3.9, 25.6, 0, 0.4, 1.1, 5.6, hex('#1e2230'));
+      g.box(-0.2, 31.6, 0, 3, 1.4, 1.4, STEEL); g.box(-1.2, 33, 0, 5, 3.4, 1, hex('#ff5a3a'));
+    });
+    M.hat_bandana = model(function (g) {
+      g.box(0, 27.6, 0, 7.6, 2.2, 7.6, hex('#3a2350')); g.box(-5, 26.5, 1.5, 2.6, 1, 1.4, hex('#3a2350')); g.box(-6.2, 25.6, 2.2, 2, 1, 1.2, hex('#3a2350'));
+      g.box(1.2, 23.2, 0, 5.2, 2.6, 7.4, hex('#1c1226'));
+    });
+    M.hat_goggles = model(function (g) {
+      g.box(0, 27.2, 0, 7.6, 1.4, 7.6, hex('#5a3a22'));
+      g.box(3.8, 26.8, 1.7, 0.8, 2.2, 2.2, hex('#8fe3ff'), 1.2); g.box(3.8, 26.8, -1.7, 0.8, 2.2, 2.2, hex('#8fe3ff'), 1.2);
+    });
+    M.hat_horn = model(function (g) {
+      g.blob(-0.3, 29, 0, 4.6, 3.2, 4.6, hex('#8a8a92'), 0, 4, 0.08);
+      g.cyl(-0.5, 29.5, 4.6, 1.5, 0, 7, 5, hex('#efe4cc')); g.cyl(-0.5, 29.5, -4.6, 1.5, 0, 7, 5, hex('#efe4cc'));
+    });
+    M.hat_halo = model(function (g) {
+      g.blob(-1.6, 25, 0, 4.6, 6, 4.8, hex('#f4f0e0'), 0, 3, 0.1);
+      for (var i = 0; i < 10; i++) { var a = i / 10 * Math.PI * 2; g.box(Math.cos(a) * 5, 35, Math.sin(a) * 5, 2.4, 0.8, 2.4, hex('#fff1a8'), 2.2); }
+    });
+    M.hat_cap = model(function (g) { g.blob(-0.3, 29, 0, 4.4, 2.6, 4.4, hex('#6a5236'), 0, 6, 0.06); g.box(3.6, 28.4, 0, 3.6, 0.6, 5, hex('#5a4630')); });
+    M.hat_tophat = model(function (g) { g.cyl(0, 29.6, 0, 6.2, 6.2, 0.8, 10, hex('#2a1a2a')); g.cyl(0, 30.4, 0, 3.8, 3.8, 8.5, 10, hex('#2a1a2a')); g.cyl(0, 31.2, 0, 3.9, 3.9, 1.3, 10, hex('#ffe066'), 0.3); });
+    M.hat_crown = model(function (g) {
+      g.cyl(0, 29.8, 0, 4.2, 4.4, 2.4, 8, GOLDC, 0.4);
+      for (var i = 0; i < 5; i++) { var a = i / 5 * Math.PI * 2; g.box(Math.cos(a) * 3.8, 32.2, Math.sin(a) * 3.8, 1.2, 2.2, 1.2, GOLDC, 0.4); }
+      g.box(4.2, 31, 0, 0.6, 1.2, 1.2, hex('#7affd0'), 1.6);
+    });
+    M.prop_staff = model(function (g) { g.box(2, 0, 7, 1.6, 30, 1.6, WOOD); g.blob(2, 32, 7, 3, 3, 3, hex('#ffb347'), 1.4, 2, 0.1); g.box(2, 28, 7, 3, 1.5, 3, hex('#c8963c'), 0.3); });
+    M.prop_crossbow = model(function (g) { g.box(6, 15, 3, 12, 2, 2, WOOD); g.box(11, 15.5, 3, 1.5, 1.5, 12, hex('#4a3020')); g.box(12, 16, 3, 0.4, 0.4, 11, hex('#f6e2b0'), 0.5); g.box(4, 12, 3, 2, 4, 2, WOOD); });
+    M.prop_sword = model(function (g) {
+      g.box(3, 5, 7, 1.4, 5, 1.4, hex('#4a3020')); g.box(3, 10, 7, 1.6, 1.2, 6, GOLDC); g.box(3, 11.2, 7, 0.8, 16, 2.6, STEEL);
+      g.box(2, 5, -7.2, 1.4, 12, 8.5, hex('#3f5f9e')); g.box(2.8, 9, -7.2, 0.4, 4, 3, GOLDC, 0.3);
+    });
+    M.prop_dagger = model(function (g) {
+      g.box(3, 9, 7, 3, 1.2, 1.2, hex('#2a1a10')); g.box(8, 9, 7, 7, 0.6, 1.6, STEEL);
+      g.box(3, 9, -7, 3, 1.2, 1.2, hex('#2a1a10')); g.box(8, 9, -7, 7, 0.6, 1.6, STEEL);
+    });
+    M.prop_wrench = model(function (g) { g.box(2, 4, 7, 1.6, 20, 1.6, STEEL); g.box(2, 23, 7, 5, 3, 2, STEEL); g.box(3.4, 26, 7, 1.4, 2.4, 2, STEEL); g.box(0.6, 26, 7, 1.4, 2.4, 2, STEEL); });
+    M.prop_axe = model(function (g) { g.box(2, 0, 7, 1.8, 29, 1.8, WOOD); g.box(5.6, 21, 7, 5.6, 8, 0.8, STEEL); g.box(-0.8, 23, 7, 2, 4, 0.8, STEEL); });
+    M.prop_book = model(function (g) { g.box(5, 11, 6, 5.5, 7, 1.6, hex('#8a2a1a')); g.box(5, 11.6, 6.9, 4.4, 5.8, 0.4, hex('#ffe2a8'), 0.6); });
+    M.prop_bomb = model(function (g) { g.blob(5, 12, 7, 3.6, 3.6, 3.6, hex('#2a2a30'), 0, 3, 0.05); g.box(5, 15.4, 7, 0.8, 2.6, 0.8, hex('#c8963c')); g.blob(5, 18.4, 7, 1.1, 1.1, 1.1, hex('#ffb347'), 2.5, 2, 0.1); });
+    M.prop_coin = model(function (g) { g.blob(2.5, 9, 7, 3.6, 3.8, 3.6, hex('#8a6440'), 0, 5, 0.12); g.box(2.5, 12.6, 7, 1.8, 1.4, 1.8, hex('#5a3a22')); g.cyl(5.5, 15, 7, 2.2, 2.2, 0.8, 8, GOLDC, 0.8); });
+    M.prop_dice = model(function (g) { g.box(5, 10, 7, 3.6, 3.6, 3.6, hex('#f4f0e0')); g.box(6.9, 11.2, 7, 0.3, 0.9, 0.9, hex('#1f5a4a')); g.box(4, 14, 8.5, 2.6, 2.6, 2.6, hex('#ffd6d6')); });
     // ---- 敌人 ----
     M.imp = model(function (g) {
       var b = hex('#6a3f8e');
@@ -326,30 +436,30 @@
     });
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
     M.sentry = model(function (g) {
-      g.box(0, 0, 0, 20, 16, 20, PAL.rock2, 0, PAL.stone);
-      g.box(0, 16, 0, 17, 13, 17, PAL.wallWood);
-      g.box(0, 22, 8.7, 6, 4, 0.8, hex('#1a120c'));
-      g.cyl(0, 29, 0, 15, 0, 13, 4, PAL.roofRed);
-      g.box(0, 12, 10.2, 8, 16, 0.8, PAL.banner); g.box(0, 18, 10.7, 4, 4, 0.4, PAL.gold, 0.6);
+      g.box(0, 0, 0, 22, 26, 22, PAL.rock2, 0, PAL.stone);
+      g.box(0, 26, 0, 16, 62, 16, PAL.wallWood);
+      g.box(0, 58, 8.2, 7, 8, 0.8, hex('#1a120c'));
+      g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed);
+      g.box(0, 40, 8.4, 8, 28, 0.8, PAL.banner); g.box(0, 52, 8.9, 4, 6, 0.4, PAL.gold, 0.6);
     });
     M.pylon = model(function (g) {
-      g.box(0, 0, 0, 18, 8, 18, PAL.rock2, 0, PAL.stone);
-      g.box(0, 8, 0, 12, 6, 12, PAL.rock);
-      g.blob(0, 26, 0, 6, 13, 6, hex('#8fe3ff'), 1.1, 3, 0.15);
-      g.blob(5, 18, 4, 3, 6, 3, hex('#8fe3ff'), 0.9, 5, 0.2); g.blob(-5, 18, -3, 3, 5, 3, hex('#8fe3ff'), 0.9, 6, 0.2);
+      g.box(0, 0, 0, 20, 10, 20, PAL.rock2, 0, PAL.stone);
+      g.box(0, 10, 0, 10, 70, 10, PAL.rock);
+      g.blob(0, 92, 0, 8, 22, 8, hex('#8fe3ff'), 1.1, 3, 0.15);
+      g.blob(6, 48, 4, 4, 16, 4, hex('#8fe3ff'), 0.9, 5, 0.2); g.blob(-6, 36, -4, 4, 14, 4, hex('#8fe3ff'), 0.9, 6, 0.2);
     });
     M.siphon = model(function (g) {
-      g.box(0, 0, 0, 14, 5, 14, PAL.stone);
-      g.box(0, 5, 0, 5, 22, 5, PAL.wood);
-      g.box(0, 22, 0, 12, 3, 3, PAL.wood);
-      g.cyl(0, 30, 0, 6, 6, 1.5, 8, PAL.gold, 1.0);
+      g.box(0, 0, 0, 16, 6, 16, PAL.stone);
+      g.box(0, 6, 0, 5, 78, 5, PAL.wood);
+      g.box(0, 78, 0, 16, 3, 3, PAL.wood);
+      g.cyl(0, 92, 0, 7, 7, 2, 8, PAL.gold, 1.0);
     });
     M.barracks = model(function (g) {
-      g.box(0, 0, 0, 30, 3, 26, PAL.stone2);
-      g.box(0, 3, 0, 26, 18, 22, PAL.wallWood);
-      g.roof(0, 21, 0, 30, 12, 26, PAL.roofRed);
-      g.box(0, 3, 11.2, 8, 11, 0.8, hex('#1a120c'));
-      banner(g, -14, 12, 34);
+      g.box(0, 0, 0, 32, 4, 28, PAL.stone2);
+      g.box(0, 4, 0, 28, 48, 24, PAL.wallWood);
+      g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed);
+      g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
+      banner(g, -15, 13, 72);
     });
     M.soldier = model(function (g) {
       g.box(0, 0, 1.6, 1.8, 4, 1.8, hex('#5a5f6a')); g.box(0, 0, -1.6, 1.8, 4, 1.8, hex('#5a5f6a'));
@@ -367,6 +477,35 @@
       g.cyl(0, 31, 0, 13, 13, 1, 8, PAL.gold, 0.8);
       for (var i = 0; i < 4; i++) { var a = i * Math.PI / 2 + Math.PI / 4; banner(g, Math.cos(a) * 30, Math.sin(a) * 30, 40); }
     });
+    // 圣火外形随等级长大：2 级起一圈石柱；3 级起按形态换上层建筑
+    M.coreRing = model(function (g) {
+      for (var i = 0; i < 6; i++) {
+        var a = i * Math.PI / 3, x = Math.cos(a) * 44, z = Math.sin(a) * 44;
+        g.box(x, 0, z, 8, 26, 8, PAL.rock2, 0, PAL.stone);
+        g.box(x, 26, z, 11, 3, 11, PAL.gold, 0.5);
+      }
+    });
+    M.core_blaze = model(function (g) {   // 烈焰：黑石尖塔，四片向上翻的火翼
+      g.cyl(0, 30, 0, 14, 8, 24, 6, hex('#2a2224'));
+      for (var i = 0; i < 4; i++) {
+        var a = i * Math.PI / 2 + Math.PI / 4, x = Math.cos(a) * 16, z = Math.sin(a) * 16;
+        g.box(x, 34, z, 5, 26, 5, hex('#5a2a1a'), 0, hex('#ff6a2a'));
+        g.box(x * 1.2, 58, z * 1.2, 4, 8, 4, hex('#ff7a2e'), 1.3);
+      }
+    });
+    M.core_ward = model(function (g) {    // 守护：白石穹顶 + 四块立石
+      g.cyl(0, 30, 0, 20, 18, 6, 10, hex('#dfe8ee'));
+      g.blob(0, 42, 0, 16, 12, 16, hex('#cfe6f2'), 0.2, 3, 0.05);
+      for (var i = 0; i < 4; i++) {
+        var a = i * Math.PI / 2, x = Math.cos(a) * 30, z = Math.sin(a) * 30;
+        g.box(x, 24, z, 7, 30, 7, hex('#bcd2de'), 0, hex('#8fe8ff'));
+        g.box(x, 54, z, 3, 6, 3, hex('#8fe8ff'), 1.2);
+      }
+    });
+    M.core_star = model(function (g) {    // 星火：细高方尖碑，顶上一颗星
+      g.box(0, 30, 0, 12, 46, 12, hex('#3a2e4a'), 0, hex('#d9a8ff'));
+      g.cyl(0, 76, 0, 7, 0.5, 14, 4, hex('#d9a8ff'), 1.1);
+    });
     M.coin = model(function (g) { g.cyl(0, -0.8, 0, 3.4, 3.4, 1.6, 8, PAL.gold, 0.6, hex('#ffd76a')); });
     M.stone = model(function (g) { g.blob(0, 2, 0, 5, 3, 5, PAL.rock2, 0, 4, 0.25); });
     M.crystal = model(function (g) { g.blob(0, 0, 0, 2.6, 4.5, 2.6, hex('#9dffcf'), 1.2, 3, 0.1); });
@@ -382,58 +521,138 @@
 
   // ================= 昼夜 =================
   function envPreset(kind) {
+    // grade = [饱和度, 对比度, 边缘光, 亮度偏移]；shadowDark = 阴影里保留多少直射光；line = 描边颜色；
+    // bloom = 泛光强度，thr = 旧的泛光阈值（阶段 1 起阈值固定，只有自发光和法术发光）
+    // rim = 冷色边缘光 [r, g, b, 强度]；fogLow = 光圈外低矮冷雾 [浓度, 高度, 从光圈边缘到最浓的距离]；vig = 暗角；
+    // amb = 环境与主光亮度倍率；a35 = 夜晚提亮到白天 35% 的备选颜色（GL.ART.night35 打开时用，默认用原版颜色）
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0 },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9 }
+      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
+        grade: [1.12, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9,
+        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.16, amb: 1 },
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6,
+        grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78,
+        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.2, amb: 1 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
+        grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62,
+        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.26, amb: 1,
+        // 备选（GL.ART.night35）：夜晚光圈外亮度约为白天 35% 的提亮版
+        a35: { sun: shade(hex('#8aa4ff'), 0.72), sky: shade(hex('#5a74b8'), 0.8), ground: shade(hex('#2a2c48'), 0.6), fog: hex('#34497a'), clear: hex('#141e36') } },
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9,
+        grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66,
+        rim: [0.55, 0.35, 0.75, 0.3], fogLow: [0.5, 34, 380], vig: 0.26, amb: 1,
+        a35: { sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#7a4070'), 0.8), ground: shade(hex('#3a1c28'), 0.6), fog: hex('#4a2038'), clear: hex('#200a14'), amb: 1 } }
     };
-    var e = P[kind], l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
-    return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp, time: 0 };
+    var e = P[kind];
+    if (e.a35 && GL.ART && GL.ART.night35) e = Object.assign({}, e, e.a35);
+    var l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
+    return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp,
+      grade: e.grade.slice(), shadowDark: e.shadowDark, line: e.line.slice(), bloom: e.bloom, thr: e.thr, time: 0,
+      rim: e.rim.slice(), fogLow: e.fogLow.slice(), vig: e.vig, amb: e.amb };
   }
   W3.envFor = function (g) {
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
     if (g.wave > 0 && g.wave % RW.BOSS_WAVES.every === 0 && g.mode !== 'shop') return 'boss';
+    if (g.mut && g.mut.night) return 'night';   // 变异器「夜行」
     return g.wave <= 3 ? 'day' : (g.wave <= 6 ? 'dusk' : 'night');
   };
+  // 直接切到当前该用的光照（截图 / 验收用，跳过渐变）
+  W3.snapEnv = function (g) { W3.env = envPreset(W3.envFor(g)); };
   function lerpEnv(a, b, k) {
-    ['light', 'sun', 'sky', 'ground', 'fog', 'clear'].forEach(function (key) { for (var i = 0; i < 3; i++) a[key][i] += (b[key][i] - a[key][i]) * k; });
-    a.fogNear += (b.fogNear - a.fogNear) * k; a.fogFar += (b.fogFar - a.fogFar) * k; a.em += (b.em - a.em) * k; a.lamp += (b.lamp - a.lamp) * k;
+    ['light', 'sun', 'sky', 'ground', 'fog', 'clear', 'line'].forEach(function (key) { for (var i = 0; i < 3; i++) a[key][i] += (b[key][i] - a[key][i]) * k; });
+    for (var j = 0; j < 4; j++) { a.grade[j] += (b.grade[j] - a.grade[j]) * k; a.rim[j] += (b.rim[j] - a.rim[j]) * k; }
+    for (j = 0; j < 3; j++) a.fogLow[j] += (b.fogLow[j] - a.fogLow[j]) * k;
+    ['fogNear', 'fogFar', 'em', 'lamp', 'shadowDark', 'bloom', 'thr', 'vig', 'amb'].forEach(function (key) { a[key] += (b[key] - a[key]) * k; });
   }
 
   // ================= 初始化 =================
+  // 按当前地图（RW.MAP）重建地形；地图没变就什么都不做
+  W3.setMap = function () {
+    var M = RW.MAP;
+    if (!M || W3.mapId === M.id) return false;
+    (W3.lands || []).forEach(function (m) { GL.removeStatic(m); }); GL.removeStatic(W3.water);
+    applyBiome(M.biome);
+    var t = buildTerrain();
+    W3.lands = t.lands.filter(function (b) { return b.v.length > 0; }).map(function (b) { return GL.upload(b, { static: true }); });
+    W3.water = GL.upload(t.water, { static: true, water: true });
+    W3.lamps = t.lamps;
+    // 房屋格（圣域收成的光点从这里飘起）
+    var cell = M.cell || 40; W3.houses = [];
+    for (var r = 0; r < M.rows.length; r++) for (var c = 0; c < M.rows[r].length; c++) if (M.rows[r][c] === 'H') W3.houses.push({ x: c * cell + cell / 2, y: r * cell + cell / 2 });
+    W3.mapId = M.id; W3.snap = true;
+    if (RW.Draw && RW.Draw.onMap) RW.Draw.onMap();
+    return true;
+  };
   W3.init = function () {
     if (!GL.ok) return false;
-    var t = buildTerrain();
-    W3.land = GL.upload(t.land);
-    W3.water = GL.upload(t.water);
-    W3.lamps = t.lamps;
+    W3.setMap();
     buildModels();
+    // 发光小物件不描边、不投影，保持干净的光点
+    ['coin', 'crystal'].forEach(function (k) { if (W3.meshes[k]) { W3.meshes[k].outline = false; W3.meshes[k].shadow = false; } });
+    // 建筑类用 1.5 像素描边，角色和敌人 2 像素（圣经第 3 节）
+    ['sentry', 'pylon', 'siphon', 'barracks', 'core', 'coreRing', 'core_blaze', 'core_ward', 'core_star', 'stone'].forEach(function (k) { GL.lineBuilding(W3.meshes[k]); });
+    // 浏览器调试参数：?lowfx 关掉全部画质效果；?hifx 锁定画质、不自动降级（截图用）
+    try {
+      if (typeof location !== 'undefined') {
+        if (/[?&]lowfx\b/.test(location.search)) GL.fx.shadow = GL.fx.outline = GL.fx.bloom = GL.fx.ao = false;
+        if (/[?&]hifx\b/.test(location.search)) perf.locked = W3.hifx = true;
+        var am = /[?&]art=([\w,]+)/.exec(location.search);   // 风格化光照开关：?art=all 或 ?art=toon,ao
+        if (am) { var af = {}; am[1].split(',').forEach(function (k) { if (k === 'all') { for (var q in GL.ART) af[q] = true; } else af[k] = true; }); GL.setArt(af); }
+      }
+    } catch (e) { /* 微信里没有 location */ }
     W3.env = envPreset('dusk');
     W3.ready = true;
     return true;
   };
 
   // ================= 镜头 =================
-  var CAM = { pitch: 44 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 1080 };
+  // 视野开阔度 0..1：跟着圣火等级走，前几级涨得快，后面慢慢涨到全开
+  W3.openK = function (g) {
+    var lv = (g.core && g.core.lv) || 1, mx = RW.CORE_MAX_LV || 5;
+    return Math.sqrt(Math.max(0, Math.min(1, (lv - 1) / (mx - 1))));
+  };
+  var CAM = { pitch: 46 * Math.PI / 180, fov: 30 * Math.PI / 180, dist: 980 };
   W3.updateCamera = function (g, dt, orbit, aspect) {
     var p = g.player, WD = T.WORLD, ct = W3.camT;
+    var lv = (g.core && g.core.lv) || 1, open = W3.openK(g);
+    CAM.dist = (860 + open * 640) * ((RW.opt && RW.opt.cam) || 1);   // 圣域越大，镜头越高越广；设置里还能再调远近
+    CAM.pitch = (50 - open * 10) * Math.PI / 180;
     var tx, tz;
     if (orbit) { tx = T.core.x + Math.cos(W3.t * 0.12) * 120; tz = T.core.y - 120 + Math.sin(W3.t * 0.12) * 80; }
-    else { tx = p.x + p.vx * T.camera.lead; tz = p.y + p.vy * T.camera.lead; }
-    tx = Math.max(200, Math.min(WD.w - 200, tx)); tz = Math.max(330, Math.min(WD.h - 230, tz));
+    else {
+      tx = p.x + p.vx * T.camera.lead; tz = p.y + p.vy * T.camera.lead;
+      var fr = g.front;
+      if (fr && lv > 1) {
+        var pull = 0.28 + open * 0.22;
+        tx = tx * (1 - pull) + fr.x * pull;
+        tz = tz * (1 - pull) + fr.y * pull;
+      }
+    }
+    // 地面可见范围：按视锥算出目标点往远（-z）、往近（+z）、左右各能看到多远
+    var asp = aspect || V.w / V.h, f = CAM.fov / 2, hgt = Math.sin(CAM.pitch) * CAM.dist, back = Math.cos(CAM.pitch) * CAM.dist;
+    var zFar = hgt / Math.tan(Math.max(0.05, CAM.pitch - f)) - back, zNear = back - hgt / Math.tan(CAM.pitch + f);
+    var halfW = Math.tan(f) * CAM.dist * asp;
+    // 先别拍到地图外面
+    var mx = Math.min(WD.w / 2, halfW * 0.92);
+    tx = Math.max(mx, Math.min(WD.w - mx, tx));
+    tz = Math.max(Math.min(WD.h / 2, zFar * 0.8), Math.min(WD.h - Math.min(WD.h / 2, zNear * 0.8), tz));
+    // 再保证英雄一定在画面安全区里（四角有 HUD，留出边）：圣火升级镜头拉远、往王旗偏时也不会把英雄甩出去
+    if (!orbit) keepHero(p, halfW * 0.55, zFar * 0.38, zNear * 0.45);
     if (W3.snap) { ct.x = tx; ct.z = tz; W3.snap = false; }
     else { var k = 1 - Math.exp(-T.camera.follow * dt); ct.x += (tx - ct.x) * k; ct.z += (tz - ct.z) * k; }
-    var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) : 0;
+    if (!orbit) { tx = ct.x; tz = ct.z; keepHero(p, halfW * 0.7, zFar * 0.5, zNear * 0.6); ct.x = tx; ct.z = tz; }   // 跟随有延迟时的兜底
+    function keepHero(pl, lx, lFar, lNear) {
+      tx = Math.max(pl.x - lx, Math.min(pl.x + lx, tx));
+      tz = Math.max(pl.y - lNear, Math.min(pl.y + lFar, tz));
+    }
+    var sh = g.shake > 0.01 ? 11 * g.shake * Math.sqrt(g.shake) * RW.opt.shake : 0;   // 设置：屏幕震动
     var sx = sh ? (Math.random() * 2 - 1) * sh : 0, sz = sh ? (Math.random() * 2 - 1) * sh : 0;
     var cx = ct.x + sx, cz = ct.z + sz;
     var eye = [cx, Math.sin(CAM.pitch) * CAM.dist, cz + Math.cos(CAM.pitch) * CAM.dist];
-    GL.setCamera(eye, [cx, 0, cz], CAM.fov, aspect || V.w / V.h);
+    GL.setCamera(eye, [cx, 0, cz], CAM.fov, asp);
     GL.updateBillboardAxes();
-    // 可见范围（地面上的大致矩形）
-    var halfW = Math.tan(CAM.fov / 2) * CAM.dist * (aspect || V.w / V.h) * 1.25;
+    // 可见范围（剔除用）：跟着镜头远近变，拉远后边缘的东西不会被误剔
     var b = W3.bounds;
-    b.x0 = cx - halfW - 80; b.x1 = cx + halfW + 80; b.z0 = cz - 760; b.z1 = cz + 360;
+    b.x0 = cx - halfW * 1.25 - 80; b.x1 = cx + halfW * 1.25 + 80; b.z0 = cz - zFar - 120; b.z1 = cz + zNear + 120;
   };
   W3.inView = function (x, z, m) { var b = W3.bounds; return x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m; };
   // 世界点 -> 逻辑屏幕坐标（HUD 用）
@@ -441,35 +660,66 @@
   W3.toScreen = function (x, y, z) {
     var p = GL.project(x, y, z);
     if (!p) { SP.ok = false; return SP; }
-    SP.x = V.x + (p[0] * 0.5 + 0.5) * V.w; SP.y = V.y + (0.5 - p[1] * 0.5) * V.h;
+    // 3D 铺满整个窗口：NDC -> 窗口 CSS 像素 -> 逻辑坐标
+    var v = RW.Plat.view;
+    SP.x = ((p[0] * 0.5 + 0.5) * v.cssW - v.ox) / v.s; SP.y = ((0.5 - p[1] * 0.5) * v.cssH - v.oy) / v.s;
     SP.ok = p[0] > -1.1 && p[0] < 1.1 && p[1] > -1.1 && p[1] < 1.1;
     return SP;
   };
 
   // ================= 每帧绘制 =================
   var WHITE = [1, 1, 1], BLACK = [0, 0, 0];
+  // 帧率自适应：平均帧时间持续超过 30ms，按 泛光 -> 描边 -> 阴影 的顺序逐个关掉
+  var perf = { avg: 1 / 60, slowT: 0, locked: false };
+  function adaptQuality(dt) {
+    if (perf.locked || !(dt > 0) || dt > 0.25) return;
+    perf.avg += (dt - perf.avg) * 0.05;
+    perf.slowT = perf.avg > 0.03 ? perf.slowT + dt : 0;
+    if (perf.slowT < 3) return;
+    perf.slowT = 0; perf.avg = 1 / 60;
+    var fx = GL.fx;
+    if (fx.bloom) fx.bloom = false; else if (fx.ao) fx.ao = false; else if (fx.outline) fx.outline = false; else if (fx.shadow) fx.shadow = false;
+    console.warn('帧率偏低，自动降低画质', JSON.stringify(fx));
+  }
+  // 设置：画质（0 自动：掉帧时逐级关特效；1 低 / 2 中 / 3 高：固定不变）
+  W3.setQuality = function (q) {
+    var fx = GL.fx;
+    if (!fx) return;
+    if (!q) { perf.locked = !!W3.hifx; fx.shadow = fx.outline = fx.bloom = fx.ao = true; return; }   // ?hifx（截图）下也不自动降级
+    perf.locked = true;
+    // 低档：关掉环境光遮蔽和描边（保底退路）；中档：有描边和阴影、没有 AO 和泛光；高档：全开
+    fx.shadow = q >= 2; fx.outline = q >= 2; fx.bloom = q >= 3; fx.ao = q >= 3;
+  };
+  W3.blobShadow = function () { return GL.fx.shadow ? 0.45 : 1; };   // 有真阴影时，脚下的圆影只做接触阴影
+
   W3.draw = function (g, viewport, dt, orbit) {
     W3.t += dt;
+    W3.setMap();   // 地图换了就重建地形
+    adaptQuality(dt);
     var target = envPreset(W3.envFor(g));
     lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
     var env = W3.env; env.time = W3.t;
+    // 圣火暖光圈：半径就是圣域半径，光圈外是敌人的地盘；夜里（lamp 高）更亮
+    var co = g.core;
+    env.coreLight = co ? { x: co.x, z: co.y, r: Math.max(co.aura || 0, 160), k: 0.12 + 1.5 * env.lamp } : null;
+    var open = W3.openK(g);
+    env.fogNear += open * 500; env.fogFar += open * 1100;
     W3.updateCamera(g, dt, orbit, viewport[2] / viewport[3]);
-    GL.beginFrame(viewport[0], viewport[1], viewport[2], viewport[3], env.clear);
-    GL.useMesh(env);
-    GL.drawStatic(W3.land, false);
-    GL.drawStatic(W3.water, true);
-    var M = W3.meshes, t = W3.t;
+    var M = W3.meshes, k;
     drawCore(g, M);
     drawTowers(g, M);
     drawSoldiers(g, M);
+    drawMates(g, M);
+    drawChests(g, M);
     drawEnemies(g, M);
     drawCorpses(g, M);
-    if (!orbit) drawHero(g, M);
+    if (!orbit || g.mode === 'down') drawHero(g, M);
     drawPickups(g, M);
-    for (var k in M) GL.drawInstances(M[k]);
     drawFx(g, env);
-    GL.flushAlpha();
-    GL.flushAdd();
+    // 阴影覆盖当前可见范围；光照、雾、描边、泛光、调色都由 env 决定
+    var b = W3.bounds, cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
+    var r = Math.sqrt((b.x1 - b.x0) * (b.x1 - b.x0) + (b.z1 - b.z0) * (b.z1 - b.z0)) / 2 + 40;
+    GL.frame(env, { cx: cx, cz: cz, r: r });
   };
 
   function flashOf(e) { return e.flash > 0 ? 0.85 : 0; }
@@ -479,33 +729,68 @@
     return WHITE;
   }
 
+  // 手持物发光点（本地坐标：前 +X、右 +Z、上 +Y）
+  var PROP_GLOW = { staff: [2, 32, 7, '#ffb347', 9], book: [5, 12, 7.5, '#fff1a8', 8], bomb: [5, 18.4, 7, '#ffb347', 6], coin: [5.5, 15.4, 7, '#ffe066', 6] };
   function drawHero(g, M) {
     var p = g.player;
-    if (g.mode === 'down' || g.mode === 'revive' || g.mode === 'result') return;
-    if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && Math.sin(W3.t * 45) > 0) return;
+    if (g.mode === 'revive' || g.mode === 'result') return;
+    if (p.dead) {   // 倒下：圣火旁一圈复活进度
+      var rk2 = 1 - Math.max(0, p.respawnT / (p.respawnMax || 1));
+      GL.ground(true, p.x, 1.2, p.y, 26, 1, 0.12, hex('#ffd27a'), 0.25);
+      GL.ground(true, p.x, 1.3, p.y, 26 * rk2, 0, 0, hex('#ffe7a0'), 0.35);
+      return;
+    }
+    // 设置：主角脚下光圈（不受受击闪烁影响，人多时也能一眼找到自己）
+    if (RW.opt.ring && g.mode !== 'down') {
+      var rc = C((g.cls || RW.CLASSES.mage).color);
+      GL.ground(false, p.x, 0.6, p.y, p.r * 2.1 + 7, 1, 0.3, [0.02, 0.02, 0.03], 0.35);
+      GL.ground(false, p.x, 0.7, p.y, p.r * 2.1 + 6, 1, 0.16, rc, 0.8);
+    }
+    if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) return;
+    var d = g.cls || RW.CLASSES.mage, look = d.look || { hat: 'wizard', prop: 'staff' };
     var sc = p.r / 10 * 1.35, face = p.face, speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-    var walk = W3.heroWalk = (W3.heroWalk || 0) + speed * 0.03 * (1 / 60) * 60 / 60;
-    var sw = Math.min(1, speed / 120) * 0.6 * Math.sin(W3.t * 14), bob = Math.abs(Math.sin(W3.t * 14)) * Math.min(1, speed / 120) * 1.5;
-    var cls = g.clsId || 'mage', cx = p.x, cz = p.y, cs = Math.cos(face), sn = Math.sin(face);
-    var lean = p.dashT > 0 ? -0.35 : 0;
-    // 两条腿：侧向偏移后前后摆
-    GL.put(M.heroLeg, cx - sn * 2.6 * sc, 0, cz + cs * 2.6 * sc, face, sc, sc, sc, sw);
-    GL.put(M.heroLeg, cx + sn * 2.6 * sc, 0, cz - cs * 2.6 * sc, face, sc, sc, sc, -sw);
-    GL.put(M.heroBody, cx, bob, cz, face, sc, sc, sc, lean);
-    var capeLift = Math.min(0.9, speed / 200) + (p.dashT > 0 ? 0.4 : 0) + Math.sin(W3.t * 6) * 0.05;
-    GL.put(cls === 'ranger' ? M.capeRanger : M.capeMage, cx, bob, cz, face, sc, sc, sc, -capeLift * 0.6 + lean);
-    GL.put(cls === 'ranger' ? M.crossbow : M.staff, cx, bob, cz, face, sc, sc, sc, lean);
+    var mv = Math.min(1, speed / 120), t = W3.t;
+    var sw = mv * 0.6 * Math.sin(t * 14), bob = Math.abs(Math.sin(t * 14)) * mv * 1.5;
+    var cx = p.x, cz = p.y, cs = Math.cos(face), sn = Math.sin(face);
+    // ---- 动作 ----
+    var lean = p.dashT > 0 ? -0.35 : 0, propTilt = 0, sy = sc, fall = 0;
+    var atk = 0;
+    for (var wi = 0; wi < g.weapons.length; wi++) atk = Math.max(atk, g.weapons[wi].kick || 0);
+    lean -= atk * 0.07; propTilt -= atk * 0.5;                                           // 攻击：身体前压，武器前送
+    if (p.castT > 0) { var ck = p.castT / 0.45; propTilt -= 1.1 * Math.sin(ck * Math.PI); bob += 3 * Math.sin(ck * Math.PI); }   // 施法：举起武器、轻跳
+    if (p.hurtT > 0) { var hk = p.hurtT / 0.3; lean += 0.32 * hk; sy *= 1 - 0.1 * hk; }            // 受击：后仰、压扁
+    if (speed < 12 && g.mode === 'battle') sy *= 1 + 0.025 * Math.sin(t * 3.2);                  // 待机：呼吸
+    if (g.mode === 'clear') { bob += Math.abs(Math.sin(t * 9)) * 5; propTilt -= 0.7; }             // 过波：欢呼跳
+    if (g.mode === 'down') { fall = Math.min(1, (1.1 - (g.downT || 0)) / 0.45); lean += 1.45 * fall; bob = 0; }   // 倒地
+    if (fall < 0.6) {
+      GL.put(M.heroLeg, cx - sn * 2.6 * sc, 0, cz + cs * 2.6 * sc, face, sc, sc, sc, sw);
+      GL.put(M.heroLeg, cx + sn * 2.6 * sc, 0, cz - cs * 2.6 * sc, face, sc, sc, sc, -sw);
+    }
+    var by = fall > 0 ? 3 * fall : bob;
+    GL.put(M.heroBody, cx, by, cz, face, sc, sy, sc, lean);
+    var capeLift = mv * 0.9 + (p.dashT > 0 ? 0.4 : 0) + Math.sin(t * 6) * 0.05;
+    var cc = hex(d.cape);
+    GL.put(M.cape, cx, by, cz, face, sc, sy, sc, -Math.min(0.9, capeLift) * 0.6 + lean, cc[0], cc[1], cc[2]);
+    var hat = M['hat_' + look.hat];
+    if (hat) {
+      var tinted = look.hat === 'wizard' || look.hat === 'hood';
+      GL.put(hat, cx, by, cz, face, sc, sy, sc, lean, tinted ? cc[0] : 1, tinted ? cc[1] : 1, tinted ? cc[2] : 1);
+    }
+    var prop = M['prop_' + look.prop];
+    if (prop) GL.put(prop, cx, by, cz, face, sc, sy, sc, lean + propTilt);
+    var pg = PROP_GLOW[look.prop];
+    if (pg && fall < 0.5 && Math.abs(propTilt) < 0.3) GL.glow(cx + (cs * pg[0] - sn * pg[2]) * sc, pg[1] * sc + by, cz + (sn * pg[0] + cs * pg[2]) * sc, pg[4], hex(pg[3]), 0.8);
+    if (look.hat === 'halo' && fall < 0.5) GL.glow(cx, 35 * sc + by, cz, 10, hex('#fff1a8'), 0.35);
+    if (g.mode === 'down') return;
     // 影子 + 脚下光圈（位阶颜色）
-    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, 0.35);
+    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, (0.35) * W3.blobShadow());
     var ec = hex(RW.EVO[p.stage].color);
     GL.ground(true, cx, 1, cz, 16 * sc, 1, 0.15, ec, 0.45);
     if (g.momTier > 0) GL.ground(true, cx, 1.2, cz, (22 + g.momTier * 5) * sc, 0, 0, g.momTier >= 3 ? hex('#ff5a2e') : hex('#ffc861'), 0.25 + 0.1 * Math.sin(W3.t * 10));
-    if (g.clsId === 'ranger' && g.focus > 0) {
+    if (g.cls && g.cls.focus && g.focus > 0) {
       var fk = g.focus / g.cls.focus.max;
       GL.ground(true, cx, 1.3, cz, 24 * sc - fk * 8, 1, 0.08, fk >= 1 ? WHITE : hex('#9dff7a'), 0.3 + 0.5 * fk);
     }
-    // 武器发光
-    if (cls === 'mage') GL.glow(cx + (cs * 2 - sn * 7) * sc, 32 * sc + bob, cz + (sn * 2 + cs * 7) * sc, 9, hex('#ffb347'), 0.8);
     // 冲刺残影
     if (p.trailT > 0 && p.trailN > 1) {
       for (var i = 0; i < p.trailN - 1; i++) {
@@ -558,7 +843,7 @@
       if (e.type === 'spore') GL.put(M.batWing, e.x, y + 1 * s, e.y, yaw, s, s * Math.sin(t * 22 + e.seq) * 1.2, s, 0, 1, 1, 1, fl);
       if (e.type === 'brood') GL.put(M.broodWing, e.x, 26 * s, e.y, yaw, s, s * (0.6 + 0.5 * Math.sin(t * 5 + e.seq)), s, 0, 1, 1, 1, fl);
       // 影子
-      GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.3, BLACK, em.fly ? 0.18 : 0.3);
+      GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.3, BLACK, (em.fly ? 0.18 : 0.3) * W3.blobShadow());
       if (!em.fly) GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#ff3b5c') : C('#ff6a4a'), e.elite ? 0.55 : 0.22);
       // 特殊光效
       if (e.type === 'bomber') GL.glow(e.x - Math.cos(yaw) * 5 * s, 16 * s, e.y - Math.sin(yaw) * 5 * s, e.state === 1 ? 14 : 6, hex('#ffb040'), 0.9);
@@ -589,13 +874,31 @@
       if (!tw.on || !W3.inView(tw.x, tw.y, 80)) continue;
       var d = tw.d, s = d.r / 12 * 0.9, bk = tw.build > 0 ? 1 - tw.build / T.build.time : 1;
       var yaw = d.kind === 'sentry' ? tw.ang : -Math.PI / 2;
-      GL.put(M[TMODEL[tw.id]], tw.x, (bk - 1) * 30, tw.y, d.kind === 'barracks' ? 0 : yaw, s, s * bk, s, 0, 1, 1, 1, tw.flash > 0 ? 0.7 : 0);
-      GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.2, BLACK, 0.3);
+      GL.put(M[TMODEL[tw.id]], tw.x, (bk - 1) * 90, tw.y, d.kind === 'barracks' ? 0 : yaw, s, s * bk, s, 0, 1, 1, 1, tw.flash > 0 ? 0.7 : 0);
+      GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.2, BLACK, (0.3) * W3.blobShadow());
       var range = (d.range || 0) * RW.TOWER_TIER.range[g.tech[tw.id] - 1];
       if (d.kind === 'barracks') range = d.leash;
       if (range) GL.ground(true, tw.x, 0.8, tw.y, range, 1, 0.012, hex(d.color), 0.25);
-      if (d.kind === 'pylon') { GL.glow(tw.x, 26, tw.y, 16, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
-      if (d.kind === 'siphon') GL.glow(tw.x, 31, tw.y, 12, hex('#ffe066'), 0.6);
+      if (d.kind === 'pylon') { GL.glow(tw.x, 84, tw.y, 18, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
+      if (d.kind === 'siphon') GL.glow(tw.x, 78, tw.y, 14, hex('#ffe066'), 0.6);
+    }
+  }
+  function drawChests(g, M) {
+    for (var i = 0; i < g.chests.length; i++) {
+      var b = g.chests[i];
+      if (!b.on || !W3.inView(b.x, b.y, 20)) continue;
+      GL.put(M.crystal, b.x, 16, b.y, W3.t, 4, 3.2, 4, 0, 1, 0.82, 0.35, 0);
+      GL.glow(b.x, 22, b.y, 16, hex('#ffe08a'), 0.45);
+    }
+  }
+  function drawMates(g, M) {
+    for (var i = 0; i < g.mates.length; i++) {
+      var m = g.mates[i];
+      if (!m.on || !W3.inView(m.x, m.y, 30)) continue;
+      var sc = m.star === 2 ? 1.45 : 1;
+      var col = hex(m.d.color);
+      GL.put(M.soldier, m.x, 0, m.y, m.ang, sc, sc, sc, 0, col[0], col[1], col[2], m.flash > 0 ? 0.7 : 0);
+      GL.ground(false, m.x, 0.6, m.y, 7 * sc, 2, 0.3, BLACK, 0.3 * W3.blobShadow());
     }
   }
   function drawSoldiers(g, M) {
@@ -603,25 +906,74 @@
       var s = g.soldiers[i];
       if (!s.on || !W3.inView(s.x, s.y, 30)) continue;
       var sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
-      GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, 1.1, 1.1, 1.1, 0, 1, 1, 1, s.flash > 0 ? 0.7 : 0);
-      GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, 0.3);
+      // 兵种：盾卫高大偏蓝、枪兵原色、弓手瘦小偏绿；脚下一圈兵种色
+      var ty = s.type, sc = ty === 'guard' ? 1.3 : (ty === 'archer' ? 0.95 : 1.1), tr = RW.TROOPS[ty];
+      var tc = ty === 'guard' ? TINT_GUARD : (ty === 'archer' ? TINT_ARCHER : WHITE);
+      GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, sc, sc, sc, 0, tc[0], tc[1], tc[2], s.flash > 0 ? 0.7 : 0);
+      GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, (0.3) * W3.blobShadow());
+      if (tr) GL.ground(true, s.x, 0.8, s.y, 9, 1, 0.2, C(tr.color), 0.45);
+    }
+    // 兵营布防点：兵种色的旗帜光与地面圈，和兵营之间一道淡淡的连线
+    var nb = g.nearestBarracks && g.mode === 'battle' ? g.nearestBarracks() : null;
+    for (i = 0; i < g.towers.length; i++) {
+      var tw = g.towers[i];
+      if (!tw.on || tw.d.kind !== 'barracks') continue;
+      var tc2 = C(RW.TROOPS[tw.troop].color);
+      if (tw === nb) GL.ground(true, tw.x, 1, tw.y, 30 + Math.sin(W3.t * 5) * 3, 1, 0.12, tc2, 0.5);   // 下一个指令给这座兵营
+      if (!tw.post) continue;
+      GL.streak(true, tw.x, 1, tw.y, tw.post.x, tw.post.y, 3, tc2, 0.18);
+      GL.ground(true, tw.post.x, 1.1, tw.post.y, 26, 1, 0.1, tc2, 0.55);
+      GL.glow(tw.post.x, 30 + Math.sin(W3.t * 3 + i) * 2, tw.post.y, 9, tc2, 0.9);
     }
   }
+  var TINT_GUARD = [0.75, 0.85, 1.25], TINT_ARCHER = [0.8, 1.15, 0.8];
   function drawCore(g, M) {
     var co = g.core;
-    GL.put(M.core, co.x, 0, co.y, 0, 1, 1, 1, 0, 1, 1, 1, co.flash > 0 ? 0.4 : 0);
+    var lv = co.lv || 1, fl = co.flash > 0 ? 0.4 : 0, F = RW.CORE_FORMS[co.form];
+    var grow = 1 + (lv - 1) * 0.06;   // 每升一级整座神龛长大一点
+    GL.put(M.core, co.x, 0, co.y, 0, grow, grow, grow, 0, 1, 1, 1, fl);
+    if (lv >= 2) GL.put(M.coreRing, co.x, 0, co.y, W3.t * 0.05, grow, grow, grow, 0, 1, 1, 1, fl);
+    if (F && M['core_' + co.form]) GL.put(M['core_' + co.form], co.x, 0, co.y, co.form === 'star' ? W3.t * 0.6 : 0, grow * 1.3, grow * 1.3, grow * 1.3, 0, 1, 1, 1, fl);
     var t = W3.t, k = co.hp / co.maxHp;
-    // 圣火：几层叠起来的火光
-    var fc = co.alert > 0 && Math.sin(t * 14) > 0 ? hex('#ff4a3a') : hex('#ffb347');
-    GL.glow(co.x, 44, co.y, 30 + Math.sin(t * 9) * 3, fc, 0.9);
-    GL.glow(co.x, 52 + Math.sin(t * 7) * 2, co.y, 18, hex('#fff1b0'), 0.9);
+    // 圣火：火焰大小跟着等级和血量走（残血时变矮变暗），颜色跟着形态走
+    var fk = (0.55 + 0.45 * k) * (1 + (lv - 1) * 0.11), top = F ? (co.form === 'star' ? 30 : 20) : 0;
+    var base = F ? C(F.color) : hex('#ffb347');
+    var fc = co.alert > 0 && Math.sin(t * 14) > 0 ? hex('#ff4a3a') : base;
+    GL.glow(co.x, 44 + top, co.y, (30 + Math.sin(t * 9) * 3) * fk, fc, 0.6 + 0.3 * k);
+    GL.glow(co.x, 52 + top + Math.sin(t * 7) * 2, co.y, 18 * fk, hex('#fff1b0'), 0.5 + 0.4 * k);
     for (var i = 0; i < 5; i++) {
       var ph = (t * 1.4 + i / 5) % 1;
-      GL.glow(co.x + Math.sin(i * 2.1 + t * 3) * 6, 38 + ph * 40, co.y + Math.cos(i * 1.7 + t * 2) * 6, 10 * (1 - ph), hex('#ff8a2a'), 0.8 * (1 - ph));
+      GL.glow(co.x + Math.sin(i * 2.1 + t * 3) * 6, 38 + top + ph * 40 * fk, co.y + Math.cos(i * 1.7 + t * 2) * 6, 10 * (1 - ph) * fk, F ? base : hex('#ff8a2a'), 0.8 * (1 - ph) * (0.4 + 0.6 * k));
+    }
+    // 野外祭坛：进度圈与水晶光
+    var SH = RW.SHRINE;
+    for (var si = 0; si < (g.shrines || []).length; si++) {
+      var sh = g.shrines[si];
+      if (!W3.inView(sh.x, sh.y, 80)) continue;
+      var sc2 = sh.done ? hex('#6a7680') : hex('#9fe8ff');
+      GL.ground(true, sh.x, 1.4, sh.y, SH.r, 1, 0.05, sc2, sh.done ? 0.2 : 0.45 + 0.15 * Math.sin(t * 4 + si));
+      if (sh.prog > 0 && !sh.done) GL.ground(true, sh.x, 1.5, sh.y, SH.r * sh.prog, 0, 0, hex('#b8f2ff'), 0.35);
+      GL.glow(sh.x, 22 + Math.sin(t * 2 + si) * 3, sh.y, sh.done ? 8 : 16, sc2, sh.done ? 0.3 : 0.8);
     }
     GL.ground(true, co.x, 1, co.y, 120 + Math.sin(t * 3) * 6, 0, 0, hex('#ffb347'), 0.22 * W3.env.lamp + 0.08);
     GL.ground(true, co.x, 1.2, co.y, 42, 1, 0.12, k < 0.3 ? hex('#ff3b3b') : hex('#ffd27a'), 0.5);
-    GL.ground(true, co.x, 1.3, co.y, T.core.gunRange, 1, 0.01, hex('#ffd27a'), 0.18);
+    // 圣域：金色边界；圈外的土地还没被照亮，压暗一些（满级「天火」照遍全图就不压了）
+    var SA = RW.SANCTUARY, au = co.aura || 0, sky = au > 3000;
+    if (au > 0 && !sky) {
+      var R0 = 2600;
+      GL.ground(false, co.x, 0.6, co.y, R0, 1, 1 - au / R0, BLACK, SA.dim);
+      GL.ground(true, co.x, 1.3, co.y, au, 1, 0.012, F ? C(F.color) : hex('#ffd27a'), 0.28 + 0.06 * Math.sin(t * 2));
+    }
+    if (!sky && co.gunRange < 3000) GL.ground(true, co.x, 1.3, co.y, co.gunRange || T.core.gunRange, 1, 0.01, hex('#ffd27a'), 0.12);
+    // 圣域收成：被照亮的房屋上方飘起金色的光点（安详生产）
+    if (lv >= 2 && W3.houses) {
+      for (var hi = 0; hi < W3.houses.length; hi++) {
+        var hs = W3.houses[hi], hx = hs.x - co.x, hz = hs.y - co.y;
+        if (hx * hx + hz * hz > au * au || !W3.inView(hs.x, hs.y, 40)) continue;
+        var hp2 = (t * 0.5 + hi * 0.37) % 1;
+        GL.glow(hs.x + Math.sin(hi * 3.1) * 8, 40 + hp2 * 50, hs.y + Math.cos(hi * 2.3) * 8, 6 * (1 - hp2), hex('#ffe08a'), 0.7 * (1 - hp2));
+      }
+    }
   }
   function drawPickups(g, M) {
     var t = W3.t, i;
@@ -658,7 +1010,9 @@
 
   // ---------- 特效：子弹、敌方弹、预警、爆炸、光效、粒子、夜晚灯光 ----------
   var colCache = {};
-  function C(h) { return colCache[h] || (colCache[h] = hex(h)); }
+  // 色弱辅助：预警用的几种红换成蓝 / 黄这组红绿色弱也分得清的高对比色（审计：红色预警压在绿草地上）
+  var CB_MAP = { '#ff3b5c': '#3d7bff', '#ff2a5a': '#3d7bff', '#ff1a3a': '#2f5bff', '#ff4a4a': '#5a8cff', '#ff3a10': '#ffd400', '#ff8a3a': '#ffe34d', '#ff3b8c': '#4d7cff', '#3a0010': '#000a3a', '#3a0020': '#000a3a' };
+  function C(h) { if (RW.opt && RW.opt.cb && CB_MAP[h]) h = CB_MAP[h]; return colCache[h] || (colCache[h] = hex(h)); }
   function drawFx(g, env) {
     var t = W3.t, i, k;
     // 夜晚灯光

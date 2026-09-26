@@ -1,24 +1,50 @@
-// 环带值守 · 核心模拟（无渲染依赖，可在 Node 里无头运行做数值测试）
+// 圣火守护者 · 核心模拟（无渲染依赖，可在 Node 里无头运行做数值测试）
 // 世界坐标：整块甲板 TUNE.WORLD，活动范围 TUNE.ARENA；镜头由渲染层处理。
 (function (root) {
   var RW = root.RW;
   var T = RW.TUNE;
-  // ---------- 地图：读 js/map.js，生成阻挡网格、敌人入口、圣火位置 ----------
-  var MAP = RW.MAP, MCELL = MAP.cell, MC = MAP.rows[0].length, MR = MAP.rows.length;
-  var GRID = new Uint8Array(MC * MR), GATES = { north: [], side: [], south: [] }, CORE_CELL = 0;
-  (function () {
+  // ---------- 地图：读 js/map.js，生成阻挡网格、敌人入口、祭坛、圣火位置；切图时整套重建 ----------
+  var MAP, MCELL, MC, MR, GRID, GATES, CORE_CELL, ALTARS, PROD;
+  var A = T.ARENA, P = T.player, DASH = T.dash;
+  var AX0, AY0, AX1, AY1;
+  var DIST_CORE, DIST_PLAYER, BFSQ;
+  var CELL = 40, GC = 1, GR = 1;   // 敌人空间划分的格子
+  function applyMap(M) {
+    MAP = M; MCELL = M.cell || 40; MC = M.rows[0].length; MR = M.rows.length;
+    GRID = new Uint8Array(MC * MR); GATES = { north: [], side: [], south: [] }; CORE_CELL = 0; ALTARS = []; PROD = [];
+    var blocked = M.blocked || RW.MAP_BLOCKED;
     for (var r = 0; r < MR; r++) for (var c = 0; c < MC; c++) {
-      var ch = MAP.rows[r][c], i = r * MC + c;
-      GRID[i] = MAP.blocked.indexOf(ch) >= 0 ? 1 : 0;
-      if (ch === 'S') (r < MR / 3 ? GATES.north : (r > MR * 2 / 3 ? GATES.south : GATES.side)).push({ x: c * MCELL + MCELL / 2, y: r * MCELL + MCELL / 2 });
-      if (ch === 'C') { CORE_CELL = i; T.core.x = c * MCELL + MCELL / 2; T.core.y = r * MCELL + MCELL / 2; }
+      var ch = M.rows[r][c], i = r * MC + c, cx = c * MCELL + MCELL / 2, cy = r * MCELL + MCELL / 2;
+      GRID[i] = blocked.indexOf(ch) >= 0 ? 1 : 0;
+      if (ch === 'H' || !GRID[i]) PROD.push({ x: cx, y: cy, house: ch === 'H' });   // 圣域收成：能走的地块和房屋
+      if (ch === 'S') (r < MR / 3 ? GATES.north : (r > MR * 2 / 3 ? GATES.south : GATES.side)).push({ x: cx, y: cy });
+      if (ch === 'C') { CORE_CELL = i; T.core.x = cx; T.core.y = cy; }
+      if (ch === 'A') ALTARS.push({ x: cx, y: cy });
     }
     T.WORLD.w = MC * MCELL; T.WORLD.h = MR * MCELL;
-    T.ARENA.x = 0; T.ARENA.y = 0; T.ARENA.w = T.WORLD.w; T.ARENA.h = T.WORLD.h;
-    RW.GRID = { grid: GRID, cols: MC, rows: MR, cell: MCELL, gates: GATES };
-  })();
-  var A = T.ARENA, P = T.player, DASH = T.dash;
-  var AX0 = A.x, AY0 = A.y, AX1 = A.x + A.w, AY1 = A.y + A.h;
+    A.x = 0; A.y = 0; A.w = T.WORLD.w; A.h = T.WORLD.h;
+    AX0 = A.x; AY0 = A.y; AX1 = A.x + A.w; AY1 = A.y + A.h;
+    DIST_CORE = new Int16Array(MC * MR); DIST_PLAYER = new Int16Array(MC * MR); BFSQ = new Int16Array(MC * MR);
+    bfs(DIST_CORE, CORE_CELL);
+    GC = Math.ceil(A.w / CELL); GR = Math.ceil(A.h / CELL);
+    // 王旗：格子坐标换算成像素
+    var fr = [null];
+    for (var k = 1; k < (M.fronts || []).length; k++) {
+      var f = M.fronts[k];
+      fr.push({ name: f.name, x: f.x != null ? f.x : f.c * MCELL + MCELL / 2, y: f.y != null ? f.y : f.r * MCELL + MCELL / 2, gate: f.gate });
+    }
+    RW.FRONTS = fr;
+    RW.MAP = M;
+    RW.GRID = { grid: GRID, cols: MC, rows: MR, cell: MCELL, gates: GATES, altars: ALTARS };
+    if (RW.NAV) { RW.NAV.distCore = DIST_CORE; RW.NAV.distPlayer = DIST_PLAYER; }
+  }
+  // 切换地图（没变就不重建）；返回是否换了
+  RW.loadMap = function (id) {
+    var M = RW.MAPS[id] || RW.MAPS.village;
+    if (M === MAP) return false;
+    applyMap(M);
+    return true;
+  };
   var DT = T.DT, TAU = Math.PI * 2;
   var KNOCK_DECAY = Math.exp(-10 * DT), PUSH_DECAY = Math.exp(-9 * DT);
 
@@ -81,7 +107,6 @@
     return hit;
   }
   // 流场：4 邻接 BFS 距离
-  var DIST_CORE = new Int16Array(MC * MR), DIST_PLAYER = new Int16Array(MC * MR), BFSQ = new Int16Array(MC * MR);
   function bfs(dist, start) {
     dist.fill(32767);
     if (start < 0) return;
@@ -95,7 +120,6 @@
       if (r < MR - 1 && GRID[i + MC] === 0 && dist[i + MC] > nd) { dist[i + MC] = nd; BFSQ[t++] = i + MC; }
     }
   }
-  bfs(DIST_CORE, CORE_CELL);
   var NAV = { x: 0, y: 0, ok: false };
   // 沿流场下一步的方向（写入 NAV），找不到更近的格子就 ok=false
   function navStep(x, y, dist) {
@@ -117,10 +141,10 @@
     var tx = (bi % MC) * MCELL + MCELL / 2 - x, ty = ((bi / MC) | 0) * MCELL + MCELL / 2 - y, tl = Math.sqrt(tx * tx + ty * ty) || 1;
     NAV.x = tx / tl; NAV.y = ty / tl; NAV.ok = true;
   }
-  RW.NAV = { collide: collideGrid, walkable: walkable, mapChar: mapChar, distCore: DIST_CORE, distPlayer: DIST_PLAYER };
+  RW.NAV = { collide: collideGrid, walkable: walkable, mapChar: mapChar, distCore: null, distPlayer: null };
+  applyMap(RW.MAP || RW.MAPS.village);
 
   // ---------- 网格（敌人空间划分，查询全部用距离平方） ----------
-  var CELL = 40, GC = Math.ceil(A.w / CELL), GR = Math.ceil(A.h / CELL);
 
   function src(name, color, crit) { return { name: name, color: color, dmg: 0, kills: 0, crit: !!crit }; }
 
@@ -138,8 +162,8 @@
     this.ebullets = makePool(180, function () { return { x: 0, y: 0, vx: 0, vy: 0, life: 0, dmg: 0, r: 5, kind: 'orb', src: '' }; });
     this.shards = makePool(220, function () { return { x: 0, y: 0, vx: 0, vy: 0, val: 1, life: 0, mag: false, recall: false, tower: null, sp: 0 }; });
     this.mines = makePool(24, function () { return { x: 0, y: 0, arm: 0, life: 0, w: null, dmg: 0, rad: 0, knock: 0 }; });
-    this.towers = makePool(T.build.max, function () { return { id: '', d: null, x: 0, y: 0, hp: 1, maxHp: 1, cd: 0, build: 0, ang: -Math.PI / 2, pulse: 0, flash: 0, spawnT: 0, soldiers: 0 }; });
-    this.soldiers = makePool(28, function () { return { x: 0, y: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, r: 6, cd: 0, home: null, slot: 0, flash: 0, ang: 0 }; });
+    this.towers = makePool(T.build.max, function () { return { id: '', d: null, x: 0, y: 0, hp: 1, maxHp: 1, cd: 0, build: 0, ang: -Math.PI / 2, pulse: 0, flash: 0, spawnT: 0, soldiers: 0, troop: 'spear', form: 'line', post: null }; });
+    this.soldiers = makePool(40, function () { return { x: 0, y: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, r: 6, cd: 0, home: null, slot: 0, flash: 0, ang: 0, type: 'spear' }; });
     this.orbs = makePool(T.biomass.count, function () { return { x: 0, y: 0, dead: 0, r: 4, bob: 0 }; });
     this.missiles = makePool(80, function () { return { x: 0, y: 0, vx: 0, vy: 0, life: 0, dmg: 0, tgt: null, tseq: 0, color: '#fff' }; });
     this.blasts = makePool(24, function () { return { x: 0, y: 0, rad: 0, de: 0, dp: 0, src: null, color: '#fff', who: '' }; });
@@ -149,6 +173,8 @@
     this.fx = makePool(72, function () { return { kind: 'ring', x: 0, y: 0, x2: 0, y2: 0, life: 0, max: 1, color: '#fff', r: 10, r2: 20, w: 2, n: 0, pts: new Float32Array(40) }; });
     this.corpses = makePool(70, function () { return { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rot: 0, rv: 0, tilt: 0, tv: 0, type: 'mite', r: 8, life: 0, max: 1, color: '#fff' }; });
     this.heals = makePool(20, function () { return { x: 0, y: 0, life: 0, sp: 0 }; });
+    this.chests = makePool(8, function () { return { x: 0, y: 0, r: 14, life: 0 }; });
+    this.mates = makePool(8, function () { return { x: 0, y: 0, vx: 0, vy: 0, hp: 1, maxHp: 1, r: 7, cd: 0, ang: 0, star: 1, id: '', d: null, flash: 0 }; });
     this.decals = makePool(40, function () { return { x: 0, y: 0, r: 10, life: 0, max: 1, color: '#000' }; });
     this.gridHead = new Int16Array(GC * GR);
     this.gridNext = new Int16Array(T.MAX_ENEMIES);
@@ -172,36 +198,148 @@
   // ================= 局 =================
   G.resetRun = function () {
     var p = this.player, CO = T.core;
-    this.core = { x: CO.x, y: CO.y, r: CO.r, hp: CO.hp, maxHp: CO.hp, flash: 0, alert: 0, cd: 0, ang: 0 };
+    this.core = { x: CO.x, y: CO.y, r: CO.r, hp: CO.hp, maxHp: CO.hp, flash: 0, alert: 0, cd: 0, ang: 0, lv: 1, form: '', pulseT: 0 };
+    this.applyCoreLevel();
     this.coreSrc = src('圣火之光', '#ffd27a', false);
     this.boss = null; this.bossAlert = 0; this.deathCause = '';
     p.x = CO.x; p.y = CO.y + 80; p.vx = p.vy = p.pvx = p.pvy = 0; p.inv = 0;
-    p.mass = 0; p.stage = 0; p.dashT = 0; p.dashCd = 0; p.trailN = 0; p.trailT = 0;
+    p.mass = 0; p.stage = 0; p.dashT = 0; p.dashCd = 0; p.trailN = 0; p.trailT = 0; p.dead = false; p.respawnT = 0;
     this.weapons = [];
     this.mods = {};
-    this.skill = null;
+    this.skill = null; this.skills = []; this.retiredSkills = [];
     this.tech = { sentry: 1, pylon: 1, siphon: 1, barracks: 1 };
     this.towerStats = {};
     for (var id in RW.TOWERS) this.towerStats[id] = src(RW.TOWERS[id].name, RW.TOWERS[id].color, false);
     this.dashSrc = src('冲刺', '#5ef2ff', false);
     this.eatSrc = src('践踏', '#9dff7a', false);
     this.envSrc = src('爆囊连锁', '#ff5a1f', false);
+    this.thornSrc = src('荆棘反伤', '#9fc4ff', false);
     this.shardCount = 0; this.shardFrac = 0; this.totalShards = 0; this.built = 0;
     this.mom = 0; this.momT = 9; this.momTier = 0; this.focusT = 0; this.focus = 0;
-    this.kills = 0; this.wave = 0; this.reviveUsed = false; this.streak = 0; this.streakT = 0; this.bestStreak = 0;
+    this.kills = 0; this.wave = 0; this.revivesLeft = RW.REKINDLE.times; this.streak = 0; this.streakT = 0; this.bestStreak = 0;
     this.lastHits = [];
+    this.lsT = 0; this.runHeals = 0;
+    p.hurtT = 0; p.castT = 0;
     this.combo = 0; this.comboT = 0;
     this.shake = 0; this.freeze = 0; this.lastStop = -9; this.flash = 0;
     this.banner = 0; this.enemyCount = 0; this.evolveT = 0;
     this.shop = null; this.result = null;
     this.eliteAlert = 0; this.eliteAlertName = '';
-    var pools = [this.corpses, this.heals, this.enemies, this.bullets, this.ebullets, this.shards, this.mines, this.towers, this.soldiers, this.orbs, this.missiles, this.blasts, this.parts, this.nums, this.marks, this.fx, this.decals];
+    var pools = [this.corpses, this.heals, this.enemies, this.bullets, this.ebullets, this.shards, this.mines, this.towers, this.soldiers, this.orbs, this.missiles, this.blasts, this.parts, this.nums, this.marks, this.fx, this.decals, this.chests, this.mates];
     for (var i = 0; i < pools.length; i++) clearPool(pools[i]);
     this.seedOrbs();
+    if (!(this.mut && this.mut.lonely)) this.seedChests(5);
+    // 一局闭环（M1）：通关、无尽、祝福、本局统计
+    this.won = false; this.final = false; this.bless = {}; this.blessPending = 0; this.blessOffers = null;
+    this.rs = { evolved: 0, bless: 0, mateMax: 0, mateStar: false, legendary: false, bossKills: 0, setMax: {}, coreLv: 1, revived: false, shrines: 0 };
+    this.shrines = [];
+    for (var ai = 0; ai < ALTARS.length; ai++) this.shrines.push({ x: ALTARS[ai].x, y: ALTARS[ai].y, prog: 0, done: false, reward: '' });
+    this.furyT = 0;
+    this.banned = {}; this.bansLeft = RW.SHOP_BIAS.bans;
+    this.sets = { melee: 0, ranged: 0, spell: 0 };
     this.recalc();
     p.hp = p.maxHp;
+    p.maxMp = T.player.mp; p.mp = p.maxMp;
   };
 
+  G.seedChests = function (n) {
+    var p = this.player, made = 0;
+    for (var k = 0; k < 24 && made < n; k++) {
+      var c = take(this.chests);
+      if (!c) return;
+      c.x = this.RR(AX0 + 40, AX1 - 40); c.y = this.RR(AY0 + 40, AY1 - 40); c.r = 14;
+      if (!walkable(c.x, c.y)) { c.on = false; continue; }
+      var dx = c.x - p.x, dy = c.y - p.y;
+      if (dx * dx + dy * dy < 120 * 120) { c.on = false; continue; }
+      made++;
+    }
+  };
+  G.mateCount = function () {
+    var n = 0;
+    for (var i = 0; i < this.mates.length; i++) if (this.mates[i].on) n++;
+    return n;
+  };
+  G.summonMate = function (x, y) {
+    var id = RW.MATE_ORDER[Math.floor(this.R() * RW.MATE_ORDER.length)], d = RW.MATES[id];
+    for (var i = 0; i < this.mates.length; i++) {
+      var o = this.mates[i];
+      if (!o.on || o.id !== id || o.star !== 1) continue;
+      o.star = 2; o.maxHp = Math.round(d.hp * 2.2); o.hp = o.maxHp; o.r = d.r + 3;
+      this.rs.mateStar = true;
+      this.banner = 1.4; this.bannerText = '两名' + d.name + '合成了';
+      this.ringFx(o.x, o.y, 8, 40, 0.4, d.color, 4);
+      return;
+    }
+    if (this.mateCount() >= 6) { this.shardCount += 8; return; }
+    var m = take(this.mates);
+    if (!m) return;
+    m.id = id; m.d = d; m.star = 1; m.x = x; m.y = y; m.vx = m.vy = 0;
+    m.hp = m.maxHp = d.hp; m.r = d.r; m.cd = 0.2; m.ang = 0; m.flash = 0;
+    this.rs.mateMax = Math.max(this.rs.mateMax, this.mateCount());
+    this.ringFx(x, y, 6, 28, 0.3, d.color, 3);
+  };
+  G.updateChests = function () {
+    if (this.mode === 'battle' && !(this.mut && this.mut.lonely)) {
+      this._chestT = (this._chestT || 10) - DT;
+      if (this._chestT <= 0) { this._chestT = 12; this.seedChests(1); }
+    }
+    var p = this.player;
+    if (p.dead) return;
+    for (var i = 0; i < this.chests.length; i++) {
+      var c = this.chests[i];
+      if (!c.on) continue;
+      var dx = p.x - c.x, dy = p.y - c.y;
+      if (dx * dx + dy * dy > (c.r + p.r + 6) * (c.r + p.r + 6)) continue;
+      c.on = false;
+      var gold = 4 + Math.floor(this.R() * 7);
+      this.shardCount += gold; this.totalShards += gold;
+      if (this.R() < 0.75) this.summonMate(c.x, c.y);
+      this.ringFx(c.x, c.y, 8, 36, 0.35, '#ffe08a', 3);
+      this.burst(c.x, c.y, 10, '#ffe08a', 160, 2, true);
+    }
+  };
+  G.updateMates = function () {
+    var p = this.player, battle = this.mode === 'battle', slot = 0;
+    for (var i = 0; i < this.mates.length; i++) {
+      var m = this.mates[i];
+      if (!m.on) continue;
+      if (m.flash > 0) m.flash -= DT;
+      m.cd -= DT;
+      slot++;
+      var tgt = null;
+      if (battle) {
+        var best = 1e9, cnt = this.near(m.x, m.y, 160);
+        for (var j = 0; j < cnt; j++) {
+          var e = this.enemies[this.nbuf[j]];
+          if (!e.on || e.spawnT > 0) continue;
+          var ex = e.x - m.x, ey = e.y - m.y, e2 = ex * ex + ey * ey;
+          if (e2 < best) { best = e2; tgt = e; }
+        }
+      }
+      var gx, gy;
+      if (tgt) { gx = tgt.x; gy = tgt.y; }
+      else if (p.dashT > 0) { gx = p.x + (p.dx || 0) * 70; gy = p.y + (p.dy || 0) * 70; }
+      else {
+        var a = slot * 1.4 + this.clock * 0.5;
+        gx = p.x + Math.cos(a) * (34 + m.star * 10);
+        gy = p.y + Math.sin(a) * (34 + m.star * 10);
+      }
+      var mx = gx - m.x, my = gy - m.y, dl = Math.sqrt(mx * mx + my * my) || 1;
+      var reach = tgt ? tgt.r + m.r + 4 : 6;
+      var sp = m.d.speed * (p.dashT > 0 ? 1.8 : 1);
+      var kk = Math.min(1, 12 * DT);
+      m.vx += ((dl > reach ? mx / dl * sp : 0) - m.vx) * kk;
+      m.vy += ((dl > reach ? my / dl * sp : 0) - m.vy) * kk;
+      m.x += m.vx * DT; m.y += m.vy * DT;
+      if (dl > 1) m.ang = Math.atan2(my, mx);
+      m.x = clampX(m.x, m.r); m.y = clampY(m.y, m.r);
+      if (tgt && dl <= reach + 6 && m.cd <= 0) {
+        m.cd = m.d.cd;
+        this.hitEnemy(tgt, m.d.dmg * (m.star === 2 ? 1.8 : 1) * this.st.dmg, mx / dl, my / dl, 60, this.coreSrc, false);
+        m.flash = 0.08;
+      }
+    }
+  };
   G.seedOrbs = function () {
     for (var i = 0; i < this.orbs.length; i++) {
       var o = this.orbs[i];
@@ -209,10 +347,12 @@
       this.placeOrb(o);
     }
   };
+  // 进化球：大部分刷在战线附近（圣火或当前王旗周围），地图再大，球的密度也一样
   G.placeOrb = function (o) {
-    var p = this.player;
+    var p = this.player, B = T.biomass, fr = this.front && (this.core.lv || 1) > 1 ? this.front : this.core, near = this.R() < (MAP.orbNear != null ? MAP.orbNear : B.near);
     for (var k = 0; k < 10; k++) {
-      o.x = this.RR(AX0 + 30, AX1 - 30); o.y = this.RR(AY0 + 30, AY1 - 30);
+      if (near && fr) { var a = this.R() * TAU, rr = this.RR(B.nearMin, B.nearMax); o.x = clampX(fr.x + Math.cos(a) * rr, 30); o.y = clampY(fr.y + Math.sin(a) * rr, 30); }
+      else { o.x = this.RR(AX0 + 30, AX1 - 30); o.y = this.RR(AY0 + 30, AY1 - 30); }
       if (!walkable(o.x, o.y) || !walkable(o.x + 8, o.y) || !walkable(o.x - 8, o.y)) continue;
       var dx = o.x - p.x, dy = o.y - p.y;
       if (dx * dx + dy * dy > 90 * 90) break;
@@ -221,19 +361,36 @@
   };
 
   G.rollStartOffers = function () {
-    this.offers = RW.CLASS_ORDER.slice();
+    this.offers = RW.CLASS_ORDER.slice();   // 全部英雄都列出；未解锁的由界面挡住
     this.mode = 'pick';
     return this.offers;
   };
 
-  G.startRun = function (classId) {
+  // opts：{ danger 危险等级, mutators 变异器 id 数组, seed 随机种子, daily 每日挑战日期 }
+  G.startRun = function (classId, opts) {
+    opts = opts || {};
+    this.mapId = RW.MAPS[opts.map] ? opts.map : 'village';
+    RW.loadMap(this.mapId);
+    if (this.gridHead.length !== GC * GR) { this.gridHead = new Int16Array(GC * GR); this.gridHead.fill(-1); }
     var cls = RW.CLASSES[classId] || RW.CLASSES.mage;
+    if (opts.seed != null) this.rand = mulberry(opts.seed >>> 0);
+    this.danger = Math.max(0, Math.min(RW.DANGER.length - 1, opts.danger | 0));
+    this.dg = RW.DANGER[this.danger];
+    this.mut = {}; this.mutList = [];
+    var ml = opts.mutators || [];
+    for (var mi = 0; mi < ml.length; mi++) if (RW.MUTATORS[ml[mi]] && !this.mut[ml[mi]]) { this.mut[ml[mi]] = RW.MUTATORS[ml[mi]]; this.mutList.push(ml[mi]); }
+    this.daily = opts.daily || '';
+    this.endless = false;
+    this._rec = { kills: 0, coins: 0, built: 0, counted: false };
     this.resetRun();
+    this.applyCoreLevel(); this.core.hp = this.core.maxHp;
     this.cls = cls; this.clsId = RW.CLASSES[classId] ? classId : 'mage';
     this.recalc(); this.player.hp = this.player.maxHp;
+    this.runHeals = 0;
     this.addWeapon(cls.weapon);
     this.setSkill(cls.skill);
-    this.shardCount = 16;   // 开局给一点钱：第一波就能在脚下建一座塔
+    this.loadSkills(RW.LOADOUT[this.clsId] || [cls.skill]);
+    this.shardCount = RW.SHEET.startGold;
     this.startWave(1);
   };
 
@@ -245,54 +402,99 @@
     for (var i = 0; i < this.weapons.length; i++) if (this.weapons[i].id === id) return this.weapons[i];
     return null;
   };
-  G.setSkill = function (id) {
+  function newSkill(id) {
     var d = RW.SKILLS[id];
-    if (this.skill && this.skill.id === id) { this.skill.tier = Math.min(3, this.skill.tier + 1); return; }
-    var old = this.skill;
-    this.skill = { id: id, d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: old ? 0 : 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0 };
+    return { id: id, d: d, name: d.name, color: d.color, crit: true, tier: 1, cd: 0, dmg: 0, kills: 0, veilT: 0, veilAcc: 0, wellT: 0, wx: 0, wy: 0, bountyT: 0, bombs: [] };
+  }
+  G.skillById = function (id) {
+    var list = this.skills || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return this.skill && this.skill.id === id ? this.skill : null;
+  };
+  // 商店买技能：已有的同名技能升阶；否则替换「当前技能」（最近放过的那一招）所在的槽位
+  G.setSkill = function (id) {
+    var own = this.skillById(id), list = this.skills;
+    if (own) { own.tier = Math.min(3, own.tier + 1); this.skill = own; return; }
+    var old = this.skill, fresh = newSkill(id);
+    if (list && list.length) {
+      var at = Math.max(0, list.indexOf(old));
+      old = list[at]; list[at] = fresh;
+    }
+    this.skill = fresh;
     if (old) { this.retiredSkills = this.retiredSkills || []; this.retiredSkills.push(old); }
+  };
+  G.loadSkills = function (ids) {
+    this.skills = [];
+    for (var i = 0; i < ids.length; i++) if (RW.SKILLS[ids[i]]) this.skills.push(newSkill(ids[i]));
+    this.skill = this.skills[0] || this.skill;
   };
 
   G.recalc = function () {
-    var s = { dmg: 1, rate: 1, speed: 1, range: 1, crit: P.crit, maxHp: this.cls ? this.cls.hp : P.hp, armor: 0, regen: 0, pickup: 1, harvest: 1, knock: 1, extra: 0, cdr: 1, dmgTaken: 1, bounty: 0 };
+    var s = { dmg: 1, melee: 1, ranged: 1, spell: 1, rate: 1, speed: 1, range: 1, crit: P.crit, maxHp: this.cls ? this.cls.hp : P.hp, armor: 0, regen: 0, pickup: 1, harvest: 1, knock: 1, extra: 0, cdr: 1, dmgTaken: 1, bounty: 0,
+      lifesteal: 0, dodge: 0, critMul: P.critMul, luck: 0, towerDmg: 1, blastR: 1, thorns: 0, interest: 0, healOrb: 1, healCore: 0, coreRegen: 0,
+      buildCost: 1, rage: 0, shopPrice: 1, freeReroll: 0, dashCd: 1, mpRegen: 1 };
+    var k;
+    if (this.cls && this.cls.fx) for (k in this.cls.fx) s[k] += this.cls.fx[k];
+    // 祝福
+    if (this.bless) for (k in this.bless) s[k] = (s[k] || 0) + this.bless[k];
+    // 流派套装：同流派武器阶数之和
+    if (this.weapons && RW.SETS) {
+      var cnt = { melee: 0, ranged: 0, spell: 0 };
+      for (var wi = 0; wi < this.weapons.length; wi++) { var wt = this.weapons[wi].d.tag || 'ranged'; cnt[wt] = (cnt[wt] || 0) + this.weapons[wi].tier; }
+      this.sets = cnt;
+      for (var tag in RW.SETS) {
+        var tiers = RW.SETS[tag].tiers;
+        for (var ti = 0; ti < tiers.length; ti++) if ((cnt[tag] || 0) >= tiers[ti][0]) for (k in tiers[ti][1]) s[k] = (s[k] || 0) + tiers[ti][1][k];
+        if (this.rs) this.rs.setMax[tag] = Math.max(this.rs.setMax[tag] || 0, cnt[tag] || 0);
+      }
+    }
     for (var id in this.mods) {
       var n = this.mods[id], fx = RW.MODS[id].fx;
-      for (var k in fx) s[k] += fx[k] * n;
+      for (k in fx) s[k] += fx[k] * n;
     }
     var evo = RW.EVO[this.player.stage];
     s.armor += evo.armor; s.maxHp += evo.hp; s.dmg += evo.dmg;
-    s.dmg = Math.max(0.3, s.dmg); s.rate = Math.max(0.4, s.rate); s.speed = Math.max(0.55, s.speed) * evo.speed;
+    s.dmg = Math.max(0.3, s.dmg); s.melee = Math.max(0.4, s.melee); s.ranged = Math.max(0.4, s.ranged); s.spell = Math.max(0.4, s.spell);
+    s.rate = Math.max(0.4, s.rate); s.speed = Math.max(0.55, s.speed) * evo.speed;
     s.range = Math.max(0.5, s.range); s.maxHp = Math.max(6, s.maxHp); s.pickup = Math.max(0.5, s.pickup);
     s.crit = Math.min(0.9, Math.max(0, s.crit)); s.knock = Math.max(0.2, s.knock); s.cdr = Math.max(0.5, s.cdr);
-    s.takenMul = s.dmgTaken * Math.min(1.6, Math.max(0.4, 1 - s.armor * T.armorPerPoint));
+    s.dodge = Math.min(T.dodgeCap, Math.max(0, s.dodge)); s.lifesteal = Math.max(0, s.lifesteal); s.harvest = Math.max(0.2, s.harvest);
+    s.buildCost = Math.max(0.4, s.buildCost); s.shopPrice = Math.max(0.5, s.shopPrice); s.dashCd = Math.max(0.4, s.dashCd);
+    s.towerDmg = Math.max(0.3, s.towerDmg); s.blastR = Math.max(0.5, s.blastR); s.mpRegen = Math.max(0.3, s.mpRegen);
+    var arm = s.armor, red = arm > 0 ? Math.min(0.75, arm / (arm + T.armorPerPoint)) : 0;
+    var neg = arm < 0 ? 1 + (-arm) * T.armorNeg : 1;
+    s.takenMul = s.dmgTaken * (1 - red) * neg;
     this.st = s;
     var p = this.player;
     p.maxHp = s.maxHp; p.r = evo.r;
     if (p.hp > p.maxHp) p.hp = p.maxHp;
   };
 
-  G.hpMul = function (w) {
-    var g = RW.GROWTH, k = w - 1;
-    return 1 + g.hpA * k + g.hpB * k * k + (w > 8 ? g.hpC9 * (w - 8) * (w - 8) : 0);
-  };
+  G.hpMul = function (w) { return RW.SHEET.hp(w); };
 
   G.startWave = function (n) {
     var p = this.player;
+    for (var si = 0; si < (this.shrines || []).length; si++) { this.shrines[si].done = false; this.shrines[si].prog = 0; this.shrines[si].reward = ''; }
     this.wave = n;
     this.def = RW.waveDef(n);
     this.wt = 0; this.dur = this.def.dur; this.spawnAcc = 0.6;
     this.eliteQ = [];
     for (var i = 0; i < this.def.elites.length; i++) this.eliteQ.push({ t: this.def.elites[i][0] * this.dur, type: this.def.elites[i][1] });
     if (this.st.bounty > 0 && n >= 3) this.eliteQ.push({ t: this.dur * 0.55, type: n % 2 ? 'warden' : 'brood' });
+    var dg = this.dg || RW.DANGER[0], mu = this.mut || {};
+    if (dg.eliteEarly && n === 3) this.eliteQ.push({ t: this.dur * 0.5, type: 'warden' });
+    var extraEl = (dg.elite || 0) + (mu.horde ? 1 : 0);
+    for (var xe = 0; xe < extraEl && n >= 3; xe++) this.eliteQ.push({ t: this.dur * (0.3 + 0.35 * xe), type: (n + xe) % 2 ? 'brood' : 'warden' });
+    this.final = n === RW.RUN.waves && !this.endless;
     this.eliteQ.sort(function (a, b) { return a.t - b.t; });
     this.eliteIdx = 0;
     var BW = RW.BOSS_WAVES;
     this.bossAt = n % BW.every === 0 ? this.dur * BW.at : -1;
     this.boss = null;
     var co = this.core;
-    co.hp = Math.min(co.maxHp, co.hp + co.maxHp * T.core.waveHeal);
+    co.hp = Math.min(co.maxHp, co.hp + co.maxHp * (co.waveHeal || T.core.waveHeal));
     p.vx = p.vy = p.pvx = p.pvy = 0; p.dashT = 0; p.dashCd = 0;
-    p.hp = p.maxHp; p.inv = 0.8;
+    p.hp = p.maxHp; p.inv = 0.8; p.mp = p.maxMp || T.player.mp;
     for (var t = 0; t < this.towers.length; t++) { var tw = this.towers[t]; if (tw.on) { tw.hp = tw.maxHp; tw.cd = 0.5; } }
     for (var s = 0; s < this.soldiers.length; s++) { var so = this.soldiers[s]; if (so.on) so.hp = so.maxHp; }
     for (var w = 0; w < this.weapons.length; w++) { var wp = this.weapons[w]; wp.cd = 0.3; wp.charge = 0; wp.mineCount = 0; }
@@ -302,6 +504,7 @@
     this.enemyCount = 0;
     this.mode = 'battle';
     this.banner = 1.6;
+    this.bannerText = (this.front && (this.core.lv || 1) > 1) ? ('王旗在' + this.front.name + ' · 跟着光走') : '';
     this.emit('waveStart', n);
   };
 
@@ -314,6 +517,10 @@
     this.shake = Math.max(0, this.shake - DT * 2.6);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - DT * 3);
     if (this.banner > 0) this.banner -= DT;
+    if (this.front && (this.core.lv || 1) > 1 && (this._frontPulse = (this._frontPulse || 0) + DT) > 0.55) {
+      this._frontPulse = 0;
+      this.ringFx(this.front.x, this.front.y, 8, 36, 0.4, '#ffe7a0', 2);
+    }
     if (this.evolveT > 0) this.evolveT -= DT;
     if (this.eliteAlert > 0) this.eliteAlert -= DT;
     if (this.bossAlert > 0) this.bossAlert -= DT;
@@ -329,23 +536,35 @@
       return;
     }
     inp = inp || { mx: 0, my: 0 };
-    if (m === 'battle') this.wt += DT;
-    if (m === 'battle' && inp.dash) this.tryDash(inp);
-    if (m === 'battle' && inp.skill) this.castSkill();
-    inp.dash = false; inp.skill = false;
-    this.movePlayer(inp);
     var p = this.player;
+    if (m === 'battle') this.wt += DT;
+    if (p.dead) this.updateRespawn();   // 英雄倒下：圣火还在就倒计时复活，战斗照常进行
+    else {
+      if (m === 'battle' && inp.dash) this.tryDash(inp);
+      if (m === 'battle' && inp.skill) { this.castSkill(inp.skill - 1); inp.skill = 0; }
+      this.movePlayer(inp);
+    }
+    inp.dash = false; inp.skill = false;
     if (p.inv > 0) p.inv -= DT;
     if (p.dashCd > 0) p.dashCd -= DT;
-    if (m === 'battle' && this.st.regen > 0) p.hp = Math.min(p.maxHp, p.hp + this.st.regen * DT);
-    if (m === 'battle' && this.wt < this.dur) this.updateSpawner();
+    if (m === 'battle' && this.st.regen > 0 && !p.dead) p.hp = Math.min(p.maxHp, p.hp + this.st.regen * DT);
+    if (m === 'battle') p.mp = Math.min(p.maxMp || T.player.mp, (p.mp || 0) + T.player.mpRegen * this.st.mpRegen * DT);
+    if (m === 'battle' && this.st.coreRegen > 0) this.core.hp = Math.min(this.core.maxHp, this.core.hp + this.st.coreRegen * DT);
+    if (p.hurtT > 0) p.hurtT -= DT;
+    if (p.castT > 0) p.castT -= DT;
+    // 刷怪：到点停；终局那一波灭火者还活着就继续刷小怪，打 Boss 的时候也不会冷场
+    if (m === 'battle' && (this.wt < this.dur || (this.final && this.boss && this.boss.on && RW.BOSS_WAVES.finalAdds > 0))) this.updateSpawner();
     if ((this.navTick = (this.navTick || 0) + 1) % 10 === 0 || this.navTick === 1) bfs(DIST_PLAYER, cellIdx(p.x, p.y));
     this.updateFocus();
     this.updateMarks();
     this.buildGrid();
-    if (m === 'battle') { this.updateWeapons(); this.updateSkill(); }
+    if (m === 'battle' && !p.dead) { this.updateWeapons(); this.updateSkill(); }
+    if (m === 'battle') this.updateSanctuary();
     this.updateTowers();
     this.updateSoldiers();
+    this.updateChests();
+    this.updateShrines(m);
+    this.updateMates();
     this.updateBullets();
     this.updateMissiles();
     this.updateEnemies();
@@ -357,8 +576,12 @@
     this.updateCorpses();
     this.updateShards();
     this.updateFx();
-    if (this.mode === 'battle' && this.wt >= this.dur) this.clearWave();
-    if (this.mode === 'clear') { this.clearT -= DT; if (this.clearT <= 0) this.enterShop(); }
+    // 波次结束：到时间就清场；终局那一波必须打倒灭火者（倒下立刻结束）
+    if (this.mode === 'battle' && ((this.wt >= this.dur && !(this.final && !this.won)) || (this.final && this.won))) this.clearWave();
+    if (this.mode === 'clear') {
+      this.clearT -= DT;
+      if (this.clearT <= 0) { if (this.won && !this.endless) this.finishRun(); else this.enterShop(); }
+    }
   };
 
   G.stop = function (frames, force) {
@@ -426,7 +649,7 @@
     var ix = inp.mx || 0, iy = inp.my || 0, m = Math.sqrt(ix * ix + iy * iy);
     if (m > 0.2) { p.dx = ix / m; p.dy = iy / m; }
     else { p.dx = Math.cos(p.face); p.dy = Math.sin(p.face); }
-    p.dashT = DASH.time; p.dashCd = DASH.cd * this.st.cdr;
+    p.dashT = DASH.time; p.dashCd = DASH.cd * this.st.cdr * this.st.dashCd;
     p.inv = Math.max(p.inv, DASH.iframes);
     p.dashId++; p.trailN = 0;
     this.recordTrail();
@@ -451,19 +674,29 @@
 
   // ---------- 刷怪：主要刷在你周围一圈（屏幕外沿），少量刷在全甲板 ----------
   G.pickMix = function (mix) {
-    var tot = 0, k;
-    for (k in mix) tot += mix[k];
+    var tot = 0, k, mm = (MAP && MAP.mix) || {};   // 每张地图有自己的敌人倾向
+    for (k in mix) tot += mix[k] * (mm[k] || 1);
     var r = this.R() * tot;
-    for (k in mix) { r -= mix[k]; if (r <= 0) return k; }
+    for (k in mix) { r -= mix[k] * (mm[k] || 1); if (r <= 0) return k; }
     return 'mite';
   };
   G.updateSpawner = function () {
-    var f = this.wt / this.dur, d = this.def;
-    var cut = this.boss && this.boss.on ? RW.BOSS_WAVES.rateCut : 1;
-    this.spawnAcc = Math.min(6, this.spawnAcc + (d.r0 + (d.r1 - d.r0) * f) * cut * DT);
+    var f = Math.min(1, this.wt / this.dur), d = this.def;
+    if (this.wt >= this.dur && this.enemyCount >= RW.BOSS_WAVES.finalAddsCap) return;   // 终局决战：小怪不越刷越多
+    var cut = this.boss && this.boss.on ? RW.BOSS_WAVES.rateCut * (this.wt >= this.dur ? RW.BOSS_WAVES.finalAdds : 1) : 1;
+    // 心流保护：英雄身边一段时间没怪，下一群马上刷在身边的环上
+    var p = this.player, sp = T.spawn, nearN = 0;
+    if (!p.dead) {
+      var cn = this.near(p.x, p.y, sp.idleR);
+      for (var ni = 0; ni < cn && !nearN; ni++) if (this.enemies[this.nbuf[ni]].on) nearN++;
+      this.idleT = nearN ? 0 : (this.idleT || 0) + DT;
+      if (this.idleT > sp.idleKick) { this.idleT = 0; this.kick = true; if (this.spawnAcc < 1) this.spawnAcc = 1; }
+    }
+    var swarm = this.mut && this.mut.swarm ? 1 + this.mut.swarm.spawn : 1;
+    this.spawnAcc = Math.min(6, this.spawnAcc + (d.r0 + (d.r1 - d.r0) * f) * cut * swarm * DT);
     if (this.bossAt >= 0 && this.wt >= this.bossAt) {
       this.bossAt = -1;
-      this.placeCluster('boss', 1);
+      this.placeCluster('boss', 1);   // 终局那一波由 spawnEnemy 换成灭火者
       this.bossAlert = 2.6;
       this.shake = Math.min(1, this.shake + 0.5);
       this.emit('bossWarn');
@@ -485,16 +718,27 @@
   };
   G.spawnPoint = function (out, goal) {
     var p = this.player, sp = T.spawn, x = 0, y = 0, co = this.core;
-    if (goal) {
-      // 冲圣火的怪：从地图入口进场（北面山道为主），给你拦截的时间
-      var gw = MAP.gateWeight, rg = this.R(), list = rg < gw.north ? GATES.north : (rg < gw.north + gw.side ? GATES.side : GATES.south);
+    var fr = this.front, lv = (co.lv || 1), kick = this.kick;
+    this.kick = false;
+    if (goal && !kick) {
+      var gw = MAP.gateWeight, north = gw.north, side = gw.side;
+      if (fr && fr.gate === 'north') { north = Math.min(0.85, 0.55 + (lv - 1) * 0.08); side = 0.1; }
+      else if (fr && fr.gate === 'south') { north = 0.25; side = 0.2; }
+      var rg = this.R(), list = rg < north ? GATES.north : (rg < north + side ? GATES.side : GATES.south);
       if (!list.length) list = GATES.north;
       var gt = list[Math.floor(this.R() * list.length)];
       out.x = gt.x + this.RR(-10, 10); out.y = gt.y + this.RR(-10, 10);
       return;
     }
+    if (!kick && fr && lv > 1 && this.R() < 0.42 + (lv - 1) * 0.1) {
+      for (var n = 0; n < 12; n++) {
+        var a0 = this.R() * TAU, r0 = this.RR(70, 160);
+        x = fr.x + Math.cos(a0) * r0; y = fr.y + Math.sin(a0) * r0;
+        if (walkable(x, y)) { out.x = x; out.y = y; return; }
+      }
+    }
     for (var tries = 0; tries < 20; tries++) {
-      if (this.R() < sp.anywhere) { x = this.RR(AX0 + 24, AX1 - 24); y = this.RR(AY0 + 24, AY1 - 24); }
+      if (!kick && this.R() < sp.anywhere) { x = this.RR(AX0 + 24, AX1 - 24); y = this.RR(AY0 + 24, AY1 - 24); }
       else {
         var a = this.R() * TAU, r = this.RR(sp.ringMin, sp.ringMax);
         x = clampX(p.x + Math.cos(a) * r, 24); y = clampY(p.y + Math.sin(a) * r, 24);
@@ -509,7 +753,8 @@
   };
   var SP = { x: 0, y: 0 };
   G.placeCluster = function (type, c) {
-    var goal = this.R() < (RW.ENEMIES[type].coreBias || 0);
+    // 攻城：危险越高，越多敌人直奔圣火（审计：高危险也几乎打不到圣火，没有压力）
+    var goal = this.R() < (RW.ENEMIES[type].coreBias || 0) + ((this.dg && this.dg.siege) || 0) * (MAP.siegeK != null ? MAP.siegeK : 1);
     this.spawnPoint(SP, goal);
     for (var i = 0; i < c; i++) {
       var mk = take(this.marks);
@@ -541,15 +786,19 @@
     }
     if (!e) return null;
     var w = this.wave, g = RW.GROWTH;
+    if (d.boss && this.final) d = RW.ENEMIES.tyrant;   // 第 20 波：灭火者
+    var dg = this.dg || RW.DANGER[0], mu = this.mut || {};
+    var hpK = dg.hp * (MAP.hard || 1) * (d.boss && dg.boss ? 1 + dg.boss : 1);   // 地图难度系数：各图通关率拉到同一档
+    if (w > RW.RUN.waves) hpK *= Math.pow(1 + RW.RUN.endlessHp, w - RW.RUN.waves);   // 无尽：复利加血
     e.type = type; e.d = d; e.x = x; e.y = y;
     e.vx = e.vy = e.kvx = e.kvy = 0; e.r = d.r;
-    e.maxHp = e.hp = d.hp * this.hpMul(w);
-    e.dmg = d.dmg * (1 + g.dmgC * (w - 1));
-    e.armor = Math.floor((d.armor || 0) + (d.armorGrow || 0) * (w - 1));
-    e.speed = d.speed * (1 + Math.min(g.spdCap, g.spdC * (w - 1)));
+    e.maxHp = e.hp = d.hp * this.hpMul(w) * hpK;
+    e.dmg = d.dmg * RW.SHEET.dmg(w) * dg.dmg;
+    e.armor = Math.floor((d.armor || 0) + (d.armorGrow || 0) * (w - 1)) + (mu.iron ? mu.iron.armor : 0);
+    e.speed = d.speed * (1 + Math.min(g.spdCap, g.spdC * (w - 1))) * (d.boss && dg.boss ? 1.15 : 1);
     e.knockRes = d.knockRes; e.flash = 0; e.spawnT = 0.18;
     e.state = 0; e.st = 0; e.cd = d.cdMin ? this.RR(0.6, d.cdMax) : (d.fireCdMin ? this.RR(1, d.fireCdMax) : 0);
-    e.slowT = 0; e.slowAmt = 0; e.bhit = 0; e.chewT = 0; e.tk = 0; e.tref = null; e.shieldT = 0; e.dashHit = -1; e.lkN = 0;
+    e.slowT = 0; e.slowAmt = 0; e.bhit = 0; e.chewT = 0; e.showdown = false; e.exhaust = 0; e.inAura = false; e.tk = 0; e.tref = null; e.shieldT = 0; e.dashHit = -1; e.lkN = 0;
     e.fireT = d.fireCd ? d.fireCd * 0.7 : (d.spawnCd ? d.spawnCd * 0.5 : 0); e.charging = false;
     e.elite = !!d.elite; e.seq = ++this.seq; e.wob = this.R() * TAU;
     e.goalCore = !!goal; e.enraged = false; e.atk = 0; e.sumT = 0; e.ax = x; e.ay = y;
@@ -595,9 +844,20 @@
   };
 
   // ================= 武器 =================
-  G.momDmg = function () { return this.momTier > 0 ? 1 + T.momentum.dmg[this.momTier - 1] : 1; };
+  G.momDmg = function () {
+    var m = this.momTier > 0 ? 1 + T.momentum.dmg[this.momTier - 1] : 1;
+    if (this.st.rage > 0) { var p = this.player; m *= 1 + this.st.rage * Math.max(0, 1 - p.hp / p.maxHp); }   // 狂怒：越残血越痛
+    if (this.furyT > 0) m *= 1 + shrineReward('fury').dmg;   // 祭坛：战意爆发
+    return m;
+  };
   G.momRate = function () { return this.momTier > 0 ? 1 + T.momentum.rate[this.momTier - 1] : 1; };
-  G.weaponDmg = function (w) { return w.d.dmg * RW.TIER_DMG[w.tier - 1] * this.st.dmg * this.momDmg(); };
+  G.weaponDmg = function (w) {
+    var tag = (w.d && w.d.tag) || 'ranged', kind = this.st[tag] || 1;
+    return w.d.dmg * RW.TIER_DMG[w.tier - 1] * this.st.dmg * kind * this.momDmg() * (w.ev ? RW.EVOLVE_MUL : 1);
+  };
+  // 进化武器的专属加成
+  G.wExtra = function (w) { return this.st.extra + (w.ev && w.ev.extra ? w.ev.extra : 0); };
+  G.wRange = function (w) { return this.st.range * (1 + (w.ev && w.ev.range ? w.ev.range : 0)); };
 
   G.updateWeapons = function () {
     var p = this.player, s = this.st;
@@ -612,8 +872,8 @@
           e = this.nearest(p.x, p.y, d.range * s.range);
           if (!e) { w.cd = 0; break; }
           a = Math.atan2(e.y - p.y, e.x - p.x); w.ang = a; w.kick = 1;
-          n = 1 + s.extra;
-          var prc = this.clsId === 'ranger' && this.focus >= this.cls.focus.max ? 2 : 0;
+          n = 1 + this.wExtra(w);
+          var prc = (this.cls.focus && this.focus >= this.cls.focus.max ? 2 : 0) + (w.ev && w.ev.pierce ? w.ev.pierce : 0);
           for (k = 0; k < n; k++) this.fireBullet(p.x, p.y, a + (k - (n - 1) / 2) * 0.12, d.speed, (d.range * s.range) / d.speed + 0.05, this.weaponDmg(w), d.knock * s.knock, prc ? 4.5 : 3.5, w, prc, prc ? '#ffffff' : d.color);
           this.muzzle(p.x + Math.cos(a) * 14, p.y + Math.sin(a) * 14, a, d.color, 0.5);
           w.cd = d.cd[t] / (s.rate * this.momRate());
@@ -624,7 +884,7 @@
           e = this.nearest(p.x, p.y, d.range * s.range);
           if (!e) { w.cd = 0; break; }
           a = Math.atan2(e.y - p.y, e.x - p.x); w.ang = a; w.kick = 1;
-          n = d.pellets + t + 2 * s.extra;
+          n = d.pellets + t + 2 * this.wExtra(w);
           var spread = d.spread + 0.035 * (n - d.pellets);
           for (k = 0; k < n; k++) {
             var sp = d.speed * this.RR(0.85, 1.12);
@@ -659,9 +919,19 @@
           this.fireArc(w, e);
           w.cd = d.cd[t] / (s.rate * this.momRate());
           break;
+        case 'swing':   // 巨斧：朝最近的敌人挥出扇形
+          if (w.cd > 0) break;
+          var sr = d.range * (1 + (this.wRange(w) - 1) * 0.6) + (p.r - P.radius);
+          e = this.nearest(p.x, p.y, sr + 30);
+          if (!e) { w.cd = 0; break; }
+          a = Math.atan2(e.y - p.y, e.x - p.x); w.ang = a; w.kick = 1;
+          this.weaponCone(w, a, sr, d.arc + 0.18 * this.wExtra(w));
+          w.cd = d.cd[t] / (s.rate * this.momRate());
+          this.emit('shot', 'scatter');
+          break;
         case 'mines':
           if (w.cd > 0) break;
-          var cap = d.maxMines + t + 2 * s.extra;
+          var cap = d.maxMines + t + 2 * this.wExtra(w);
           if (w.mineCount >= cap || !this.canPlaceMine(p.x, p.y)) { w.cd = 0.1; break; }
           var mn = take(this.mines);
           if (!mn) { w.cd = 0.1; break; }
@@ -675,6 +945,27 @@
     }
   };
 
+  G.weaponCone = function (w, face, len, arc) {
+    var p = this.player, d = w.d, dmg = this.weaponDmg(w), hit = false;
+    for (var i = 0; i < this.enemies.length; i++) {
+      var e = this.enemies[i];
+      if (!e.on || e.spawnT > 0) continue;
+      var dx = e.x - p.x, dy = e.y - p.y, d2 = dx * dx + dy * dy, reach = len + e.r;
+      if (d2 > reach * reach) continue;
+      var diff = Math.atan2(Math.sin(Math.atan2(dy, dx) - face), Math.cos(Math.atan2(dy, dx) - face));
+      if (Math.abs(diff) > arc) continue;
+      var dd = Math.sqrt(d2) || 1;
+      this.hitEnemy(e, dmg, dx / dd, dy / dd, d.knock * this.st.knock, w, false);
+      hit = true;
+    }
+    this.ringFx(p.x + Math.cos(face) * len * 0.4, p.y + Math.sin(face) * len * 0.4, 6, len * 0.75, 0.2, d.color, 5);
+    for (var q = 0; q < 8; q++) {
+      var pt = take(this.parts, true), aa = face + (q / 7 - 0.5) * arc * 2, rr = len * this.RR(0.6, 1);
+      pt.x = p.x + Math.cos(aa) * rr; pt.y = p.y + Math.sin(aa) * rr; pt.vx = Math.cos(aa) * 80; pt.vy = Math.sin(aa) * 80;
+      pt.life = pt.max = 0.22; pt.color = q % 2 ? '#ffffff' : d.color; pt.size = 2.5; pt.drag = 0.85; pt.glow = true;
+    }
+    if (hit) this.stop(T.hitstop.heavy);
+  };
   G.fireBullet = function (x, y, a, speed, life, dmg, knock, r, source, pierce, color) {
     var b = take(this.bullets);
     if (!b) return;
@@ -688,8 +979,8 @@
 
   G.updateBlades = function (w) {
     var p = this.player, d = w.d, s = this.st, t = w.tier - 1;
-    var n = d.count + t + s.extra;
-    var rad = d.range * (1 + (s.range - 1) * 0.6) + (p.r - P.radius);
+    var n = d.count + t + this.wExtra(w);
+    var rad = d.range * (1 + (this.wRange(w) - 1) * 0.6) + (p.r - P.radius);
     w.phase += d.spin * s.rate * DT;
     w.bladeN = n; w.bladeR = rad;
     var dmg = this.weaponDmg(w), hitCd = d.cd[t];
@@ -714,8 +1005,8 @@
 
   G.fireLance = function (w) {
     var p = this.player, d = w.d, s = this.st, t = w.tier - 1;
-    var len = d.range * s.range, width = d.width + 3 * t;
-    var n = 1 + s.extra, dmg = this.weaponDmg(w), anyHit = false;
+    var len = d.range * this.wRange(w), width = d.width + 3 * t;
+    var n = 1 + this.wExtra(w), dmg = this.weaponDmg(w), anyHit = false;
     for (var k = 0; k < n; k++) {
       var off = k === 0 ? 0 : ((k % 2) ? 1 : -1) * 0.105 * Math.ceil(k / 2);
       var a = w.ang + off, ux = Math.cos(a), uy = Math.sin(a);
@@ -748,7 +1039,7 @@
 
   G.fireArc = function (w, first) {
     var p = this.player, d = w.d, s = this.st, t = w.tier - 1;
-    var jumps = d.jumps + t + s.extra, dmg = this.weaponDmg(w);
+    var jumps = d.jumps + t + this.wExtra(w), dmg = this.weaponDmg(w), fall = w.ev && w.ev.nofall ? 1 : d.falloff;
     var f = take(this.fx, true);
     f.kind = 'arc'; f.life = f.max = 0.2; f.color = d.color; f.n = 0; f.w = 3;
     f.pts[f.n++] = p.x; f.pts[f.n++] = p.y;
@@ -758,7 +1049,7 @@
       if (f.n < 38) { f.pts[f.n++] = cur.x; f.pts[f.n++] = cur.y; }
       var cx = cur.x, cy = cur.y;
       var dx0 = cx - p.x, dy0 = cy - p.y, dl0 = Math.sqrt(dx0 * dx0 + dy0 * dy0) || 1;
-      this.hitEnemy(cur, dmg * Math.pow(d.falloff, j), dx0 / dl0, dy0 / dl0, d.knock * s.knock, w, false);
+      this.hitEnemy(cur, dmg * Math.pow(fall, j), dx0 / dl0, dy0 / dl0, d.knock * s.knock, w, false);
       this.nodeFlash(cx, cy, d.color, 12);
       var next = null, bd = jr2;
       var cnt = this.near(cx, cy, d.jumpRange * s.range);
@@ -819,6 +1110,9 @@
   // ---------- 爆炸：统一排队处理，连锁不会递归 ----------
   G.queueBlast = function (x, y, rad, dmgEnemies, dmgPlayer, source, color, who, knock) {
     var b = take(this.blasts, true);
+    // 火药：只放大主角自己的爆炸（符文陷阱、黑洞内爆；它们的 source.crit 为真）。
+    // 环境连锁（炸药地精被打爆）和敌人的爆炸不吃这个加成
+    if (dmgPlayer <= 0 && source && source.crit && this.st) rad *= this.st.blastR;
     b.x = x; b.y = y; b.rad = rad; b.de = dmgEnemies; b.dp = dmgPlayer; b.src = source; b.color = color; b.who = who || ''; b.knock = knock || 220;
   };
   G.processBlasts = function () {
@@ -872,15 +1166,24 @@
   };
 
   // ================= 主动技能 =================
-  G.skillDmg = function () { return this.skill.d.dmg * RW.SKILL_TIER[this.skill.tier - 1] * this.st.dmg * this.momDmg(); };
-  G.castSkill = function () {
-    var sk = this.skill, p = this.player;
+  G.skillDmg = function () {
+    var tag = (this.skill.d && this.skill.d.tag) || 'spell';
+    return this.skill.d.dmg * RW.SKILL_TIER[this.skill.tier - 1] * this.st.dmg * (this.st[tag] || 1) * this.momDmg();
+  };
+  G.castSkill = function (which) {
+    var list = this.skills && this.skills.length ? this.skills : (this.skill ? [this.skill] : []);
+    var sk = list[which || 0], p = this.player;
     if (!sk || sk.cd > 0) return false;
+    var cost = sk.d.mp || 18;
+    if ((p.mp || 0) < cost) return false;
+    this.skill = sk;
+    p.mp -= cost;
+    p.castT = 0.28;
     var d = sk.d, i, e;
-    sk.cd = d.cd * this.st.cdr;
+    sk.cd = d.cd * this.st.cdr * 0.72;
     switch (sk.id) {
       case 'nova':
-        var rad = d.radius + 20 * (sk.tier - 1), dmg = this.skillDmg();
+        var rad = (d.radius + 20 * (sk.tier - 1)) * this.st.blastR, dmg = this.skillDmg();   // 炎爆也吃「爆炸范围」
         for (i = 0; i < this.enemies.length; i++) {
           e = this.enemies[i];
           if (!e.on || e.spawnT > 0) continue;
@@ -919,11 +1222,90 @@
         this.ringFx(p.x, p.y, 8, 70, 0.25, d.color, 4);
         this.flash = Math.max(this.flash, 0.15);
         break;
+      case 'bash':
+        this.skillCone(sk, d.len, d.arc, 1, d.knock);
+        this.ringFx(p.x, p.y, 8, d.len * 0.7, 0.28, d.color, 5);
+        this.shake = Math.min(1, this.shake + 0.35);
+        break;
+      case 'shade':
+        this.skillStep(d.step);
+        this.skillLine(sk, d.len, d.knock);
+        this.ringFx(p.x, p.y, 6, 40, 0.22, d.color, 3);
+        break;
+      case 'cleave':
+        this.skillCone(sk, d.len, d.arc, 1, d.knock);
+        this.ringFx(p.x, p.y, 10, d.len, 0.32, d.color, 6);
+        this.shake = Math.min(1, this.shake + 0.45);
+        this.stop(2, true);
+        break;
+      case 'hymn':
+        this.skillHeal(d.heal, d.core);
+        this.ringFx(p.x, p.y, 8, 90, 0.4, d.color, 4);
+        this.ringFx(this.core.x, this.core.y, this.core.r, this.core.r + 40, 0.4, '#ffd27a', 3);
+        break;
+      case 'salvo':
+        sk.bombs = [];
+        for (i = 0; i < 3; i++) {
+          var ba = p.face, dist = d.step * (i + 1);
+          sk.bombs.push({ x: p.x + Math.cos(ba) * dist, y: p.y + Math.sin(ba) * dist, t: 0.28 * i, r: d.radius * this.st.blastR });
+        }
+        break;
+      case 'bounty':
+        sk.bountyT = d.dur + (sk.tier - 1);
+        this.ringFx(p.x, p.y, 6, 50, 0.3, d.color, 3);
+        break;
+      case 'wager':
+        var roll = this.R();
+        if (roll < 0.34) {
+          var wr = d.radius * this.st.blastR, wd = this.skillDmg();
+          for (i = 0; i < this.enemies.length; i++) {
+            e = this.enemies[i];
+            if (!e.on || e.spawnT > 0) continue;
+            var wx = e.x - p.x, wy = e.y - p.y, rr = wr + e.r;
+            if (wx * wx + wy * wy > rr * rr) continue;
+            var wl = Math.sqrt(wx * wx + wy * wy) || 1;
+            this.hitEnemy(e, wd, wx / wl, wy / wl, 160, sk, false);
+          }
+          this.ringFx(p.x, p.y, 8, wr, 0.35, d.color, 5);
+          this.shake = Math.min(1, this.shake + 0.3);
+        } else if (roll < 0.67) {
+          this.skillHeal(d.heal, 0);
+          this.ringFx(p.x, p.y, 8, 80, 0.35, '#fff1a8', 4);
+        } else {
+          var coins = d.coins + 4 * (sk.tier - 1);
+          for (i = 0; i < coins; i++) this.spawnShard(p.x, p.y, 1);
+          this.ringFx(p.x, p.y, 6, 60, 0.3, '#ffe066', 3);
+        }
+        break;
+      case 'fan':
+        var fn = d.pellets, face = p.face;
+        for (i = 0; i < fn; i++) {
+          var fa = face + (i / (fn - 1) - 0.5) * d.spread;
+          this.fireBullet(p.x, p.y, fa, d.speed, d.range / d.speed, this.skillDmg(), d.knock, 3, sk, 0, d.color);
+        }
+        this.ringFx(p.x, p.y, 6, 36, 0.18, d.color, 3);
+        break;
+      case 'ring':
+        this.skillCone(sk, d.len, Math.PI, 1, d.knock);
+        this.ringFx(p.x, p.y, 8, d.len, 0.28, d.color, 4);
+        break;
+      case 'lash':
+        this.skillCone(sk, d.len, d.arc, 1, d.knock);
+        this.ringFx(p.x, p.y, 8, d.len * 0.8, 0.22, d.color, 4);
+        break;
     }
     this.emit('skill', sk.id);
     return true;
   };
   G.updateSkill = function () {
+    if (!this._skillPass) {
+      var list = this.skills && this.skills.length ? this.skills : (this.skill ? [this.skill] : []);
+      this._skillPass = 1;
+      for (var n = 0; n < list.length; n++) { this.skill = list[n]; this.updateSkill(); }
+      this._skillPass = 0;
+      if (list.length) this.skill = list[0];
+      return;
+    }
     var sk = this.skill, p = this.player;
     if (!sk) return;
     if (sk.cd > 0) sk.cd -= DT;
@@ -992,6 +1374,55 @@
         this.stop(4, true);
       }
     }
+    if (sk.bountyT > 0) sk.bountyT -= DT;
+    if (sk.bombs && sk.bombs.length) {
+      var left = [];
+      for (i = 0; i < sk.bombs.length; i++) {
+        var bm = sk.bombs[i];
+        bm.t -= DT;
+        if (bm.t > 0) { left.push(bm); continue; }
+        this.queueBlast(bm.x, bm.y, bm.r, this.skillDmg(), 0, sk, d.color, '', d.knock || 180);
+        this.ringFx(bm.x, bm.y, 6, bm.r, 0.28, d.color, 4);
+      }
+      sk.bombs = left;
+    }
+  };
+  G.skillCone = function (sk, len, arc, mul, knock) {
+    var p = this.player, dmg = this.skillDmg() * mul, face = p.face;
+    for (var i = 0; i < this.enemies.length; i++) {
+      var e = this.enemies[i];
+      if (!e.on || e.spawnT > 0) continue;
+      var dx = e.x - p.x, dy = e.y - p.y, d2 = dx * dx + dy * dy, reach = len + e.r;
+      if (d2 > reach * reach) continue;
+      var ang = Math.atan2(dy, dx), diff = Math.atan2(Math.sin(ang - face), Math.cos(ang - face));
+      if (Math.abs(diff) > arc) continue;
+      var dd = Math.sqrt(d2) || 1;
+      this.hitEnemy(e, dmg, dx / dd, dy / dd, knock * this.st.knock, sk, false);
+    }
+  };
+  G.skillLine = function (sk, len, knock) {
+    var p = this.player, dmg = this.skillDmg(), face = p.face, c = Math.cos(face), s = Math.sin(face);
+    for (var i = 0; i < this.enemies.length; i++) {
+      var e = this.enemies[i];
+      if (!e.on || e.spawnT > 0) continue;
+      var dx = e.x - p.x, dy = e.y - p.y, along = dx * c + dy * s;
+      if (along < -e.r || along > len + e.r) continue;
+      var side = dx * -s + dy * c;
+      if (Math.abs(side) > 28 + e.r) continue;
+      this.hitEnemy(e, dmg, c, s, knock * this.st.knock, sk, false);
+    }
+  };
+  G.skillStep = function (dist) {
+    var p = this.player, c = Math.cos(p.face), s = Math.sin(p.face);
+    for (var k = 4; k >= 1; k--) {
+      var nx = p.x + c * dist * k / 4, ny = p.y + s * dist * k / 4;
+      if (walkable(nx, ny)) { p.x = nx; p.y = ny; return; }
+    }
+  };
+  G.skillHeal = function (frac, coreAmt) {
+    var p = this.player, co = this.core;
+    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * frac);
+    if (coreAmt) co.hp = Math.min(co.maxHp, co.hp + coreAmt * (1 + 0.25 * (this.skill.tier - 1)));
   };
   G.ringFx = function (x, y, r, r2, life, color, w) {
     var f = take(this.fx, true);
@@ -1033,14 +1464,14 @@
   // ================= 建筑 =================
   G.towerCount = function () { return countOn(this.towers); };
   G.buildPrice = function (id) {
-    return Math.round(RW.TOWERS[id].cost * this.priceMul() * (1 + T.build.step * this.towerCount()));
+    return Math.round(RW.TOWERS[id].cost * this.priceMul() * this.st.buildCost * (1 + T.build.step * this.towerCount()));
   };
   // 返回 'ok' 或原因
   G.canBuildHere = function (x, y) {
     if (x < AX0 + 20 || x > AX1 - 20 || y < AY0 + 20 || y > AY1 - 20) return false;
     var ch = mapChar(x, y);
     if (!walkable(x, y) || ch === '=' || ch === 'S') return false;
-    var co = this.core, cdx = x - co.x, cdy = y - co.y, cmin = co.r + 22;
+    var co = this.core, cdx = x - co.x, cdy = y - co.y, cmin = T.build.coreClear;
     if (cdx * cdx + cdy * cdy < cmin * cmin) return false;
     for (var i = 0; i < this.towers.length; i++) {
       var tw = this.towers[i];
@@ -1053,16 +1484,21 @@
   G.buildTower = function (id) {
     var p = this.player;
     if (this.mode !== 'battle' && this.mode !== 'clear') return '只能在战斗中建造';
+    if (this.mut && this.mut.nobuild) return '本局开了「孤身」：不能建造';
     if (this.towerCount() >= T.build.max) return '建筑已达上限 ' + T.build.max;
     var price = this.buildPrice(id);
     if (this.shardCount < price) return '金币不足，需要 ' + price;
     var d = RW.TOWERS[id], back = p.r + d.r + 1;
     var bx = p.x - Math.cos(p.face) * back, by = p.y - Math.sin(p.face) * back;
-    if (!this.canBuildHere(bx, by)) { bx = p.x; by = p.y; if (!this.canBuildHere(bx, by)) return '离其他建筑太近'; }
+    if (!this.canBuildHere(bx, by)) {
+      bx = p.x; by = p.y;
+      if (!this.canBuildHere(bx, by)) return Math.hypot(p.x - this.core.x, p.y - this.core.y) < T.build.coreClear + 20 ? '离圣火太近，走开一点再造' : '这里造不了：离其他建筑太近或不是空地';
+    }
     var tw = take(this.towers);
     if (!tw) return '建筑已达上限';
     tw.id = id; tw.d = d; tw.x = bx; tw.y = by; tw.cd = 0.4; tw.build = T.build.time; tw.pulse = 0; tw.flash = 0;
     tw.spawnT = 1; tw.soldiers = 0; tw.ang = p.face; tw.spent = price;
+    tw.troop = RW.TROOP_ORDER[0]; tw.form = RW.FORMATION_ORDER[0]; tw.post = null;
     tw.maxHp = tw.hp = d.hp * RW.TOWER_TIER.hp[this.tech[id] - 1];
     this.shardCount -= price;
     this.built++;
@@ -1071,16 +1507,153 @@
     this.emit('build', id);
     return 'ok';
   };
+  // ---------- 野外祭坛：站进圈里撑满进度就占领（每波每座一次），给金币 / 圣火回血 / 战意爆发 / 金箱 ----------
+  function shrineReward(id) { var L = RW.SHRINE.rewards; for (var i = 0; i < L.length; i++) if (L[i].id === id) return L[i]; return L[0]; }
+  G.updateShrines = function (m) {
+    if (this.furyT > 0) this.furyT -= DT;
+    var S = RW.SHRINE, p = this.player, list = this.shrines || [];
+    for (var i = 0; i < list.length; i++) {
+      var sh = list[i];
+      if (sh.done || m !== 'battle') continue;
+      var dx = p.x - sh.x, dy = p.y - sh.y, inside = dx * dx + dy * dy < S.r * S.r;
+      sh.prog = inside ? sh.prog + DT / S.hold : Math.max(0, sh.prog - DT / S.hold * 0.5);
+      if (sh.prog < 1) continue;
+      sh.prog = 1; sh.done = true;
+      var tot = 0, k, L = S.rewards;
+      for (k = 0; k < L.length; k++) tot += L[k].w;
+      var roll = this.R() * tot, rw = L[0];
+      for (k = 0; k < L.length; k++) { roll -= L[k].w; if (roll < 0) { rw = L[k]; break; } }
+      sh.reward = rw.id;
+      this.rs.shrines++;
+      if (rw.id === 'gold') { var gold = 10 + this.wave * 3; this.shardCount += gold; this.totalShards += gold; this.addNum(sh.x, sh.y - 20, '+' + gold, 'crit'); }
+      else if (rw.id === 'heal') { var co = this.core; co.hp = Math.min(co.maxHp, co.hp + co.maxHp * rw.k); }
+      else if (rw.id === 'fury') this.furyT = rw.t;
+      else { var c = take(this.chests); if (c) { c.x = sh.x + 30; c.y = sh.y; c.r = 14; c.life = 0; } }
+      this.banner = 1.6; this.bannerText = '占领祭坛 · ' + rw.name;
+      this.ringFx(sh.x, sh.y, 10, S.r * 1.6, 0.6, '#b8f2ff', 5);
+      this.emit('shrine', rw.id);
+    }
+  };
+
+  // ---------- 圣火火舌；3 级起按形态变化 ----------
+  var formCache = {};
+  G.coreForm = function () {
+    var co = this.core, F = RW.CORE_FORMS[co.form];
+    if (!F) return null;
+    var tier = co.formTier || 1, key = co.form + tier;
+    if (formCache[key]) return formCache[key];
+    var o = {}, k, tt = F.tiers && F.tiers[tier - 1];
+    for (k in F) if (k !== 'tiers') o[k] = F[k];
+    if (tt) for (k in tt) o[k] = tt[k];
+    o.tier = tier;
+    return (formCache[key] = o);
+  };
+  // 某项圣火能力是否已解锁（按 RW.CORE_LV 里的 perk 所在等级）
+  var PERK_LV = null;
+  G.corePerk = function (id) {
+    if (!PERK_LV) { PERK_LV = {}; for (var i = 1; i < RW.CORE_LV.length; i++) if (RW.CORE_LV[i].perk) PERK_LV[RW.CORE_LV[i].perk] = i; }
+    return PERK_LV[id] != null && (this.core.lv || 1) >= PERK_LV[id];
+  };
+  // 圣域：圣火照亮的一圈。里面的敌人被拖慢、灼烧；建筑、同伴、英雄受到照顾
+  G.inAura = function (x, y) { var co = this.core, dx = x - co.x, dy = y - co.y, r = co.aura || 0; return dx * dx + dy * dy < r * r; };
+  G.updateSanctuary = function () {
+    var co = this.core, SA = RW.SANCTUARY, i, hallow = this.corePerk('hallow'), judge = this.corePerk('form3');
+    var r2 = (co.aura || 0) * (co.aura || 0);
+    co.burnT = (co.burnT || 0) - DT;
+    var burn = judge && co.burnT <= 0, bd = 0;
+    if (burn) { co.burnT = 0.5; bd = (co.gunDmg || T.core.gunDmg) * RW.SHEET.def(this.wave) * SA.judge.burn * 0.5; }
+    for (i = 0; i < this.enemies.length; i++) {
+      var e = this.enemies[i];
+      if (!e.on) continue;
+      var dx = e.x - co.x, dy = e.y - co.y;
+      e.inAura = dx * dx + dy * dy < r2;
+      if (!e.inAura || e.spawnT > 0) continue;
+      if (hallow) { if (e.slowT < 0.15) e.slowT = 0.15; if (!(e.slowAmt >= SA.hallow.slow)) e.slowAmt = SA.hallow.slow; }
+      if (burn) this.hitEnemy(e, bd, 0, 0, 0, this.coreSrc, false);
+    }
+    if (hallow) {
+      var tend = SA.hallow.tend * DT;
+      for (i = 0; i < this.towers.length; i++) { var tw = this.towers[i]; if (tw.on && tw.hp < tw.maxHp && this.inAura(tw.x, tw.y)) tw.hp = Math.min(tw.maxHp, tw.hp + tend); }
+      for (i = 0; i < this.mates.length; i++) { var mt = this.mates[i]; if (mt.on && mt.hp < mt.maxHp && this.inAura(mt.x, mt.y)) mt.hp = Math.min(mt.maxHp, mt.hp + tend); }
+    }
+    var p = this.player;
+    if (this.corePerk('bless') && !p.dead && p.hp < p.maxHp && this.inAura(p.x, p.y)) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * SA.bless.regen * DT);
+  };
+  // 圣域收成：覆盖到的地块与房屋，每波结束结算
+  G.sanctuaryYield = function () {
+    if (!this.corePerk('yield')) return 0;
+    var Y = RW.SANCTUARY.yield, co = this.core, r2 = (co.aura || 0) * (co.aura || 0), cells = 0, houses = 0;
+    for (var i = 0; i < PROD.length; i++) {
+      var c = PROD[i], dx = c.x - co.x, dy = c.y - co.y;
+      if (dx * dx + dy * dy > r2) continue;
+      if (c.house) houses++; else cells++;
+    }
+    var n = cells * Y.perCell + houses * Y.perHouse;
+    if (this.corePerk('sky')) n *= Y.skyMul;
+    return Math.round(n * (this.mut && this.mut.poor ? 1 + this.mut.poor.gold : 1));
+  };
   G.updateCoreGun = function () {
-    var co = this.core, CO = T.core;
+    var co = this.core, CO = T.core, F = this.coreForm(), i;
+    if (F && F.regen) co.hp = Math.min(co.maxHp, co.hp + F.regen * DT);
+    var gr = (co.gunRange || CO.gunRange) + (F && F.range ? F.range : 0), gd = (co.gunDmg || CO.gunDmg) * RW.SHEET.def(this.wave) * (F && F.dmgMul ? F.dmgMul : 1), gc = co.gunCd || CO.gunCd;
+    // 守护形态：周期性守护波
+    if (F && F.pulse) {
+      co.pulseT -= DT;
+      if (co.pulseT <= 0) {
+        co.pulseT = F.pulse;
+        var reach = gr + F.reach, cnt = this.near(co.x, co.y, reach);
+        for (i = 0; i < cnt; i++) {
+          var en = this.enemies[this.nbuf[i]];
+          if (!en.on) continue;
+          var ex = en.x - co.x, ey = en.y - co.y;
+          if (ex * ex + ey * ey < reach * reach) { en.slowT = F.slowT; en.slowAmt = Math.max(en.slowAmt || 0, F.slow); }
+        }
+        for (i = 0; i < this.towers.length; i++) { var tw = this.towers[i]; if (tw.on && Math.hypot(tw.x - co.x, tw.y - co.y) < reach) tw.hp = Math.min(tw.maxHp, tw.hp + F.heal); }
+        for (i = 0; i < this.mates.length; i++) { var mt = this.mates[i]; if (mt.on && Math.hypot(mt.x - co.x, mt.y - co.y) < reach) mt.hp = Math.min(mt.maxHp, mt.hp + F.heal); }
+        this.ringFx(co.x, co.y, co.r, reach, 0.6, F.color, 3);
+      }
+    }
+    // 8 级：流星火雨，砸在射程内随机一个敌人头上
+    if (this.corePerk('rain')) {
+      var RN = RW.SANCTUARY.rain;
+      co.rainT = (co.rainT || 0) - DT;
+      if (co.rainT <= 0) {
+        var pool = [], rc = this.near(co.x, co.y, gr);
+        for (i = 0; i < rc; i++) { var re = this.enemies[this.nbuf[i]]; if (re.on && re.spawnT <= 0 && (re.x - co.x) * (re.x - co.x) + (re.y - co.y) * (re.y - co.y) < gr * gr) pool.push(re); }
+        if (pool.length) {
+          var rt = pool[(this.R() * pool.length) | 0];
+          this.queueBlast(rt.x, rt.y, RN.blast, gd * RN.dmgMul, 0, this.coreSrc, F ? F.color : '#ffb347', '', 90);
+          this.ringFx(rt.x, rt.y, 8, RN.blast * 1.4, 0.5, '#fff1b0', 5); this.burst(rt.x, rt.y, 14, '#ffb347', 220, 2.5, false);
+          co.rainT = this.corePerk('sky') ? RN.skyCd : RN.cd;
+        } else co.rainT = 0.3;
+      }
+    }
     co.cd -= DT;
     if (co.cd > 0) return;
-    var e = this.nearest(co.x, co.y, CO.gunRange);
-    if (!e) { co.cd = 0; return; }
-    var a = Math.atan2(e.y - co.y, e.x - co.x);
-    co.ang = a;
-    this.fireBullet(co.x + Math.cos(a) * co.r, co.y + Math.sin(a) * co.r, a, 460, CO.gunRange / 460 + 0.05, CO.gunDmg * (1 + 0.1 * (this.wave - 1)), 40, 3, this.coreSrc, 0, '#9fe8ff');
-    co.cd = CO.gunCd;
+    var shots = (F && F.shots ? F.shots : 1) + (this.corePerk('twin') ? RW.SANCTUARY.twin.shots : 0), targets = [], cnt2 = this.near(co.x, co.y, gr);
+    if (shots === 1) { var e0 = this.nearest(co.x, co.y, gr); if (e0) targets.push(e0); }
+    else {
+      // 星火：挑最近的几个不同目标
+      var cand = [];
+      for (i = 0; i < cnt2; i++) {
+        var ce = this.enemies[this.nbuf[i]];
+        if (!ce.on || ce.spawnT > 0) continue;
+        var d2 = (ce.x - co.x) * (ce.x - co.x) + (ce.y - co.y) * (ce.y - co.y);
+        if (d2 < gr * gr) cand.push([d2, ce]);
+      }
+      cand.sort(function (a, b) { return a[0] - b[0]; });
+      for (i = 0; i < cand.length && i < shots; i++) targets.push(cand[i][1]);
+    }
+    if (!targets.length) { co.cd = 0; return; }
+    var col = F ? F.color : '#9fe8ff';
+    for (i = 0; i < targets.length; i++) {
+      var e = targets[i], a = Math.atan2(e.y - co.y, e.x - co.x);
+      co.ang = a;
+      var tdist = Math.sqrt((e.x - co.x) * (e.x - co.x) + (e.y - co.y) * (e.y - co.y));
+      this.fireBullet(co.x + Math.cos(a) * co.r, co.y + Math.sin(a) * co.r, a, 460, Math.min(gr, tdist + 80) / 460 + 0.05, gd, 40, 3, this.coreSrc, 0, col);
+      if (F && F.blast) this.queueBlast(e.x, e.y, F.blast, gd * F.blastK, 0, this.coreSrc, col, '', 60);   // 烈焰：命中处爆燃
+    }
+    co.cd = gc;
     this.emit('shot', 'tower');
   };
   G.updateTowers = function () {
@@ -1101,7 +1674,7 @@
         if (!e) { tw.cd = 0; continue; }
         var a = Math.atan2(e.y - tw.y, e.x - tw.x);
         tw.ang = a;
-        this.fireBullet(tw.x + Math.cos(a) * 12, tw.y + Math.sin(a) * 12, a, d.speed, range / d.speed + 0.05, d.dmg * RW.TOWER_TIER.dmg[ti], d.knock, 3, st, 0, d.color);
+        this.fireBullet(tw.x + Math.cos(a) * 12, tw.y + Math.sin(a) * 12, a, d.speed, range / d.speed + 0.05, d.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg * RW.SHEET.def(this.wave), d.knock, 3, st, 0, d.color);
         this.muzzle(tw.x + Math.cos(a) * 14, tw.y + Math.sin(a) * 14, a, d.color, 0.5);
         tw.cd = d.cd;
         this.emit('shot', 'tower');
@@ -1116,7 +1689,7 @@
           if (d2 > rr * rr) continue;
           var dd = Math.sqrt(d2) || 1;
           en.slowT = d.slowTime; en.slowAmt = d.slow;
-          this.hitEnemy(en, d.dmg * RW.TOWER_TIER.dmg[ti], dx / dd, dy / dd, d.knock, st, false);
+          this.hitEnemy(en, d.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg * RW.SHEET.def(this.wave), dx / dd, dy / dd, d.knock, st, false);
           hit = true;
         }
         this.ringFx(tw.x, tw.y, 10, range, 0.4, d.color, 2.5);
@@ -1151,15 +1724,26 @@
   G.spawnSoldier = function (tw) {
     var s = take(this.soldiers);
     if (!s) return;
-    var ti = this.tech.barracks - 1, sd = tw.d.soldier;
-    s.home = tw; s.slot = tw.soldiers; tw.soldiers++;
+    var ti = this.tech.barracks - 1, sd = RW.TROOPS[tw.troop] || RW.TROOPS.spear;
+    s.home = tw; s.slot = this.freeSlot(tw); tw.soldiers++; s.type = tw.troop;
     s.x = tw.x + this.RR(-6, 6); s.y = tw.y + tw.d.r + 4; s.vx = s.vy = 0;
     s.maxHp = s.hp = sd.hp * RW.TOWER_TIER.hp[ti]; s.r = sd.r; s.cd = 0.3; s.flash = 0; s.ang = 0;
-    this.ringFx(s.x, s.y, 3, 16, 0.25, tw.d.color, 2);
+    this.ringFx(s.x, s.y, 3, 16, 0.25, sd.color, 2);
     this.emit('soldier');
+  };
+  // 阵型里空着的位置（士兵阵亡后补位）
+  G.freeSlot = function (tw) {
+    for (var k = 0; k < 16; k++) {
+      var used = false;
+      for (var i = 0; i < this.soldiers.length; i++) { var o = this.soldiers[i]; if (o.on && o.home === tw && o.slot === k) { used = true; break; } }
+      if (!used) return k;
+    }
+    return 0;
   };
   G.hurtSoldier = function (s, dmg) {
     if (!s.on) return;
+    var tr = RW.TROOPS[s.type], fm = s.home && RW.FORMATIONS[s.home.form];
+    dmg *= (1 - ((tr && tr.armor) || 0)) * ((fm && fm.taken) || 1);
     s.hp -= dmg; s.flash = 0.1;
     if (s.hp <= 0) this.killSoldier(s);
   };
@@ -1168,39 +1752,130 @@
     if (s.home && s.home.soldiers > 0) s.home.soldiers--;
     this.burst(s.x, s.y, 8, '#ff9ecf', 140, 2, false);
   };
+  // 兵营指挥：布防点、兵种、阵型。对离英雄最近的兵营下令（站在兵营旁边按布防 = 召回）
+  G.nearestBarracks = function () {
+    var p = this.player, best = null, bd = 1e18;
+    for (var i = 0; i < this.towers.length; i++) {
+      var tw = this.towers[i];
+      if (!tw.on || tw.d.kind !== 'barracks') continue;
+      var d2 = (tw.x - p.x) * (tw.x - p.x) + (tw.y - p.y) * (tw.y - p.y);
+      if (d2 < bd) { bd = d2; best = tw; }
+    }
+    return best;
+  };
+  G.commandBarracks = function (cmd) {
+    var tw = this.nearestBarracks(), p = this.player;
+    if (!tw) return '还没有兵营：按 4 在脚下造一座';
+    var i, TR, FM;
+    if (cmd === 'post' && Math.hypot(p.x - tw.x, p.y - tw.y) < T.barracksCmd.recallNear) cmd = 'recall';
+    if (cmd === 'post') {
+      tw.post = { x: p.x, y: p.y };
+      this.ringFx(p.x, p.y, 6, 40, 0.5, RW.TROOPS[tw.troop].color, 4);
+      this.emit('command', 'post');
+      return RW.TROOPS[tw.troop].name + '去你脚下布防（' + RW.FORMATIONS[tw.form].name + '）';
+    }
+    if (cmd === 'recall') { tw.post = null; this.ringFx(tw.x, tw.y, 6, 40, 0.5, '#ffd27a', 4); this.emit('command', 'recall'); return RW.TROOPS[tw.troop].name + '回营守着兵营'; }
+    if (cmd === 'troop') {
+      tw.troop = RW.TROOP_ORDER[(RW.TROOP_ORDER.indexOf(tw.troop) + 1) % RW.TROOP_ORDER.length];
+      TR = RW.TROOPS[tw.troop];
+      var ti = this.tech.barracks - 1;
+      for (i = 0; i < this.soldiers.length; i++) {   // 现有士兵就地换装，血量按比例
+        var s = this.soldiers[i];
+        if (!s.on || s.home !== tw) continue;
+        var k = s.hp / s.maxHp;
+        s.type = tw.troop; s.maxHp = TR.hp * RW.TOWER_TIER.hp[ti]; s.hp = Math.max(1, s.maxHp * k); s.r = TR.r;
+        this.ringFx(s.x, s.y, 3, 16, 0.25, TR.color, 2);
+      }
+      this.emit('command', 'troop');
+      return '兵营改练' + TR.name + '：' + TR.note;
+    }
+    if (cmd === 'form') {
+      tw.form = RW.FORMATION_ORDER[(RW.FORMATION_ORDER.indexOf(tw.form) + 1) % RW.FORMATION_ORDER.length];
+      FM = RW.FORMATIONS[tw.form];
+      this.emit('command', 'form');
+      return '阵型：' + FM.name + ' · ' + FM.note;
+    }
+    return '';
+  };
+  // 离某点最近的敌人入口方向（横阵面朝这里）
+  G.threatDir = function (x, y) {
+    var G2 = RW.GRID, best = null, bd = 1e18, all = G2 ? G2.gates.north.concat(G2.gates.side, G2.gates.south) : [];
+    for (var i = 0; i < all.length; i++) { var d2 = (all[i].x - x) * (all[i].x - x) + (all[i].y - y) * (all[i].y - y); if (d2 < bd) { bd = d2; best = all[i]; } }
+    if (!best) return { x: 0, y: -1 };
+    var dx = best.x - x, dy = best.y - y, l = Math.sqrt(dx * dx + dy * dy) || 1;
+    return { x: dx / l, y: dy / l };
+  };
+  // 每座兵营这一帧的阵地：锚点（布防点 / 王旗方向 / 兵营本身）、朝向、人数
+  G.barracksAnchor = function (tw) {
+    var a = tw.anchor || (tw.anchor = { x: 0, y: 0, fx: 0, fy: -1, n: 1 });
+    var fr = this.front, push = fr && (this.core.lv || 1) > 1;
+    if (tw.post) { a.x = tw.post.x; a.y = tw.post.y; }
+    else if (push) {
+      var ox = fr.x - tw.x, oy = fr.y - tw.y, ol = Math.sqrt(ox * ox + oy * oy) || 1, ro = Math.min(ol, 220);
+      a.x = tw.x + ox / ol * ro; a.y = tw.y + oy / ol * ro;
+    } else { a.x = tw.x; a.y = tw.y + tw.d.r + 20; }
+    var f = this.threatDir(a.x, a.y); a.fx = f.x; a.fy = f.y;
+    a.n = Math.max(1, tw.d.soldiers[this.tech.barracks - 1]);
+    return a;
+  };
+  G.formationSpot = function (tw, a, s) {
+    var n = a.n, k = s.slot % n, form = tw.form, out = this._spot || (this._spot = { x: 0, y: 0 });
+    var px = -a.fy, py = a.fx, ranged = RW.TROOPS[s.type] && RW.TROOPS[s.type].range > 0;
+    if (form === 'ring') {
+      var ang = k / n * Math.PI * 2 + 0.4, rad = 22 + n * 5;
+      out.x = a.x + Math.cos(ang) * rad; out.y = a.y + Math.sin(ang) * rad;
+    } else if (form === 'loose') {
+      var ang2 = k * 2.4 + 0.7, rad2 = 46 + k * 14;
+      out.x = a.x + Math.cos(ang2) * rad2; out.y = a.y + Math.sin(ang2) * rad2;
+    } else {   // 横阵：垂直于来敌方向排开；弓手退半个身位站第二排
+      var off = (k - (n - 1) / 2) * 22, back = ranged ? -26 : 8;
+      out.x = a.x + px * off + a.fx * back; out.y = a.y + py * off + a.fy * back;
+    }
+    return out;
+  };
   G.updateSoldiers = function () {
-    var battle = this.mode === 'battle';
-    for (var i = 0; i < this.soldiers.length; i++) {
+    var battle = this.mode === 'battle', i;
+    for (i = 0; i < this.towers.length; i++) { var bt = this.towers[i]; if (bt.on && bt.d.kind === 'barracks') this.barracksAnchor(bt); }
+    for (i = 0; i < this.soldiers.length; i++) {
       var s = this.soldiers[i];
       if (!s.on) continue;
       var tw = s.home;
       if (!tw || !tw.on) { this.killSoldier(s); continue; }
       if (s.flash > 0) s.flash -= DT;
-      var d = tw.d, sd = d.soldier, ti = this.tech.barracks - 1;
+      var d = tw.d, sd = RW.TROOPS[s.type] || RW.TROOPS.spear, fm = RW.FORMATIONS[tw.form] || RW.FORMATIONS.line, ti = this.tech.barracks - 1;
+      var an = tw.anchor || this.barracksAnchor(tw);
       s.cd -= DT;
       var tgt = null;
       if (battle) {
-        // 只拦截兵营警戒圈内的敌人
-        var best = 1e9, cnt = this.near(tw.x, tw.y, d.leash);
+        // 以阵地为圆心、阵型决定的半径内找敌人；弓手多看一个射程
+        var leash = d.leash * (fm.leash || 1), look = leash + (sd.range || 0);
+        var best = 1e9, cnt = this.near(an.x, an.y, look);
         for (var j = 0; j < cnt; j++) {
           var e = this.enemies[this.nbuf[j]];
           if (!e.on || e.spawnT > 0) continue;
-          var hx = e.x - tw.x, hy = e.y - tw.y;
-          if (hx * hx + hy * hy > d.leash * d.leash) continue;
+          var hx = e.x - an.x, hy = e.y - an.y;
+          if (hx * hx + hy * hy > look * look) continue;
           var sx = e.x - s.x, sy = e.y - s.y, s2 = sx * sx + sy * sy;
           if (s2 < best) { best = s2; tgt = e; }
         }
       }
-      var gx, gy;
-      if (tgt) { gx = tgt.x; gy = tgt.y; }
-      else { var a = s.slot * 1.9 + this.clock * 0.3; gx = tw.x + Math.cos(a) * 30; gy = tw.y + Math.sin(a) * 30; }
+      var gx, gy, reach;
+      var ranged = sd.range > 0;
+      if (tgt && !ranged) { gx = tgt.x; gy = tgt.y; reach = tgt.r + s.r + 3 + (sd.reach || 0); }
+      else {
+        var sp = this.formationSpot(tw, an, s); gx = sp.x; gy = sp.y; reach = 4;
+        // 弓手：目标在射程外就往前挪到射程边上
+        if (tgt && ranged) {
+          var rx = tgt.x - s.x, ry = tgt.y - s.y, rl = Math.sqrt(rx * rx + ry * ry) || 1;
+          if (rl > sd.range) { gx = tgt.x - rx / rl * (sd.range - 10); gy = tgt.y - ry / rl * (sd.range - 10); }
+        }
+      }
       var dx = gx - s.x, dy = gy - s.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
-      var reach = tgt ? tgt.r + s.r + 3 : 4;
-      var want = dl > reach ? sd.speed : 0;
+      var want = dl > reach ? sd.speed * (fm.speed || 1) : 0;
       var k = Math.min(1, 10 * DT);
       s.vx += (dx / dl * want - s.vx) * k; s.vy += (dy / dl * want - s.vy) * k;
       s.x += s.vx * DT; s.y += s.vy * DT;
-      if (dl > 1) s.ang = Math.atan2(dy, dx);
+      if (dl > 1 && want > 0) s.ang = Math.atan2(dy, dx);
       // 士兵之间软分离
       for (var q = 0; q < this.soldiers.length; q++) {
         if (q === i) continue;
@@ -1211,11 +1886,18 @@
       }
       s.x = clampX(s.x, s.r); s.y = clampY(s.y, s.r);
       collideGrid(s, s.r);
-      if (tgt && dl <= reach + 2 && s.cd <= 0) {
-        s.cd = sd.atkCd;
-        this.hitEnemy(tgt, sd.dmg * RW.TOWER_TIER.dmg[ti], dx / dl, dy / dl, 70, this.towerStats.barracks, false);
-        var f = take(this.fx, true);
-        f.kind = 'slash'; f.x = s.x + dx / dl * 6; f.y = s.y + dy / dl * 6; f.r = s.ang; f.life = f.max = 0.12; f.color = '#ffd1e8';
+      if (tgt && s.cd <= 0) {
+        var tx = tgt.x - s.x, ty = tgt.y - s.y, tl = Math.sqrt(tx * tx + ty * ty) || 1;
+        var dmg = sd.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg * RW.SHEET.def(this.wave) * ((tgt.elite || tgt.d.boss) && sd.eliteMul ? sd.eliteMul : 1);
+        if (ranged && tl <= sd.range) {
+          s.cd = sd.atkCd; s.ang = Math.atan2(ty, tx);
+          this.fireBullet(s.x, s.y, s.ang, sd.arrow, sd.range / sd.arrow + 0.1, dmg, 30, 3, this.towerStats.barracks, 0, sd.color);
+        } else if (!ranged && tl <= tgt.r + s.r + 5 + (sd.reach || 0)) {
+          s.cd = sd.atkCd; s.ang = Math.atan2(ty, tx);
+          this.hitEnemy(tgt, dmg, tx / tl, ty / tl, 70, this.towerStats.barracks, false);
+          var f = take(this.fx, true);
+          f.kind = 'slash'; f.x = s.x + tx / tl * 6; f.y = s.y + ty / tl * 6; f.r = s.ang; f.life = f.max = 0.12; f.color = sd.color;
+        }
       }
       if (!tgt && s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 2 * DT);
     }
@@ -1247,13 +1929,24 @@
     if (!e.on) return;
     var crit = false, critCh = this.st.crit;
     if (source && source.crit && this.cls) {
-      if (this.clsId === 'mage') {
+      if (this.cls.near) {
         var nr = this.cls.near, mdx = e.x - this.player.x, mdy = e.y - this.player.y, md = Math.sqrt(mdx * mdx + mdy * mdy);
         dmg *= 1 + nr.bonus * Math.max(0, Math.min(1, (nr.r1 - md) / (nr.r1 - nr.r0)));
-      } else if (this.clsId === 'ranger') critCh += this.focus * this.cls.focus.crit;
+      } else if (this.cls.focus) critCh += this.focus * this.cls.focus.crit;
     }
-    if (source && source.crit && this.R() < critCh) { dmg *= P.critMul; crit = true; }
+    if (source && source.crit && this.R() < critCh) { dmg *= this.st.critMul; crit = true; }
+    // 吸血：只算主角自己的武器与技能（它们的 source.crit 为真），每秒次数有上限
+    if (source && source.crit && this.st.lifesteal > 0 && this.clock >= this.lsT && this.R() < this.st.lifesteal) {
+      var pl = this.player;
+      if (pl.hp < pl.maxHp && this.mode === 'battle') { pl.hp = Math.min(pl.maxHp, pl.hp + 1); this.lsT = this.clock + 1 / T.lifestealPerSec; this.addNum(pl.x, pl.y - 18, 1, 'heal'); }
+    }
     e.hx = kx; e.hy = ky; e.hk = knock;
+    if (e.exhaust > 0) dmg *= 1 + e.exhaust;   // 终局决战：灭火者力竭
+    if (e.inAura) {   // 圣域：加护让同伴、建筑、圣火更痛；三阶让所有伤害更痛
+      var SA = RW.SANCTUARY;
+      if (this.corePerk('bless') && !(source && source.crit)) dmg *= 1 + SA.bless.allyDmg;
+      if (this.corePerk('form3')) dmg *= 1 + SA.judge.taken;
+    }
     if (e.shieldT > 0) dmg *= 1 - RW.ENEMIES.shielder.reduce;
     var dd = Math.max(1, dmg - e.armor);
     var armored = (e.armor > 0 && dd < dmg * 0.8) || e.shieldT > 0;
@@ -1265,7 +1958,7 @@
     this.addNum(e.x + this.RR(-6, 6), e.elite ? e.y + this.RR(-6, 6) : e.y - e.r - 2, dd, crit ? 'crit' : (armored ? 'armor' : 'hit'));
     if (heavy) this.stop(T.hitstop.heavy);
     if (crit && e.elite) this.stop(T.hitstop.eliteCrit);
-    this.emit('hit', crit ? 1 : 0);
+    this.emit('hit', crit ? 1 : 0, e.type);
     if (e.hp <= 0) this.killEnemy(e, source, 'kill');
   };
 
@@ -1282,7 +1975,7 @@
     if (how === 'silent') return;
     var pl = this.player, kdx = e.x - pl.x, kdy = e.y - pl.y, near = kdx * kdx + kdy * kdy < T.momentum.near * T.momentum.near;
     if (near || how === 'eat') this.addMomentum(d.boss ? 25 : (e.elite ? 6 : 1));
-    if (near && this.R() < T.healOrb.chance) this.spawnHeal(e.x, e.y);
+    if (near && this.R() < T.healOrb.chance * this.st.healOrb) this.spawnHeal(e.x, e.y);
     this.kills++;
     if (source) source.kills++;
     this.streak = this.streakT > 0 ? this.streak + 1 : 1; this.streakT = 1.3;
@@ -1291,6 +1984,7 @@
     var n = d.shards;
     if (e.elite && this.st.bounty > 0) n *= 2;
     for (var k = 0; k < n; k++) this.spawnShard(e.x, e.y, d.shardVal);
+    if (this.skill && this.skill.bountyT > 0 && how !== 'eat') this.spawnShard(e.x, e.y, d.shardVal);
     if (how === 'kill') {
       if (e.type === 'splitter') {
         for (var s = 0; s < d.splits; s++) {
@@ -1305,6 +1999,11 @@
       }
     }
     if (e.decal !== false && how === 'kill' && e.r >= 10) this.decal(e.x, e.y, e.r * 0.8, 'rgba(0,0,0,0.35)');
+    if (source && source.ev && source.ev.gold && how === 'kill') this.spawnShard(e.x, e.y, 1);   // 金符阵
+    if (d.boss && how === 'kill') {
+      this.rs.bossKills++; this.blessPending++;
+      if (this.final && d === RW.ENEMIES.tyrant) { this.won = true; this.banner = 3; this.bannerText = '灭火者倒下了 · 圣火长明'; }
+    }
     if (d.boss && how === 'kill') { this.boss = null; this.stop(14, true); this.shake = 1; this.flash = 0.8; this.ringFx(e.x, e.y, e.r, 320, 0.9, '#ffffff', 8); this.burst(e.x, e.y, 60, d.color, 420, 4, true); this.emit('bossDown'); return; }
     if (e.elite) { this.stop(T.hitstop.eliteKill, true); this.shake = Math.min(1, this.shake + 0.7); this.flash = Math.max(this.flash, 0.25); this.emit('eliteDown'); }
     else { if (e.type === 'shell') this.stop(T.hitstop.shellKill); this.emit(how === 'eat' ? 'eat' : 'kill', e.type); }
@@ -1339,6 +2038,7 @@
       this.burst(p.x, p.y, 40, evo[p.stage].color, 320, 3, true);
       this.flash = Math.max(this.flash, 0.4);
       this.stop(T.hitstop.evolve, true);
+      this.blessPending = (this.blessPending || 0) + 1;   // 晋升：整备前多一次祝福三选一
       this.emit('evolve', evo[p.stage].name);
     }
   };
@@ -1368,6 +2068,8 @@
         var s = this.soldiers[i];
         if (!s.on) continue;
         var sx = s.x - e.x, sy = s.y - e.y, s2 = sx * sx + sy * sy;
+        var tt = RW.TROOPS[s.type] && RW.TROOPS[s.type].taunt;   // 盾卫招怪：看起来更近
+        if (tt) s2 /= tt;
         if (s2 < sa && s2 < best) { best = s2; tx = s.x; ty = s.y; tk = 2; tref = s; }
       }
     }
@@ -1595,11 +2297,56 @@
     this.emit('buy', 'repair');
     return 'ok';
   };
-  G.armorCore = function () {
-    var co = this.core, c = this.coreArmorCost();
+  G.armorCore = function () { return this.upgradeCore(); };
+  G.applyCoreLevel = function () {
+    var co = this.core, CO = T.core, lv = co.lv || 1, hp = 0, dmg = 0, range = 0, cd = 0, heal = 0;
+    for (var i = 2; i <= lv; i++) {
+      var L = RW.CORE_LV[i];
+      if (!L) break;
+      hp += L.hp; dmg += L.dmg; range += L.range; cd += L.cd; heal += L.heal;
+    }
+    var ratio = co.maxHp > 0 ? co.hp / co.maxHp : 1;
+    var coreK = (1 + ((this.dg && this.dg.coreHp) || 0)) * (1 + ((this.mut && this.mut.fragile) ? this.mut.fragile.coreHp : 0));
+    co.maxHp = Math.round((CO.hp + hp) * coreK);
+    if (this.rs) this.rs.coreLv = Math.max(this.rs.coreLv, lv);
+    co.hp = Math.min(co.maxHp, Math.max(1, co.maxHp * ratio));
+    co.gunDmg = CO.gunDmg + dmg;
+    co.gunRange = CO.gunRange + range;
+    co.aura = RW.CORE_LV[Math.min(lv, RW.CORE_LV.length - 1)].aura || 0;
+    var FT = RW.SANCTUARY.formTierAt; co.formTier = lv >= FT[3] ? 3 : (lv >= FT[2] ? 2 : 1);
+    if (this.corePerk('sky')) co.gunRange = RW.SANCTUARY.skyRange;
+    co.gunCd = Math.max(0.22, CO.gunCd - cd);
+    co.waveHeal = CO.waveHeal + heal;
+    var fr = RW.FRONTS[Math.min(lv, RW.FRONTS.length - 1)];
+    this.front = fr ? { name: fr.name, x: fr.x, y: fr.y, gate: fr.gate } : null;
+  };
+  G.coreUpgradeCost = function () {
+    var next = RW.CORE_LV[(this.core.lv || 1) + 1];
+    if (!next) return 0;
+    return Math.round(next.cost * this.priceMul());
+  };
+  G.coreNeedsForm = function () { var co = this.core; return (co.lv || 1) + 1 === RW.CORE_FORM_AT && !co.form; };
+  G.upgradeCore = function (form) {
+    var co = this.core, lv = co.lv || 1, next = RW.CORE_LV[lv + 1];
+    if (!next) return '圣火已满级';
+    var c = this.coreUpgradeCost();
     if (this.shardCount < c) return '金币不足，需要 ' + c;
-    this.shardCount -= c; co.maxHp += T.core.armorHp; co.hp += T.core.armorHp;
-    this.emit('buy', 'armor');
+    if (this.coreNeedsForm()) {
+      if (!RW.CORE_FORMS[form]) return '先选圣火形态';
+      co.form = form; co.pulseT = 0;
+      this.emit('coreForm', form);
+    }
+    this.shardCount -= c;
+    var before = co.maxHp, fr0 = this.front;
+    co.lv = lv + 1;
+    this.applyCoreLevel();
+    co.hp = Math.min(co.maxHp, co.hp + (co.maxHp - before));
+    this.emit('buy', 'coreLv');
+    // 升级横幅：新能力 + 圣域扩张（王旗换站时一并说）
+    this.banner = 2.4;
+    this.bannerText = '圣火 Lv' + co.lv + ' · ' + next.note + (this.front && this.front !== fr0 && (!fr0 || fr0.name !== this.front.name) ? ' · 王旗插到' + this.front.name : ' · 圣域扩大');
+    this.ringFx(co.x, co.y, co.r, Math.min(co.aura, 1400), 1.1, '#ffd27a', 6);
+    if (this.front) this.ringFx(this.front.x, this.front.y, 12, 90, 0.7, '#ffd27a', 5);
     return 'ok';
   };
 
@@ -1609,6 +2356,15 @@
     var pdx = p.x - e.x, pdy = p.y - e.y, pl = pdist || 1;
     e.bvx = pdx / pl * e.speed; e.bvy = pdy / pl * e.speed;
     if (!battle) return false;
+    // 终局决战：到点后灭火者直扑圣火；再拖下去就力竭，受到的伤害越来越高
+    if (this.final && this.wt >= this.dur) {
+      var BW = RW.BOSS_WAVES, co = this.core, cx = co.x - e.x, cy = co.y - e.y, cl = Math.sqrt(cx * cx + cy * cy) || 1;
+      if (!e.showdown) { e.showdown = true; this.banner = 2.6; this.bannerText = d.name + '直扑圣火！守住它'; this.emit('bossWarn'); }
+      if (cl > BW.coreStop && (p.dead || pl > 260)) { e.bvx = cx / cl * e.speed * 1.2; e.bvy = cy / cl * e.speed * 1.2; }
+      var over = this.wt - this.dur - BW.showdown, ex = over > 0 ? Math.min(BW.exhaustMax, over * BW.exhaustRate) : 0;
+      if (ex > 0 && !(e.exhaust > 0)) { this.banner = 2.6; this.bannerText = d.name + '力竭：受到的伤害越来越高'; }
+      e.exhaust = ex;
+    }
     if (!e.enraged && e.hp < e.maxHp * d.phase2) {
       e.enraged = true; e.sumT = 0.6; e.state = 0; e.st = 1.0;
       this.flash = Math.max(this.flash, 0.5); this.shake = 1; this.stop(10, true);
@@ -1662,7 +2418,7 @@
             var ang = e.wob + q * TAU / arms;
             b.x = e.x + Math.cos(ang) * e.r; b.y = e.y + Math.sin(ang) * e.r;
             b.vx = Math.cos(ang) * B.speed; b.vy = Math.sin(ang) * B.speed;
-            b.life = 5; b.dmg = B.dmg * (1 + RW.GROWTH.dmgC * (this.wave - 1)); b.r = 6; b.kind = 'orb'; b.src = d.name + '弹幕';
+            b.life = 5; b.dmg = B.dmg * RW.SHEET.dmg(this.wave); b.r = 6; b.kind = 'orb'; b.src = d.name + '弹幕';
           }
           e.wob += B.turn * (ph ? -1.2 : 1);
           this.emit('eliteFire');
@@ -1686,7 +2442,7 @@
 
   G.wardenFire = function (e) {
     var d = e.d, n = this.wave >= d.lateWave ? d.bulletsLate : d.bullets;
-    var off = this.R() * TAU, dmg = d.bulletDmg * (1 + RW.GROWTH.dmgC * (this.wave - 1));
+    var off = this.R() * TAU, dmg = d.bulletDmg * RW.SHEET.dmg(this.wave);
     for (var k = 0; k < n; k++) {
       var b = take(this.ebullets);
       if (!b) break;
@@ -1721,8 +2477,29 @@
   };
 
   G.hurtPlayer = function (dmg, source, fx, fy) {
+    if (this.player.dead) return;
     var p = this.player;
     if (p.inv > 0 || this.mode !== 'battle') return;
+    if (this.st.dodge > 0 && this.R() < this.st.dodge) {   // 闪避：不掉血，短暂无敌
+      p.inv = 0.25;
+      var nd = take(this.nums, true);
+      nd.x = p.x; nd.y = p.y - 16; nd.kind = 'heal'; nd.text = '闪避'; nd.vy = -50; nd.life = nd.max = 0.6;
+      this.emit('dodge');
+      return;
+    }
+    if (this.st.thorns > 0) {   // 荆棘：反震身边的敌人
+      var tr = T.thornsR, near = this.near(p.x, p.y, tr), td = this.st.thorns * this.st.dmg, ids = [];
+      for (var ti = 0; ti < near; ti++) ids.push(this.nbuf[ti]);   // 先拷出来：击杀可能再次用到 nbuf
+      for (ti = 0; ti < ids.length; ti++) {
+        var te = this.enemies[ids[ti]];
+        if (!te.on || te.spawnT > 0) continue;
+        var tx = te.x - p.x, ty = te.y - p.y, tl = Math.sqrt(tx * tx + ty * ty) || 1;
+        if (tl > tr + te.r) continue;
+        this.hitEnemy(te, td, tx / tl, ty / tl, 160, this.thornSrc, false);
+      }
+      this.ringFx(p.x, p.y, 8, tr, 0.3, '#9fc4ff', 3);
+    }
+    p.hurtT = 0.3;
     var d = dmg * this.st.takenMul;
     p.hp -= d; p.inv = P.iframes;
     var ax = p.x - fx, ay = p.y - fy, al = Math.sqrt(ax * ax + ay * ay) || 1;
@@ -1737,27 +2514,61 @@
     if (p.hp <= 0) { p.hp = 0; this.die(); }
   };
 
+  // 英雄倒下：圣火还亮着就不结束，倒计时后在圣火旁复活；只有圣火熄灭才进复活 / 结算
   G.die = function () {
+    var p = this.player;
+    this.burst(p.x, p.y, 34, RW.EVO[p.stage].color, 260, 3, true);
+    if (this.deathCause !== 'core' && this.core.hp > 0) {
+      var R = RW.RESPAWN;
+      p.dead = true; p.hp = 0;
+      p.respawnT = p.respawnMax = Math.min(R.max, R.base + R.perWave * (this.wave - 1));
+      p.deadX = p.x; p.deadY = p.y;
+      // 圣火分出自己的火焰把英雄续回来：倒下有代价，但不会因此直接熄灭
+      var co = this.core, cost = Math.min(co.hp - 1, co.maxHp * R.coreCost);
+      if (cost > 0) { co.hp -= cost; p.coreCost = Math.round(cost); } else p.coreCost = 0;
+      this.rs.deaths = (this.rs.deaths || 0) + 1;
+      this.streak = 0; this.mom = 0; this.momTier = 0;
+      this.emit('die', 'respawn');
+      return;
+    }
     this.mode = 'down';
     this.downT = 1.1;
-    this.burst(this.player.x, this.player.y, 34, RW.EVO[this.player.stage].color, 260, 3, true);
     this.emit('die');
   };
-  G.canRevive = function () { return !this.reviveUsed && this.wave >= RW.AD.FIRST_AD_WAVE; };
+  // 倒下期间：英雄藏在圣火旁（敌人会压向圣火），倒计时结束原地复活并短暂无敌
+  G.updateRespawn = function () {
+    var p = this.player, co = this.core;
+    p.x = co.x; p.y = co.y + co.r + 30; p.vx = p.vy = p.pvx = p.pvy = 0;
+    p.respawnT -= DT;
+    if (p.respawnT <= 1e-6) this.respawn();
+  };
+  G.respawn = function () {
+    var p = this.player, co = this.core;
+    if (!p.dead) return;
+    p.dead = false; p.hp = Math.ceil(p.maxHp * RW.RESPAWN.hp); p.inv = RW.RESPAWN.inv; p.respawnT = 0;
+    p.x = co.x; p.y = co.y + co.r + 30;
+    this.ringFx(p.x, p.y, 10, 140, 0.5, RW.EVO[p.stage].color, 5);
+    this.emit('revive');
+  };
+  // 圣火熄灭：每局可以重燃 RW.REKINDLE.times 次（玩家反馈：要有三次重燃机会）
+  G.canRevive = function () { return this.revivesLeft > 0 && this.wave >= RW.REKINDLE.fromWave; };
   G.afterDeath = function () {
     if (this.canRevive()) { this.mode = 'revive'; this.emit('reviveOffer'); }
     else this.finishRun();
   };
   G.revive = function () {
     var p = this.player;
-    this.reviveUsed = true;
+    var RK = RW.REKINDLE;
+    this.revivesLeft = Math.max(0, this.revivesLeft - 1);
+    this.rs.revived = true; this.rs.rekindles = (this.rs.rekindles || 0) + 1;
+    p.dead = false; p.respawnT = 0;
     p.hp = Math.ceil(p.maxHp * 0.6); p.inv = 2.2;
-    var co = this.core; co.hp = Math.max(co.hp, co.maxHp * 0.5); this.deathCause = '';
+    var co = this.core; co.hp = Math.max(co.hp, co.maxHp * RK.core); this.deathCause = '';
     for (var i = 0; i < this.enemies.length; i++) {
       var e = this.enemies[i];
       if (!e.on) continue;
       var dx = e.x - p.x, dy = e.y - p.y, d2 = dx * dx + dy * dy;
-      if (d2 < 170 * 170 && !e.elite) this.killEnemy(e, null, 'silent');
+      if (d2 < RK.clear * RK.clear && !e.elite) this.killEnemy(e, null, 'silent');
       else { var d = Math.sqrt(d2) || 1; e.kvx += dx / d * 300 * e.knockRes; e.kvy += dy / d * 300 * e.knockRes; }
     }
     clearPool(this.ebullets);
@@ -1773,17 +2584,86 @@
     var ws = [], i;
     for (i = 0; i < this.weapons.length; i++) {
       var w = this.weapons[i];
-      ws.push({ name: w.d.name + ' ' + ['I', 'II', 'III'][w.tier - 1], dmg: Math.round(w.dmg), kills: w.kills, color: w.d.color });
+      ws.push({ name: (w.name || w.d.name) + ' ' + ['I', 'II', 'III'][w.tier - 1], dmg: Math.round(w.dmg), kills: w.kills, color: w.d.color });
     }
     for (var id in this.towerStats) { var ts = this.towerStats[id]; if (ts.dmg > 0) ws.push({ name: ts.name + (id === 'barracks' ? '士兵' : ''), dmg: Math.round(ts.dmg), kills: ts.kills, color: ts.color }); }
     var extra = [this.skill, this.dashSrc, this.envSrc, this.coreSrc].concat(this.retiredSkills || []);
     for (i = 0; i < extra.length; i++) { var x = extra[i]; if (x && x.dmg > 0) ws.push({ name: x.name, dmg: Math.round(x.dmg), kills: x.kills, color: x.color }); }
     if (this.eatSrc.kills > 0) ws.push({ name: '践踏（只数）', dmg: this.eatSrc.kills, kills: this.eatSrc.kills, color: this.eatSrc.color, count: true });
     ws.sort(function (a, b) { return b.dmg - a.dmg; });
-    this.result = { wave: reached, kills: this.kills, shards: this.totalShards, list: ws, hits: this.lastHits.slice(), newBest: newBest, best: this.best,
-      stage: RW.EVO[this.player.stage].name, towers: this.built, streak: this.bestStreak, coreDown: this.deathCause === 'core' };
+    var sum = this.runSummary();
+    var rec = this.recordProgress(reached, sum);
+    this.result = { unlocked: rec.unlocked, achievements: rec.ach, hero: this.clsId, wave: reached, kills: this.kills, shards: this.totalShards, list: ws, hits: this.lastHits.slice(), newBest: newBest, best: this.best,
+      stage: RW.EVO[this.player.stage].name, towers: this.built, streak: this.bestStreak, coreDown: this.deathCause === 'core',
+      won: this.won, endless: this.endless, canEndless: this.won && !this.endless, score: sum.score, newScore: rec.newScore,
+      danger: this.danger, mutators: this.mutList.slice(), daily: this.daily, bossKills: this.rs.bossKills, evolved: this.rs.evolved };
     this.mode = 'result';
-    this.emit('result');
+    this.emit(this.won && !this.endless ? 'victory' : 'result');
+  };
+
+  // 分数：清掉的波数、击杀、Boss、通关，乘以危险与变异器倍率
+  G.runScore = function () {
+    var S = RW.SCORE, cleared = this.won && !this.endless ? RW.RUN.waves : Math.max(0, this.wave - 1);
+    var base = cleared * S.wave + this.kills * S.kill + this.rs.bossKills * S.boss + (this.won ? S.win : 0);
+    var mul = 1 + this.danger * S.danger;
+    for (var i = 0; i < this.mutList.length; i++) mul += RW.MUTATORS[this.mutList[i]].score;
+    return Math.round(base * mul);
+  };
+  // 本局汇总：成就判定和结算页都用它
+  G.runSummary = function () {
+    var rs = this.rs;
+    return { wave: this.wave, won: this.won, danger: this.danger, bossKills: rs.bossKills, streak: this.bestStreak, mateMax: rs.mateMax, mateStar: rs.mateStar,
+      evolved: rs.evolved, setMax: rs.setMax, coreLv: rs.coreLv, legendary: rs.legendary, gold: this.totalShards, built: this.built, bless: rs.bless,
+      revived: rs.revived, deaths: rs.deaths || 0, mutators: this.mutList.length, daily: this.daily, score: this.runScore(), shrines: rs.shrines || 0, map: this.mapId || 'village' };
+  };
+
+  // 局外进度：累计数据只记增量（通关后接无尽再结算不会重复算），返回新解锁的英雄与成就
+  G.recordProgress = function (reached, sum) {
+    var pr = this.prog || (this.prog = {});
+    pr.unlocked = pr.unlocked || {}; pr.heroBest = pr.heroBest || {}; pr.heroDanger = pr.heroDanger || {}; pr.ach = pr.ach || {};
+    var rc = this._rec || (this._rec = { kills: 0, coins: 0, built: 0, counted: false });
+    pr.kills = (pr.kills || 0) + (this.kills - rc.kills);
+    pr.coins = (pr.coins || 0) + (this.totalShards - rc.coins);
+    pr.built = (pr.built || 0) + (this.built - rc.built);
+    rc.kills = this.kills; rc.coins = this.totalShards; rc.built = this.built;
+    // 最近 12 局（通关后接无尽再结算时更新同一条）
+    pr.history = pr.history || [];
+    var hist = { hero: this.clsId, map: this.mapId || 'village', wave: reached, won: this.won, endless: this.endless, danger: this.danger, score: sum ? sum.score : 0, daily: this.daily || '' };
+    if (!rc.counted) { pr.history.unshift(hist); if (pr.history.length > 12) pr.history.length = 12; }
+    else if (pr.history.length) pr.history[0] = hist;
+    if (!rc.counted) { pr.runs = (pr.runs || 0) + 1; rc.counted = true; }
+    var id = this.clsId;
+    if (id) pr.heroBest[id] = Math.max(pr.heroBest[id] || 0, reached);   // 「打到第 n 波」= 到达第 n 波
+    pr.mapBest = pr.mapBest || {};
+    pr.mapBest[this.mapId || 'village'] = Math.max(pr.mapBest[this.mapId || 'village'] || 0, reached);
+    if (id && this.won) pr.heroDanger[id] = Math.max(pr.heroDanger[id] == null ? -1 : pr.heroDanger[id], this.danger);
+    if (this.won) pr.wins = (pr.wins || 0) + (rc.won ? 0 : 1);
+    rc.won = rc.won || this.won;
+    if (this.endless) pr.endlessBest = Math.max(pr.endlessBest || 0, reached);
+    var score = sum ? sum.score : 0, newScore = score > (pr.bestScore || 0);
+    if (newScore) pr.bestScore = score;
+    if (this.daily) {
+      pr.daily = pr.daily || {};
+      pr.daily[this.daily] = Math.max(pr.daily[this.daily] || 0, score);
+    }
+    var out = [], i;
+    for (i = 0; i < RW.CLASS_ORDER.length; i++) {
+      var h = RW.CLASS_ORDER[i];
+      if (RW.isUnlocked(h, pr)) continue;
+      var up = RW.unlockProgress(h, pr);
+      if (up.have >= up.need) { pr.unlocked[h] = 1; out.push(h); }
+    }
+    var ach = [];
+    if (sum) {
+      for (i = 0; i < RW.ACHIEVEMENTS.length; i++) {
+        var a = RW.ACHIEVEMENTS[i];
+        if (pr.ach[a.id]) continue;
+        var ok = false;
+        try { ok = !!a.check(pr, sum); } catch (err) { ok = false; }
+        if (ok) { pr.ach[a.id] = 1; ach.push(a.id); }
+      }
+    }
+    return { unlocked: out, ach: ach, newScore: newScore };
   };
 
   // ================= 战意 / 凝神 / 回血火光 / 尸体 =================
@@ -1811,7 +2691,7 @@
     }
   };
   G.updateFocus = function () {
-    if (this.clsId !== 'ranger') { this.focus = 0; return; }
+    if (!this.cls || !this.cls.focus) { this.focus = 0; return; }
     var F = this.cls.focus, p = this.player, sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     if (sp < F.still && this.mode === 'battle') this.focusT = Math.min(F.per * F.max + 0.01, this.focusT + DT);
     else this.focusT = Math.max(0, this.focusT - DT * (F.per * F.max / F.decay));
@@ -1826,6 +2706,7 @@
   };
   G.updateHeals = function () {
     var p = this.player, pr = P.pickup * this.st.pickup + 10;
+    if (p.dead) return;
     for (var i = 0; i < this.heals.length; i++) {
       var h = this.heals[i];
       if (!h.on) continue;
@@ -1838,6 +2719,7 @@
         var before = p.hp;
         p.hp = Math.min(p.maxHp, p.hp + T.healOrb.heal);
         if (p.hp > before) this.addNum(p.x, p.y - 18, p.hp - before, 'heal');
+        if (this.st.healCore > 0) { var co = this.core; co.hp = Math.min(co.maxHp, co.hp + this.st.healCore); }
         this.emit('heal');
       }
     }
@@ -1870,6 +2752,7 @@
   // ================= 绿球（吃了长质量） =================
   G.updateOrbs = function () {
     var p = this.player, reach = p.r + 12;
+    if (p.dead) return;
     for (var i = 0; i < this.orbs.length; i++) {
       var o = this.orbs[i];
       if (!o.on) continue;
@@ -1920,7 +2803,7 @@
       sh.x += sh.vx * DT; sh.y += sh.vy * DT; sh.vx *= 0.9; sh.vy *= 0.9;
       sh.life -= DT;
       if (sh.life <= 0) { sh.on = false; this.spark(sh.x, sh.y, '#3a8a7a'); continue; }
-      if (this.mode === 'battle' && d2 < pr2) { sh.mag = true; sh.sp = 120; continue; }
+      if (this.mode === 'battle' && d2 < pr2 && !p.dead) { sh.mag = true; sh.sp = 120; continue; }
       var rg = RW.TOWERS.siphon.range * RW.TOWER_TIER.range[this.tech.siphon - 1];
       for (var t = 0; t < this.towers.length; t++) {
         var tt = this.towers[t];
@@ -1932,7 +2815,7 @@
   };
   G.collectShard = function (sh, mul) {
     sh.on = false;
-    this.shardFrac += sh.val * this.st.harvest * mul;
+    this.shardFrac += sh.val * this.st.harvest * mul * (this.mut && this.mut.poor ? 1 + this.mut.poor.gold : 1);
     var whole = Math.floor(this.shardFrac + 1e-6);
     this.shardFrac -= whole;
     this.shardCount += whole; this.totalShards += whole;
@@ -1942,6 +2825,7 @@
 
   // ================= 波次结束 =================
   G.clearWave = function () {
+    if (this.player.dead) this.respawn();
     this.mode = 'clear';
     this.clearT = 1.6;
     for (var i = 0; i < this.enemies.length; i++) { var e = this.enemies[i]; if (e.on) this.killEnemy(e, null, 'silent'); }
@@ -1949,20 +2833,201 @@
     clearPool(this.marks); clearPool(this.ebullets); clearPool(this.missiles); clearPool(this.blasts);
     if (this.skill) { this.skill.veilT = 0; this.skill.wellT = 0; }
     for (var j = 0; j < this.shards.length; j++) { var s = this.shards[j]; if (s.on && !s.tower && !s.mag) { s.mag = true; s.recall = true; s.sp = 60; } }
+    var haul = Math.round((T.harvestBase + Math.max(0, this.st.harvest - 1) * T.harvestPer) * (this.mut && this.mut.poor ? 1 + this.mut.poor.gold : 1));
+    this.shardCount += haul; this.totalShards += haul; this.haul = haul;
+    var yg = this.sanctuaryYield();   // 圣域收成
+    this.shardCount += yg; this.totalShards += yg; this.yieldGold = yg;
     this.ringFx(this.player.x, this.player.y, 10, 700, 0.8, '#5ef2ff', 3);
     this.emit('waveClear', this.wave);
   };
 
   // ================= 整备（商店） =================
-  G.priceMul = function () { return 1 + T.priceGrowth * Math.max(0, this.wave - 1); };
+  G.priceMul = function () { return RW.SHEET.price(this.wave) * (this.st ? this.st.shopPrice : 1) * (1 + ((this.dg && this.dg.price) || 0)); };
   G.enterShop = function () {
     clearPool(this.shards); clearPool(this.mines); clearPool(this.bullets);
     for (var w = 0; w < this.weapons.length; w++) this.weapons[w].mineCount = 0;
     if (!this.shop) this.shop = { slots: [], rerolls: 0, adUsed: false };
     this.shop.rerolls = 0; this.shop.adUsed = false;
+    this.shop.free = Math.round(this.st.freeReroll);
+    this.shop.interest = 0;
+    if (this.st.interest > 0) {   // 利息：按手上金币发放
+      var it = Math.min(T.interestCap, Math.floor(this.shardCount * this.st.interest));
+      if (it > 0) { this.shardCount += it; this.totalShards += it; this.shop.interest = it; }
+    }
     this.rollShop(true);
     this.mode = 'shop';
+    if (this.blessPending > 0) { this.rollBless(); this.mode = 'bless'; }
     this.emit('shop');
+  };
+
+  // ================= 祝福三选一 =================
+  G.rollBless = function () {
+    var wts = RW.rarityWeights(this.wave, this.st.luck), out = [], guard = 0;
+    while (out.length < 3 && guard++ < 60) {
+      var sum = wts[0] + wts[1] + wts[2], roll = this.R() * sum, want = 0;
+      for (var i = 0; i < 3; i++) { roll -= wts[i]; if (roll < 0) { want = i; break; } }
+      var pool = [];
+      for (var r = want; r >= 0 && !pool.length; r--) {
+        for (var j = 0; j < RW.BLESS_ORDER.length; j++) {
+          var id = RW.BLESS_ORDER[j];
+          if (RW.BLESSINGS[id].r === r && out.indexOf(id) < 0) pool.push(id);
+        }
+      }
+      if (pool.length) out.push(pool[Math.floor(this.R() * pool.length)]);
+    }
+    this.blessOffers = out;
+    return out;
+  };
+  G.chooseBless = function (i) {
+    if (this.mode !== 'bless' || !this.blessOffers) return '没有可选的祝福';
+    var id = this.blessOffers[i];
+    if (!id) return '没有这个选项';
+    var fx = RW.BLESSINGS[id].fx;
+    for (var k in fx) this.bless[k] = (this.bless[k] || 0) + fx[k];
+    this.blessPending = Math.max(0, this.blessPending - 1);
+    this.rs.bless++;
+    this.recalc();
+    this.player.hp = this.player.maxHp;
+    this.emit('buy', 'bless');
+    if (this.blessPending > 0) this.rollBless();
+    else { this.blessOffers = null; this.mode = 'shop'; }
+    return 'ok';
+  };
+
+  // ================= 武器进化 =================
+  G.canEvolve = function (w) {
+    var ev = RW.EVOLVE[w.id];
+    return !!ev && w.tier >= 3 && !w.ev && this.modCount(ev.mod) > 0;
+  };
+  G.evolveWeapon = function (i) {
+    var w = this.weapons[i];
+    if (!w || !this.canEvolve(w)) return '还不能进化';
+    w.ev = RW.EVOLVE[w.id]; w.name = w.ev.name;
+    this.rs.evolved++;
+    this.recalc();
+    this.emit('evolve', w.name);
+    return 'ok';
+  };
+
+  // ================= 局中存档 =================
+  // 进整备（或祝福）时存一份；退出后从这次整备开始。死亡、通关结算时删除，不能靠读档反悔。
+  // 随机数：存档时换一个新种子并记下，读档与不退出的走向完全一样（刷新出的货也一样）。
+  RW.RUN_SAVE_V = 1;
+  G.saveRun = function () {
+    if (this.mode !== 'shop' && this.mode !== 'bless') return null;
+    var seed = Math.floor(this.R() * 4294967296) >>> 0, i;
+    this.rand = mulberry(seed);
+    var p = this.player, co = this.core, out = {
+      v: RW.RUN_SAVE_V, seed: seed, mode: this.mode, cls: this.clsId, danger: this.danger, mutators: this.mutList.slice(), daily: this.daily,
+      endless: this.endless, won: this.won, wave: this.wave, gold: this.shardCount, goldFrac: this.shardFrac, totalGold: this.totalShards,
+      built: this.built, kills: this.kills, bestStreak: this.bestStreak, revivesLeft: this.revivesLeft, runHeals: this.runHeals,
+      blessPending: this.blessPending, blessOffers: this.blessOffers ? this.blessOffers.slice() : null, bless: this.bless, mods: this.mods,
+      tech: this.tech, rs: this.rs, rec: this._rec, lastHits: this.lastHits,
+      player: { mass: p.mass, stage: p.stage, hp: p.hp, mp: p.mp, x: p.x, y: p.y },
+      chests: [], orbs: [],
+      core: { lv: co.lv || 1, hp: co.hp, form: co.form || '' }, map: this.mapId || 'village', furyT: this.furyT || 0,
+      banned: this.banned, bansLeft: this.bansLeft,
+      weapons: [], skills: [], skillAt: -1, retired: [], towers: [], mates: [], src: {},
+      shop: this.shop
+    };
+    for (i = 0; i < this.weapons.length; i++) { var w = this.weapons[i]; out.weapons.push({ id: w.id, tier: w.tier, ev: !!w.ev, dmg: w.dmg, kills: w.kills, spent: w.spent }); }
+    var sk = this.skills || [];
+    for (i = 0; i < sk.length; i++) out.skills.push({ id: sk[i].id, tier: sk[i].tier, dmg: sk[i].dmg, kills: sk[i].kills });
+    out.skillAt = sk.indexOf(this.skill);
+    var rt = this.retiredSkills || [];
+    for (i = 0; i < rt.length; i++) out.retired.push({ name: rt[i].name, color: rt[i].color, dmg: rt[i].dmg, kills: rt[i].kills });
+    for (i = 0; i < this.towers.length; i++) { var t = this.towers[i]; if (t.on) out.towers.push({ id: t.id, x: t.x, y: t.y, hp: t.hp, spent: t.spent, ang: t.ang, troop: t.troop, form: t.form, post: t.post ? { x: t.post.x, y: t.post.y } : null }); }
+    for (i = 0; i < this.mates.length; i++) { var m = this.mates[i]; if (m.on) out.mates.push({ id: m.id, star: m.star, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, r: m.r }); }
+    for (i = 0; i < this.chests.length; i++) { var c = this.chests[i]; if (c.on) out.chests.push([c.x, c.y, c.life || 0]); }
+    for (i = 0; i < this.orbs.length; i++) { var o = this.orbs[i]; out.orbs.push([o.on ? 1 : 0, o.x, o.y, o.dead || 0, o.bob || 0]); }
+    var srcs = { core: this.coreSrc, dash: this.dashSrc, eat: this.eatSrc, env: this.envSrc, thorn: this.thornSrc };
+    for (var k in srcs) out.src[k] = [srcs[k].dmg, srcs[k].kills];
+    for (k in this.towerStats) out.src['t:' + k] = [this.towerStats[k].dmg, this.towerStats[k].kills];
+    return JSON.parse(JSON.stringify(out));
+  };
+  G.loadRun = function (sv) {
+    if (!sv || sv.v !== RW.RUN_SAVE_V || !RW.CLASSES[sv.cls]) return false;
+    var i, k;
+    this.startRun(sv.cls, { danger: sv.danger, mutators: sv.mutators, daily: sv.daily, map: sv.map });
+    this.endless = !!sv.endless; this.won = !!sv.won; this.final = false;
+    this.wave = sv.wave; this.shardCount = sv.gold; this.shardFrac = sv.goldFrac || 0; this.totalShards = sv.totalGold;
+    this.built = sv.built; this.kills = sv.kills; this.bestStreak = sv.bestStreak; this.revivesLeft = sv.revivesLeft != null ? sv.revivesLeft : (sv.reviveUsed ? RW.REKINDLE.times - 1 : RW.REKINDLE.times); this.runHeals = sv.runHeals || 0;
+    this.bless = sv.bless || {}; this.mods = sv.mods || {}; this.tech = sv.tech; this.rs = sv.rs; this._rec = sv.rec; this.lastHits = sv.lastHits || [];
+    this.blessPending = sv.blessPending || 0; this.blessOffers = sv.blessOffers;
+    this.banned = sv.banned || {}; this.bansLeft = sv.bansLeft != null ? sv.bansLeft : RW.SHOP_BIAS.bans;
+    this.weapons = [];
+    for (i = 0; i < sv.weapons.length; i++) {
+      var ws = sv.weapons[i];
+      if (!RW.WEAPONS[ws.id]) continue;
+      this.addWeapon(ws.id);
+      var w = this.weapons[this.weapons.length - 1];
+      w.tier = ws.tier; w.dmg = ws.dmg; w.kills = ws.kills; w.spent = ws.spent;
+      if (ws.ev && RW.EVOLVE[ws.id]) { w.ev = RW.EVOLVE[ws.id]; w.name = w.ev.name; }
+    }
+    this.skills = [];
+    for (i = 0; i < sv.skills.length; i++) {
+      if (!RW.SKILLS[sv.skills[i].id]) continue;
+      var sk = newSkill(sv.skills[i].id);
+      sk.tier = sv.skills[i].tier; sk.dmg = sv.skills[i].dmg; sk.kills = sv.skills[i].kills;
+      this.skills.push(sk);
+    }
+    this.skill = this.skills[sv.skillAt] || this.skills[0] || null;
+    this.retiredSkills = sv.retired || [];
+    var p = this.player;
+    p.mass = sv.player.mass; p.stage = sv.player.stage;
+    this.core.lv = sv.core.lv; this.core.form = sv.core.form || ''; this.applyCoreLevel(); this.core.hp = Math.min(this.core.maxHp, sv.core.hp);
+    this.recalc();
+    p.hp = Math.max(1, Math.min(p.maxHp, sv.player.hp)); p.mp = sv.player.mp;
+    if (sv.player.x != null) { p.x = sv.player.x; p.y = sv.player.y; }
+    if (sv.chests) {
+      clearPool(this.chests);
+      for (i = 0; i < sv.chests.length; i++) { var ch = take(this.chests); if (ch) { ch.x = sv.chests[i][0]; ch.y = sv.chests[i][1]; ch.r = 14; ch.life = sv.chests[i][2]; } }
+    }
+    if (sv.orbs) for (i = 0; i < sv.orbs.length && i < this.orbs.length; i++) {
+      var ob = this.orbs[i], os = sv.orbs[i];
+      ob.on = !!os[0]; ob.x = os[1]; ob.y = os[2]; ob.dead = os[3]; ob.bob = os[4];
+    }
+    clearPool(this.towers); clearPool(this.soldiers); clearPool(this.mates);
+    for (i = 0; i < sv.towers.length; i++) {
+      var ts = sv.towers[i], d = RW.TOWERS[ts.id], tw = take(this.towers);
+      if (!tw || !d) continue;
+      tw.id = ts.id; tw.d = d; tw.x = ts.x; tw.y = ts.y; tw.cd = 0.4; tw.build = 0; tw.pulse = 0; tw.flash = 0;
+      tw.spawnT = 1; tw.soldiers = 0; tw.ang = ts.ang || 0; tw.spent = ts.spent;
+      tw.troop = RW.TROOPS[ts.troop] ? ts.troop : RW.TROOP_ORDER[0]; tw.form = RW.FORMATIONS[ts.form] ? ts.form : RW.FORMATION_ORDER[0]; tw.post = ts.post ? { x: ts.post.x, y: ts.post.y } : null;
+      tw.maxHp = d.hp * RW.TOWER_TIER.hp[this.tech[ts.id] - 1]; tw.hp = Math.min(tw.maxHp, ts.hp);
+    }
+    for (i = 0; i < sv.mates.length; i++) {
+      var ms = sv.mates[i], md = RW.MATES[ms.id], m = take(this.mates);
+      if (!m || !md) continue;
+      m.id = ms.id; m.d = md; m.star = ms.star; m.x = ms.x; m.y = ms.y; m.vx = m.vy = 0;
+      m.hp = ms.hp; m.maxHp = ms.maxHp; m.r = ms.r; m.cd = 0.2; m.ang = 0; m.flash = 0;
+    }
+    var srcs = { core: this.coreSrc, dash: this.dashSrc, eat: this.eatSrc, env: this.envSrc, thorn: this.thornSrc };
+    for (k in srcs) if (sv.src[k]) { srcs[k].dmg = sv.src[k][0]; srcs[k].kills = sv.src[k][1]; }
+    for (k in this.towerStats) if (sv.src['t:' + k]) { this.towerStats[k].dmg = sv.src['t:' + k][0]; this.towerStats[k].kills = sv.src['t:' + k][1]; }
+    clearPool(this.enemies); clearPool(this.ebullets); clearPool(this.bullets); clearPool(this.marks); clearPool(this.shards); clearPool(this.mines);
+    this.enemyCount = 0; this.boss = null; this.banner = 0; this.eliteQ = [];
+    this.shop = sv.shop;
+    this.rand = mulberry(sv.seed >>> 0);
+    this.mode = sv.mode === 'bless' && this.blessOffers ? 'bless' : 'shop';
+    this.emit('resume');
+    return true;
+  };
+
+  // 无尽：通关之后接着打
+  G.continueEndless = function () {
+    if (!this.won || this.endless) return false;
+    this.endless = true; this.final = false; this.result = null;
+    this.enterShop();
+    return true;
+  };
+  // 每日挑战：同一天所有人同一个种子、同一个英雄、同一组变异器（危险 1）
+  RW.dailySetup = function (key) {
+    var h = 2166136261;
+    for (var i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    var rnd = mulberry(h), pool = RW.MUT_ORDER.slice(), muts = [];
+    while (muts.length < 2 && pool.length) muts.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
+    return { key: key, seed: h, hero: RW.CLASS_ORDER[h % RW.CLASS_ORDER.length], danger: 1, mutators: muts, map: RW.MAP_ORDER[(h >>> 8) % RW.MAP_ORDER.length] };
   };
   G.modCount = function (id) { return this.mods[id] || 0; };
   G.offerFor = function (kind, id) {
@@ -1975,8 +3040,8 @@
       o.tier = this.tech[id] + 1; o.upgrade = true;
       o.price = Math.round(RW.TOWERS[id].techCost * RW.TECH_COST[o.tier - 1] * pm);
     } else if (kind === 'skill') {
-      var sk = this.skill, sd = RW.SKILLS[id];
-      if (sk && sk.id === id) { o.tier = sk.tier + 1; o.upgrade = true; }
+      var sk = this.skill, sd = RW.SKILLS[id], own = this.skillById(id);
+      if (own) { o.tier = own.tier + 1; o.upgrade = true; }
       else { o.tier = 1; o.replace = sk ? sk.d.name : ''; }
       o.price = Math.round(sd.cost * RW.TIER_COST[o.tier - 1] * pm);
     } else {
@@ -1996,12 +3061,12 @@
     } else if (kind === 'tech') {
       for (i = 0; i < RW.TOWER_ORDER.length; i++) { id = RW.TOWER_ORDER[i]; if (this.tech[id] < 3) out.push(id); }
     } else if (kind === 'skill') {
-      for (i = 0; i < RW.SKILL_ORDER.length; i++) { id = RW.SKILL_ORDER[i]; if (!(this.skill && this.skill.id === id && this.skill.tier >= 3)) out.push(id); }
+      for (i = 0; i < RW.SKILL_ORDER.length; i++) { id = RW.SKILL_ORDER[i]; var ow = this.skillById(id); if (!(ow && ow.tier >= 3)) out.push(id); }
     } else {
       for (i = 0; i < RW.MOD_ORDER.length; i++) { id = RW.MOD_ORDER[i]; if (this.modCount(id) < RW.MODS[id].max) out.push(id); }
     }
-    var res = [];
-    for (i = 0; i < out.length; i++) if (!exclude[kind + ':' + out[i]]) res.push(out[i]);
+    var res = [], ban = this.banned || {};
+    for (i = 0; i < out.length; i++) if (!exclude[kind + ':' + out[i]] && !ban[kind + ':' + out[i]]) res.push(out[i]);
     return res;
   };
   G.rollShop = function (keepLocked) {
@@ -2013,29 +3078,85 @@
         slots.push(re); used[old.kind + ':' + old.id] = true;
       } else slots.push(null);
     }
-    for (var s = 0; s < 4; s++) {
-      if (slots[s]) continue;
-      var o = null;
-      for (var tries = 0; tries < 10 && !o; tries++) {
-        var r = this.R(), kind = r < 0.32 ? 'weapon' : (r < 0.7 ? 'mod' : (r < 0.84 ? 'skill' : 'tech'));
-        var firstNew = this.wave <= 1 && s === 0;         // 第一次整备保证有一把「新」武器可选
-        if (firstNew) kind = 'weapon';
-        var c = this.candidates(kind, used);
-        if (firstNew) { var self = this; c = c.filter(function (id) { return !self.findWeapon(id); }); }
-        if (!c.length) continue;
-        var id = c[Math.floor(this.R() * c.length)];
-        o = this.offerFor(kind, id);
-        used[kind + ':' + id] = true;
-      }
-      if (!o) { var cm = this.candidates('mod', used); if (cm.length) { o = this.offerFor('mod', cm[0]); used['mod:' + cm[0]] = true; } }
-      slots[s] = o || { kind: 'none', sold: true, price: 0 };
-    }
+    for (var s = 0; s < 4; s++) if (!slots[s]) slots[s] = this.rollOffer(used, this.wave <= 1 && s === 0);   // 第一次整备第一格保证是新武器
     shop.slots = slots;
+    this.evolvePity();
+  };
+  G.rollOffer = function (used, firstNew) {
+    var o = null;
+    for (var tries = 0; tries < 10 && !o; tries++) {
+      var r = this.R(), kind = r < 0.32 ? 'weapon' : (r < 0.7 ? 'mod' : (r < 0.84 ? 'skill' : 'tech'));
+      if (firstNew) kind = 'weapon';
+      var c = this.candidates(kind, used);
+      if (firstNew) { var self = this; c = c.filter(function (id) { return !self.findWeapon(id); }); }
+      if (!c.length) continue;
+      var id = kind === 'mod' ? this.pickMod(c) : (kind === 'weapon' ? this.pickWeapon(c) : c[Math.floor(this.R() * c.length)]);
+      o = this.offerFor(kind, id);
+      used[kind + ':' + id] = true;
+    }
+    if (!o) { var cm = this.candidates('mod', used); if (cm.length) { o = this.offerFor('mod', cm[0]); used['mod:' + cm[0]] = true; } }
+    return o || { kind: 'none', sold: true, price: 0 };
+  };
+  // 禁用：这件货本局不再出现，当场补一件别的（每局次数有限）。玩家呼声很高的功能
+  G.banSlot = function (i) {
+    var sl = this.shop && this.shop.slots[i];
+    if (!sl || sl.sold || sl.kind === 'none') return '这一格没有货';
+    if (this.bansLeft <= 0) return '本局禁用次数用完了';
+    this.banned[sl.kind + ':' + sl.id] = 1; this.bansLeft--;
+    var used = {};
+    for (var k = 0; k < this.shop.slots.length; k++) { var o = this.shop.slots[k]; if (o && o.kind !== 'none') used[o.kind + ':' + o.id] = true; }
+    this.shop.slots[i] = this.rollOffer(used, false);
+    this.emit('reroll');
+    return 'ok';
+  };
+  // 武器按「你已经在走的流派」和「能升阶」加权，少刷到用不上的货
+  G.pickWeapon = function (c) {
+    var B = RW.SHOP_BIAS, tags = {}, i, sum = 0, wts = [];
+    for (i = 0; i < this.weapons.length; i++) { var t = this.weapons[i].d.tag || 'ranged'; tags[t] = (tags[t] || 0) + 1; }
+    for (i = 0; i < c.length; i++) {
+      var d = RW.WEAPONS[c[i]], w = this.findWeapon(c[i]);
+      var k = (w ? B.upgrade : 1) * (tags[d.tag || 'ranged'] ? B.ownTag : 1);
+      wts.push(k); sum += k;
+    }
+    var r = this.R() * sum;
+    for (i = 0; i < c.length; i++) { r -= wts[i]; if (r < 0) return c[i]; }
+    return c[c.length - 1];
+  };
+  // 进化保底：有 II 阶以上武器还缺配方道具时，连续几次整备都没刷到就强制放一件
+  G.evolvePity = function () {
+    var shop = this.shop, need = [], i;
+    for (i = 0; i < this.weapons.length; i++) {
+      var w = this.weapons[i], ev = RW.EVOLVE[w.id];
+      if (ev && !w.ev && w.tier >= 2 && this.modCount(ev.mod) === 0 && need.indexOf(ev.mod) < 0) need.push(ev.mod);
+    }
+    if (!need.length) { shop.evoMiss = 0; return; }
+    for (i = 0; i < shop.slots.length; i++) { var o = shop.slots[i]; if (o && o.kind === 'mod' && need.indexOf(o.id) >= 0) { shop.evoMiss = 0; return; } }
+    shop.evoMiss = (shop.evoMiss || 0) + 1;
+    if (shop.evoMiss < RW.SHOP_BIAS.evoPity) return;
+    var free = [];
+    for (i = 0; i < shop.slots.length; i++) if (shop.slots[i] && !shop.slots[i].locked) free.push(i);
+    if (!free.length) return;
+    shop.slots[free[Math.floor(this.R() * free.length)]] = this.offerFor('mod', need[Math.floor(this.R() * need.length)]);
+    shop.evoMiss = 0;
+  };
+  // 按品质权重抽道具：先抽品质，该品质没货就往低一档找
+  G.pickMod = function (c) {
+    var wts = RW.rarityWeights(this.wave, this.st.luck), sum = 0, r, i;
+    for (i = 0; i < wts.length; i++) sum += wts[i];
+    var roll = this.R() * sum, want = 0;
+    for (i = 0; i < wts.length; i++) { roll -= wts[i]; if (roll < 0) { want = i; break; } }
+    for (r = want; r >= 0; r--) {
+      var pool = c.filter(function (id) { return (RW.MODS[id].r || 0) === r; });
+      if (pool.length) return pool[Math.floor(this.R() * pool.length)];
+    }
+    return c[Math.floor(this.R() * c.length)];
   };
   G.rerollCost = function () {
+    if (this.shop.free > 0) return 0;
     return Math.round(T.rerollBase + T.rerollPerWave * (this.wave - 1) + T.rerollStep * this.shop.rerolls);
   };
   G.reroll = function (free) {
+    if (!free && this.shop.free > 0) { this.shop.free--; free = true; }
     if (!free) {
       var c = this.rerollCost();
       if (this.shardCount < c) return false;
@@ -2059,9 +3180,11 @@
       var w = this.findWeapon(sl.id);
       if (w) { if (w.tier >= 3) return '已满级'; w.tier++; w.spent += sl.price; }
       else { if (this.weapons.length >= RW.MAX_SLOTS) return '武器槽已满'; this.addWeapon(sl.id); this.weapons[this.weapons.length - 1].spent = sl.price; }
+      this.recalc();   // 流派套装跟着变
     } else if (sl.kind === 'mod') {
       if (this.modCount(sl.id) >= RW.MODS[sl.id].max) return '已达上限';
       this.mods[sl.id] = this.modCount(sl.id) + 1;
+      if (RW.MODS[sl.id].r === 3) this.rs.legendary = true;
       this.recalc();
     } else if (sl.kind === 'tech') {
       if (this.tech[sl.id] >= 3) return '已满级';
