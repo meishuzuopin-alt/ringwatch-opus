@@ -1,0 +1,1 @@
+{"name": "embers_rise", "image": "embers_rise.png", "frame_w": 209, "frame_h": 143, "frames": 6, "fps": 12, "blend": "additive", "note": "straight alpha from black bg; draw additive or normal"}

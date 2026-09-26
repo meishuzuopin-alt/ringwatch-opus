@@ -1,0 +1,1 @@
+{"name": "bolt_impact", "image": "bolt_impact.png", "frame_w": 209, "frame_h": 124, "frames": 6, "fps": 12, "blend": "additive", "note": "straight alpha from black bg; draw additive or normal"}
