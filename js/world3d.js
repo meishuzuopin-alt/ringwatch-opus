@@ -13,13 +13,13 @@
 
   // ================= 调色 =================
   var PAL = {
-    grass: hex('#6a9a3e'), grass2: hex('#6f9f41'), grassDark: hex('#65943b'),
-    dirt: hex('#b08652'), dirt2: hex('#aa8250'), stone: hex('#aaa498'), stone2: hex('#b3ada1'),
-    rock: hex('#7b7f86'), rock2: hex('#8d9098'), rockDark: hex('#5f636b'), moss: hex('#5f8f3a'),
-    bed: hex('#3d5a6e'), water: hex('#2f8fd0'), plank: hex('#8a5a34'), plank2: hex('#9b6a3f'), wood: hex('#6b4428'),
-    trunk: hex('#6b4a2e'), leaf: hex('#3f7f35'), leaf2: hex('#4d9440'), leaf3: hex('#356b2e'),
-    wall: hex('#e8dcc4'), wallWood: hex('#8a6440'), roofBlue: hex('#3f5f9e'), roofRed: hex('#b5523a'),
-    lamp: hex('#ffcf6b'), banner: hex('#2a2440'), gold: hex('#e0a83a'), flower: [hex('#ffffff'), hex('#ffd6f0'), hex('#fff1a8')]
+    grass: hex('#5fae3e'), grass2: hex('#72be4a'), grassDark: hex('#4a9836'),
+    dirt: hex('#c49858'), dirt2: hex('#b6884c'), stone: hex('#c8bfa6'), stone2: hex('#d6ccb4'),
+    rock: hex('#7e8694'), rock2: hex('#949eac'), rockDark: hex('#5c6474'), moss: hex('#5a9e3c'),
+    bed: hex('#3a5870'), water: hex('#2184c2'), plank: hex('#a86a36'), plank2: hex('#c48246'), wood: hex('#7a4e2a'),
+    trunk: hex('#6e4a2c'), leaf: hex('#3c9436'), leaf2: hex('#4eaa42'), leaf3: hex('#2e7c2e'),
+    wall: hex('#f3e6cc'), wallWood: hex('#a67240'), roofBlue: hex('#3d629e'), roofRed: hex('#c45a3a'),
+    lamp: hex('#ffc85a'), banner: hex('#2a2440'), gold: hex('#e0a83a'), flower: [hex('#ffffff'), hex('#ffd6f0'), hex('#fff1a8')]
   };
 
   // ================= 地貌 =================
@@ -42,6 +42,13 @@
     for (k in BASE_PAL) PAL[k] = BASE_PAL[k];
     PAL.pine = PAL.willow = 0;
     for (k in B) PAL[k] = typeof B[k] === 'string' ? hex(B[k]) : B[k];
+  }
+  // 给接下来画的面记一张贴图（RW.TEXTURES.slots）。0 仍然只用顶点色。几何本身不变。
+  function withTex(gb, name, fn) {
+    var T = RW.TEXTURES, prev = gb.tex || 0;
+    gb.tex = (T && T.slots && T.slots[name]) || 0;
+    fn();
+    gb.tex = prev;
   }
 
   // ================= 地形 =================
@@ -74,26 +81,28 @@
         }
         continue;
       }
-      // 地面格子
-      var top;
-      if (k === ',' || k === 'S') top = h < 0.5 ? PAL.dirt : PAL.dirt2;
-      else if (k === '_' || k === 'C') top = h < 0.5 ? PAL.stone : PAL.stone2;
+      // 地面格子。草 = 空地，土 = 路，石板 = 中央广场
+      var top, surf = '';
+      if (k === ',' || k === 'S') { top = h < 0.5 ? PAL.dirt : PAL.dirt2; surf = 'dirt'; }
+      else if (k === '_' || k === 'C') { top = h < 0.5 ? PAL.stone : PAL.stone2; surf = 'plaza'; }
       else if (k === '#' || k === '^') top = PAL.moss;
-      else top = h < 0.33 ? PAL.grass : (h < 0.66 ? PAL.grass2 : PAL.grassDark);
+      else { top = h < 0.33 ? PAL.grass : (h < 0.66 ? PAL.grass2 : PAL.grassDark); surf = 'grass'; }
       var gy = 0;
       if (k === '#' || k === '^') {
         // 岩壁：一到两层石块，顶上长草
         var ht = k === '^' ? 70 + h * 50 : 34 + h * 22;
         gb.box(cx, 0, cz, C, ht, C, shade(PAL.rock, 0.9 + h * 0.2), 0, shade(PAL.moss, 0.9 + h * 0.2), true);
         if (h > 0.55) gb.box(cx + (h - 0.5) * 12, ht, cz - (h - 0.5) * 10, C * 0.55, 8 + h * 10, C * 0.5, PAL.rock2, 0, PAL.moss, true);
-        if (h < 0.3 && k === '#') gb.blob(cx + 8, ht + 6, cz + 6, 10, 9, 10, PAL.leaf2, 0, c * 31 + r, 0.25);
+        if (h < 0.3 && k === '#') withTex(gb, 'canopy', function () { gb.blob(cx + 8, ht + 6, cz + 6, 10, 9, 10, PAL.leaf2, 0, c * 31 + r, 0.25); });
         continue;
       }
-      gb.quad([x0, gy, z1], [x1, gy, z1], [x1, gy, z0], [x0, gy, z0], top);
-      if (k === '_' || k === 'C') {
-        // 石板：内缩一圈的浅色板
-        gb.quad([x0 + 3, 0.6, z1 - 3], [x1 - 3, 0.6, z1 - 3], [x1 - 3, 0.6, z0 + 3], [x0 + 3, 0.6, z0 + 3], shade(top, 1.06));
-      }
+      withTex(gb, surf, function () {
+        gb.quad([x0, gy, z1], [x1, gy, z1], [x1, gy, z0], [x0, gy, z0], top);
+        if (k === '_' || k === 'C') {
+          // 石板：内缩一圈的浅色板
+          gb.quad([x0 + 3, 0.6, z1 - 3], [x1 - 3, 0.6, z1 - 3], [x1 - 3, 0.6, z0 + 3], [x0 + 3, 0.6, z0 + 3], shade(top, 1.06));
+        }
+      });
       // 靠河的一侧：竖直岸壁 + 木栅栏
       var nb = [[0, 1], [0, -1], [1, 0], [-1, 0]];
       for (var q = 0; q < 4; q++) {
@@ -175,7 +184,7 @@
     gb.cyl(x, 0, z, 3.6 * s, 2.4 * s, 20 * s, 6, PAL.trunk);
     for (var i = 0; i < 3; i++) {
       var y = (16 + i * 17) * s, r = (22 - i * 6) * s;
-      gb.cyl(x, y, z, r, 0.8, 24 * s, 7, shade(lc, 0.95 + R() * 0.1));
+      withTex(gb, 'canopy', function () { gb.cyl(x, y, z, r, 0.8, 24 * s, 7, shade(lc, 0.95 + R() * 0.1)); });
       gb.cyl(x, y + 12 * s, z, r * 0.52, 0.6, 12 * s, 7, snowC);
     }
   }
@@ -185,9 +194,11 @@
     var trunk = 52 * s;
     gb.cyl(x, 0, z, 4.4 * s, 2.6 * s, trunk, 6, PAL.trunk);
     var lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3];
-    gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
-    gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
-    if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    withTex(gb, 'canopy', function () {
+      gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
+      gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
+      if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    });
   }
   function tufts(gb, x, z, c, r) {
     var R = rnd(c * 977 + r * 131 + 5);
@@ -198,7 +209,7 @@
       gb.tri(a, b, t, col); gb.tri(b, a, t, col);
     }
   }
-  function bush(gb, x, z, seed) { gb.blob(x, 9, z, 16, 14, 16, PAL.leaf2, 0, seed, 0.3); }
+  function bush(gb, x, z, seed) { withTex(gb, 'canopy', function () { gb.blob(x, 9, z, 16, 14, 16, PAL.leaf2, 0, seed, 0.3); }); }
   function flowers(gb, x, z, c, r) {
     var R = rnd(c * 131 + r * 7);
     for (var i = 0; i < 4; i++) {
@@ -250,10 +261,10 @@
     var roofH = Math.max(28, Math.min(50, span * 0.4));
     var doorH = 36;
     gb.box(cx, 0, cz, w - 8, 4, d - 6, PAL.stone2);
-    gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall);
+    withTex(gb, 'wall', function () { gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall); });
     gb.box(x0 + 7, 4, cz, 3, wallH, d - 10, PAL.wood); gb.box(x0 + w - 7, 4, cz, 3, wallH, d - 10, PAL.wood);
     gb.box(cx, wallH, cz, w - 10, 4, d - 10, PAL.wood);
-    gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof);
+    withTex(gb, 'roof', function () { gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof); });
     gb.box(cx - w * 0.2, wallH + roofH * 0.45, cz - 4, 7, 20, 7, PAL.rockDark);
     gb.box(cx, 4, z0 + d - 5.5, 12, doorH, 1.4, PAL.wood);
     var winY = 4 + doorH * 0.45;
@@ -437,9 +448,9 @@
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
     M.sentry = model(function (g) {
       g.box(0, 0, 0, 22, 26, 22, PAL.rock2, 0, PAL.stone);
-      g.box(0, 26, 0, 16, 62, 16, PAL.wallWood);
+      withTex(g, 'wall', function () { g.box(0, 26, 0, 16, 62, 16, PAL.wallWood); });
       g.box(0, 58, 8.2, 7, 8, 0.8, hex('#1a120c'));
-      g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed);
+      withTex(g, 'roof', function () { g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed); });
       g.box(0, 40, 8.4, 8, 28, 0.8, PAL.banner); g.box(0, 52, 8.9, 4, 6, 0.4, PAL.gold, 0.6);
     });
     M.pylon = model(function (g) {
@@ -456,8 +467,8 @@
     });
     M.barracks = model(function (g) {
       g.box(0, 0, 0, 32, 4, 28, PAL.stone2);
-      g.box(0, 4, 0, 28, 48, 24, PAL.wallWood);
-      g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed);
+      withTex(g, 'wall', function () { g.box(0, 4, 0, 28, 48, 24, PAL.wallWood); });
+      withTex(g, 'roof', function () { g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed); });
       g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
       banner(g, -15, 13, 72);
     });
@@ -526,19 +537,19 @@
     // rim = 冷色边缘光 [r, g, b, 强度]；fogLow = 光圈外低矮冷雾 [浓度, 高度, 从光圈边缘到最浓的距离]；vig = 暗角；
     // amb = 环境与主光亮度倍率；chill = C1 冷暖混合（0 白天端，1 夜晚端，见 RW.C1_LIGHT）；a35 = 夜晚提亮到白天 35% 的备选颜色
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: shade(hex('#b0c6e6'), 0.44), sky: shade(hex('#9eb8e4'), 0.50), ground: shade(hex('#283850'), 0.75), fog: hex('#466892'), clear: hex('#5278a8'), fogNear: 1900, fogFar: 3200, em: 1.0, lamp: 0.5,
-        grade: [1.02, 1.08, 0.04, 0.0], shadowDark: 0.42, line: hex('#1a1830'), bloom: 0.35, thr: 0.9,
-        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.15, amb: 0.56, chill: 0 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#94aed4'), 0.40), sky: shade(hex('#7090bc'), 0.46), ground: shade(hex('#223044'), 0.72), fog: hex('#3a547c'), clear: hex('#3a547c'), fogNear: 1750, fogFar: 2900, em: 1.2, lamp: 0.75,
-        grade: [0.98, 1.06, 0.05, 0.0], shadowDark: 0.40, line: hex('#161428'), bloom: 0.45, thr: 0.85,
-        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.17, amb: 0.46, chill: 0.45 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8098c0'), 0.38), sky: shade(hex('#6080b0'), 0.46), ground: shade(hex('#1c2c44'), 0.75), fog: hex('#2c446c'), clear: hex('#1a2c48'), fogNear: 1700, fogFar: 2800, em: 1.5, lamp: 1.0,
-        grade: [0.96, 1.06, 0.06, 0.0], shadowDark: 0.38, line: hex('#0c0e18'), bloom: 0.55, thr: 0.85,
-        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.20, amb: 0.36, chill: 1,
+      day: { light: [-0.58, 0.78, 0.24], sun: shade(hex('#ffd7a2'), 0.78), sky: shade(hex('#c5e2ff'), 0.62), ground: shade(hex('#3c417c'), 0.72), fog: hex('#e4d0ae'), clear: hex('#79b7e6'), fogNear: 2800, fogFar: 5000, em: 0.82, lamp: 0.42,
+        grade: [1.16, 1.03, 0.02, 0.018], shadowDark: 0.58, line: hex('#3a3c62'), bloom: 0.18, thr: 0.92,
+        rim: [0.42, 0.48, 0.82, 0.05], fogLow: [0.04, 24, 640], vig: 0.06, amb: 0.74, chill: 0 },
+      dusk: { light: [-0.62, 0.68, 0.26], sun: shade(hex('#ffc48a'), 0.66), sky: shade(hex('#e8c8a4'), 0.52), ground: shade(hex('#3a3c6a'), 0.64), fog: hex('#c9aa86'), clear: hex('#e09a72'), fogNear: 2100, fogFar: 3800, em: 1.05, lamp: 0.7,
+        grade: [1.08, 1.04, 0.04, 0.01], shadowDark: 0.5, line: hex('#322c50'), bloom: 0.3, thr: 0.88,
+        rim: [0.62, 0.48, 0.62, 0.12], fogLow: [0.12, 36, 480], vig: 0.1, amb: 0.6, chill: 0.25 },
+      night: { light: [-0.32, 0.84, 0.42], sun: shade(hex('#9aafef'), 0.48), sky: shade(hex('#6678c0'), 0.5), ground: shade(hex('#2e2a5c'), 0.7), fog: hex('#1c2848'), clear: hex('#12182e'), fogNear: 1500, fogFar: 3400, em: 1.7, lamp: 1.2,
+        grade: [1.05, 1.02, 0.03, 0.02], shadowDark: 0.52, line: hex('#262044'), bloom: 0.36, thr: 0.9,
+        rim: [0.42, 0.4, 0.82, 0.18], fogLow: [0.28, 42, 520], vig: 0.12, amb: 0.5, chill: 1,
         // 备选（GL.ART.night35）：夜晚光圈外亮度约为白天 35% 的提亮版
         a35: { sun: shade(hex('#8aa4ff'), 0.72), sky: shade(hex('#5a74b8'), 0.8), ground: shade(hex('#2a2c48'), 0.6), fog: hex('#34497a'), clear: hex('#141e36') } },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#8090c8'), 0.3), sky: shade(hex('#503868'), 0.4), ground: shade(hex('#1a1020'), 0.5), fog: hex('#2a2048'), clear: hex('#1a1430'), fogNear: 1400, fogFar: 2200, em: 1.4, lamp: 0.9,
-        grade: [0.96, 1.06, 0.12, -0.008], shadowDark: 0.24, line: hex('#12060a'), bloom: 0.85, thr: 0.66,
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#8090c8'), 0.36), sky: shade(hex('#604878'), 0.48), ground: shade(hex('#2a1838'), 0.62), fog: hex('#322450'), clear: hex('#1c1434'), fogNear: 1500, fogFar: 2400, em: 1.4, lamp: 0.9,
+        grade: [0.98, 1.04, 0.08, 0.01], shadowDark: 0.4, line: hex('#2a1840'), bloom: 0.7, thr: 0.7,
         rim: [0.55, 0.35, 0.75, 0.3], fogLow: [0.5, 34, 380], vig: 0.26, amb: 0.3, chill: 0.72,
         a35: { sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#7a4070'), 0.8), ground: shade(hex('#3a1c28'), 0.6), fog: hex('#4a2038'), clear: hex('#200a14'), amb: 1 } }
     };
@@ -550,6 +561,7 @@
       rim: e.rim.slice(), fogLow: e.fogLow.slice(), vig: e.vig, amb: e.amb, chill: e.chill || 0 };
   }
   W3.envFor = function (g) {
+    if (RW.QA && RW.QA.wantDay) return 'day';
     if (g.nightOn) return 'night';
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
     if (g.wave > 0 && g.wave % RW.BOSS_WAVES.every === 0 && g.mode !== 'shop') return 'boss';
@@ -670,7 +682,7 @@
   };
 
   // ================= 每帧绘制 =================
-  var WHITE = [1, 1, 1], BLACK = [0, 0, 0];
+  var WHITE = [1, 1, 1], BLACK = [0, 0, 0], SHADOW = [0.14, 0.11, 0.28];
   // 帧率自适应：平均帧时间持续超过 30ms，按 泛光 -> 描边 -> 阴影 的顺序逐个关掉
   var perf = { avg: 1 / 60, slowT: 0, locked: false };
   function adaptQuality(dt) {
@@ -699,7 +711,8 @@
     W3.setMap();   // 地图换了就重建地形
     adaptQuality(dt);
     var target = envPreset(W3.envFor(g));
-    lerpEnv(W3.env, target, Math.min(1, dt * 1.5));
+    var qaSnap = RW.QA && (RW.QA.wantDay || RW.QA.wantNight);
+    lerpEnv(W3.env, target, qaSnap ? 1 : Math.min(1, dt * 1.5));
     var env = W3.env; env.time = W3.t;
     // 圣火暖光圈：半径就是圣域半径，光圈外是敌人的地盘；夜里（lamp 高）更亮
     var co = g.core;
@@ -743,19 +756,18 @@
       GL.ground(true, p.x, 1.3, p.y, 26 * rk2, 0, 0, hex('#ffe7a0'), 0.35);
       return;
     }
-    // 设置：主角脚下光圈（不受受击闪烁影响，人多时也能一眼找到自己）
+    // 设置：主角脚下软光（没有描边圆环，人多时仍能找到自己）
     if (RW.opt.ring && g.mode !== 'down') {
       var rc = C((g.cls || RW.CLASSES.mage).color);
-      GL.ground(false, p.x, 0.6, p.y, p.r * 2.1 + 7, 1, 0.3, [0.02, 0.02, 0.03], 0.35);
-      GL.ground(false, p.x, 0.7, p.y, p.r * 2.1 + 6, 1, 0.16, rc, 0.8);
+      GL.ground(true, p.x, 0.7, p.y, p.r * 2.8 + 16, 0, 0, rc, 0.14);
     }
     if (p.inv > 0 && p.dashT <= 0 && g.mode === 'battle' && p.hurtT <= 0 && Math.sin(W3.t * 45) > 0) { if (GL.lamp) GL.lamp.intensity = 0; return; }
     var sc = p.r / 10 * 1.35, cx = p.x, cz = p.y, ec = hex(RW.EVO[p.stage].color);
     if (SPR && SPR.has('hero')) { if (!heroSprite(g, p)) return; }
     else { if (GL.lamp) GL.lamp.intensity = 0; if (!heroModel(g, M, p)) return; }
-    // 影子 + 脚下光圈（位阶颜色）
-    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.3, BLACK, 0.35 * (SPR && SPR.has('hero') ? 1 : W3.blobShadow()));
-    GL.ground(true, cx, 1, cz, 16 * sc, 1, 0.15, ec, 0.45);
+    // 蓝紫接触影 + 位阶色的软光，不画硬边圆环
+    GL.ground(false, cx, 0.8, cz, 13 * sc, 2, 0.45, SHADOW, 0.32 * (SPR && SPR.has('hero') ? 1 : W3.blobShadow()));
+    GL.ground(true, cx, 1, cz, 22 * sc, 0, 0, ec, 0.1);
     if (g.momTier > 0) GL.ground(true, cx, 1.2, cz, (22 + g.momTier * 5) * sc, 0, 0, g.momTier >= 3 ? hex('#ff5a2e') : hex('#ffc861'), 0.25 + 0.1 * Math.sin(W3.t * 10));
     if (g.cls && g.cls.focus && g.focus > 0) {
       var fk = g.focus / g.cls.focus.max;
@@ -887,7 +899,7 @@
     if (es.tint) { TT[0] = tint[0] * es.tint[0]; TT[1] = tint[1] * es.tint[1]; TT[2] = tint[2] * es.tint[2]; tint = TT; }
     SPR.put(es.set, e.x, o.y * bodyH, e.y, o.row, o.frame, false, bodyH, sx, sy, 0, tint[0], tint[1], tint[2], fl);
     // 接触阴影 + 脚下红圈（精英更亮）
-    GL.ground(false, e.x, 0.6, e.y, e.r * 1.15, 2, 0.3, BLACK, 0.3);
+    GL.ground(false, e.x, 0.6, e.y, e.r * 1.15, 2, 0.45, SHADOW, 0.28);
     GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#ff3b5c') : C('#ff6a4a'), e.elite ? 0.55 : 0.22);
     // 特殊光效（位置改成立牌上大致的手 / 法器处）
     if (e.type === 'bomber') GL.glow(e.x, bodyH * 0.45, e.y, e.state === 1 ? 14 : 6, hex('#ffb040'), 0.9);
@@ -928,7 +940,7 @@
       if (e.type === 'spore') GL.put(M.batWing, e.x, y + 1 * s, e.y, yaw, s, s * Math.sin(t * 22 + e.seq) * 1.2, s, 0, 1, 1, 1, fl);
       if (e.type === 'brood') GL.put(M.broodWing, e.x, 26 * s, e.y, yaw, s, s * (0.6 + 0.5 * Math.sin(t * 5 + e.seq)), s, 0, 1, 1, 1, fl);
       // 影子
-      GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.3, BLACK, (em.fly ? 0.18 : 0.3) * W3.blobShadow());
+        GL.ground(false, e.x, 0.6, e.y, e.r * (em.fly ? 0.8 : 1.15), 2, 0.45, SHADOW, (em.fly ? 0.16 : 0.28) * W3.blobShadow());
       if (!em.fly) GL.ground(true, e.x, 0.7, e.y, e.r * 1.3, 1, 0.12, e.elite ? C('#ff3b5c') : C('#ff6a4a'), e.elite ? 0.55 : 0.22);
       // 特殊光效
       if (e.type === 'bomber') GL.glow(e.x - Math.cos(yaw) * 5 * s, 16 * s, e.y - Math.sin(yaw) * 5 * s, e.state === 1 ? 14 : 6, hex('#ffb040'), 0.9);
@@ -967,11 +979,11 @@
       var d = tw.d, s = d.r / 12 * 0.9, bk = tw.build > 0 ? 1 - tw.build / T.build.time : 1;
       var yaw = d.kind === 'sentry' ? tw.ang : -Math.PI / 2;
       GL.put(M[TMODEL[tw.id]], tw.x, (bk - 1) * 90, tw.y, d.kind === 'barracks' ? 0 : yaw, s, s * bk, s, 0, 1, 1, 1, tw.flash > 0 ? 0.7 : 0);
-      GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.2, BLACK, (0.3) * W3.blobShadow());
+      GL.ground(false, tw.x, 0.5, tw.y, d.r * 1.6, 2, 0.4, SHADOW, 0.28 * W3.blobShadow());
       var range = (d.range || 0) * RW.TOWER_TIER.range[g.tech[tw.id] - 1];
       if (d.kind === 'barracks') range = d.leash;
-      if (range) GL.ground(true, tw.x, 0.8, tw.y, range, 1, 0.012, hex(d.color), 0.25);
-      if (d.kind === 'pylon') { GL.glow(tw.x, 84, tw.y, 18, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
+      // 射程不画圈。细描边圆环在真机上被泛光拉成两道亮圈（北桥两座箭塔）。射程数字仍在数据里。
+      if (d.kind === 'pylon') { GL.glow(tw.x, 84, tw.y, 18, hex('#8fe3ff'), 0.5 + 0.2 * Math.sin(W3.t * 4)); if (tw.pulse > 0 && range) GL.ground(true, tw.x, 1, tw.y, range, 0, 0, hex('#8fe3ff'), tw.pulse); }
       if (d.kind === 'siphon') GL.glow(tw.x, 78, tw.y, 14, hex('#ffe066'), 0.6);
     }
   }
@@ -990,7 +1002,7 @@
       var sc = m.star === 2 ? 1.45 : 1;
       var col = hex(m.d.color);
       GL.put(M.soldier, m.x, 0, m.y, m.ang, sc, sc, sc, 0, col[0], col[1], col[2], m.flash > 0 ? 0.7 : 0);
-      GL.ground(false, m.x, 0.6, m.y, 7 * sc, 2, 0.3, BLACK, 0.3 * W3.blobShadow());
+      GL.ground(false, m.x, 0.6, m.y, 7 * sc, 2, 0.45, SHADOW, 0.28 * W3.blobShadow());
     }
   }
   function drawSoldiers(g, M) {
@@ -1009,11 +1021,11 @@
         var o = SPR.animate(ss.set, st, t, mode, s.vx, s.vy, i * 0.53, false);
         var tc2 = ss.tint || WHITE;
         SPR.put(ss.set, s.x, o.y * bh, s.y, o.row, o.frame, atk && Math.cos(s.ang) < 0, bh, o.sx, o.sy, 0, tc2[0], tc2[1], tc2[2], s.flash > 0 ? 0.7 : 0);
-        GL.ground(false, s.x, 0.6, s.y, 8, 2, 0.3, BLACK, 0.3);
+        GL.ground(false, s.x, 0.6, s.y, 8, 2, 0.45, SHADOW, 0.28);
       } else {
         var tc = ty === 'guard' ? TINT_GUARD : (ty === 'archer' ? TINT_ARCHER : WHITE);
         GL.put(M.soldier, s.x, Math.abs(Math.sin(W3.t * 14 + i)) * Math.min(1, sp / 80) * 2, s.y, s.ang, sc, sc, sc, 0, tc[0], tc[1], tc[2], s.flash > 0 ? 0.7 : 0);
-        GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.3, BLACK, (0.3) * W3.blobShadow());
+        GL.ground(false, s.x, 0.6, s.y, 7, 2, 0.45, SHADOW, 0.28 * W3.blobShadow());
       }
       if (tr) GL.ground(true, s.x, 0.8, s.y, 9, 1, 0.2, C(tr.color), 0.45);
     }
@@ -1061,16 +1073,17 @@
       if (sh.prog > 0 && !sh.done) GL.ground(true, sh.x, 1.5, sh.y, SH.r * sh.prog, 0, 0, hex('#b8f2ff'), 0.35);
       GL.glow(sh.x, 22 + Math.sin(t * 2 + si) * 3, sh.y, sh.done ? 8 : 16, sc2, sh.done ? 0.3 : 0.8);
     }
-    GL.ground(true, co.x, 1, co.y, 120 + Math.sin(t * 3) * 6, 0, 0, hex('#ffb347'), 0.22 * W3.env.lamp + 0.08);
-    GL.ground(true, co.x, 1.2, co.y, 42, 1, 0.12, k < 0.3 ? hex('#ff3b3b') : hex('#ffd27a'), 0.5);
-    // 圣域：金色边界；圈外的土地还没被照亮，压暗一些（满级「天火」照遍全图就不压了）
+    // 圣火脚下是一团软光，不画半径上的金圈。夜里更暖，白天只留一点炉火。
+    var warmPool = 0.05 + 0.18 * (W3.env.chill || 0) + 0.06 * W3.env.lamp;
+    GL.ground(true, co.x, 0.9, co.y, 70 + 80 * (W3.env.chill || 0), 0, 0, hex('#ffb060'), warmPool);
+    if (k < 0.3) GL.ground(true, co.x, 1.1, co.y, 36, 0, 0, hex('#ff5a3a'), 0.12);
     var SA = RW.SANCTUARY, au = co.aura || 0, sky = au > 3000;
-    if (au > 0 && !sky) {
+    if (au > 0 && !sky && SA.dim > 0.01) {
       var R0 = 2600;
       GL.ground(false, co.x, 0.6, co.y, R0, 1, 1 - au / R0, BLACK, SA.dim);
-      GL.ground(true, co.x, 1.3, co.y, au * 1.08, 1, 0.42, hex('#ffd27a'), (RW.C1_LIGHT && RW.C1_LIGHT.ring != null) ? RW.C1_LIGHT.ring : 0.06);
     }
-    if (!sky && co.gunRange < 3000) GL.ground(true, co.x, 1.3, co.y, co.gunRange || T.core.gunRange, 1, 0.08, hex('#ffd27a'), 0.035);
+    var ringA = (RW.C1_LIGHT && RW.C1_LIGHT.ring != null) ? RW.C1_LIGHT.ring : 0;
+    if (au > 0 && !sky && ringA > 0.01) GL.ground(true, co.x, 1.3, co.y, au * 1.08, 1, 0.55, hex('#ffd27a'), ringA);
     // 圣域收成：被照亮的房屋上方飘起金色的光点（安详生产）
     if (lv >= 2 && W3.houses) {
       for (var hi = 0; hi < W3.houses.length; hi++) {

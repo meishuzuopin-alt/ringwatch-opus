@@ -1,4 +1,4 @@
-// 圣火守护者 · M0 验收钩子。?perf 记帧时间，?fxbench / ?night 由 main 开夜，事件进 RW.QA.log。
+// 圣火守护者 · M0 验收钩子。?perf 记帧时间，?fxbench / ?night 由 main 开夜战，?day 开同一座桥的白天，事件进 RW.QA.log。
 (function (root) {
   var QA = {
     log: [],
@@ -6,6 +6,7 @@
     perf: false,
     bench: false,
     wantNight: false,
+    wantDay: false,
     seed: null,
     boot: function (search) {
       var q = {};
@@ -14,7 +15,8 @@
       });
       this.perf = Object.prototype.hasOwnProperty.call(q, 'perf');
       this.bench = Object.prototype.hasOwnProperty.call(q, 'fxbench');
-      this.wantNight = this.bench || Object.prototype.hasOwnProperty.call(q, 'night');
+      this.wantDay = Object.prototype.hasOwnProperty.call(q, 'day');
+      this.wantNight = this.bench || Object.prototype.hasOwnProperty.call(q, 'night') || this.wantDay;
       if (Object.prototype.hasOwnProperty.call(q, 'seed') && q.seed !== '') this.seed = +q.seed;
       else this.seed = this.bench ? 1 : null;
       this.log = []; this.frames = [];
