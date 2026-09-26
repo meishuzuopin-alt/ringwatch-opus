@@ -526,15 +526,15 @@
     // rim = 冷色边缘光 [r, g, b, 强度]；fogLow = 光圈外低矮冷雾 [浓度, 高度, 从光圈边缘到最浓的距离]；vig = 暗角；
     // amb = 环境与主光亮度倍率；chill = C1 冷暖混合（0 白天端，1 夜晚端，见 RW.C1_LIGHT）；a35 = 夜晚提亮到白天 35% 的备选颜色
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: shade(hex('#b7ccec'), 0.50), sky: shade(hex('#a8c4ee'), 0.58), ground: shade(hex('#2c3c5c'), 0.85), fog: hex('#4e709e'), clear: hex('#5e82b0'), fogNear: 1900, fogFar: 3200, em: 1.0, lamp: 0.5,
-        grade: [1.04, 1.02, 0.04, 0.02], shadowDark: 0.52, line: hex('#1a1830'), bloom: 0.35, thr: 0.9,
-        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.12, amb: 0.62, chill: 0 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#9eb6dc'), 0.48), sky: shade(hex('#7c9cc8'), 0.55), ground: shade(hex('#28344c'), 0.82), fog: hex('#3e5a86'), clear: hex('#3e5c88'), fogNear: 1750, fogFar: 2900, em: 1.2, lamp: 0.75,
-        grade: [1.0, 1.02, 0.05, 0.01], shadowDark: 0.5, line: hex('#161428'), bloom: 0.45, thr: 0.85,
-        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.14, amb: 0.58, chill: 0.45 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4d0'), 0.50), sky: shade(hex('#7090c4'), 0.62), ground: shade(hex('#24344e'), 0.90), fog: hex('#3a5680'), clear: hex('#243656'), fogNear: 1700, fogFar: 2800, em: 1.5, lamp: 1.0,
-        grade: [0.98, 1.02, 0.06, 0.01], shadowDark: 0.48, line: hex('#0c0e18'), bloom: 0.55, thr: 0.85,
-        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.16, amb: 0.62, chill: 1,
+      day: { light: [-0.45, 0.82, 0.36], sun: shade(hex('#b0c6e6'), 0.44), sky: shade(hex('#9eb8e4'), 0.50), ground: shade(hex('#283850'), 0.75), fog: hex('#466892'), clear: hex('#5278a8'), fogNear: 1900, fogFar: 3200, em: 1.0, lamp: 0.5,
+        grade: [1.02, 1.08, 0.04, 0.0], shadowDark: 0.42, line: hex('#1a1830'), bloom: 0.35, thr: 0.9,
+        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.15, amb: 0.56, chill: 0 },
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#94aed4'), 0.40), sky: shade(hex('#7090bc'), 0.46), ground: shade(hex('#223044'), 0.72), fog: hex('#3a547c'), clear: hex('#3a547c'), fogNear: 1750, fogFar: 2900, em: 1.2, lamp: 0.75,
+        grade: [0.98, 1.06, 0.05, 0.0], shadowDark: 0.40, line: hex('#161428'), bloom: 0.45, thr: 0.85,
+        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.17, amb: 0.46, chill: 0.45 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8098c0'), 0.38), sky: shade(hex('#6080b0'), 0.46), ground: shade(hex('#1c2c44'), 0.75), fog: hex('#2c446c'), clear: hex('#1a2c48'), fogNear: 1700, fogFar: 2800, em: 1.5, lamp: 1.0,
+        grade: [0.96, 1.06, 0.06, 0.0], shadowDark: 0.38, line: hex('#0c0e18'), bloom: 0.55, thr: 0.85,
+        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.20, amb: 0.36, chill: 1,
         // 备选（GL.ART.night35）：夜晚光圈外亮度约为白天 35% 的提亮版
         a35: { sun: shade(hex('#8aa4ff'), 0.72), sky: shade(hex('#5a74b8'), 0.8), ground: shade(hex('#2a2c48'), 0.6), fog: hex('#34497a'), clear: hex('#141e36') } },
       boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#8090c8'), 0.3), sky: shade(hex('#503868'), 0.4), ground: shade(hex('#1a1020'), 0.5), fog: hex('#2a2048'), clear: hex('#1a1430'), fogNear: 1400, fogFar: 2200, em: 1.4, lamp: 0.9,
