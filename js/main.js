@@ -31,12 +31,22 @@
   function runInfoOf(sv) { return sv && sv.v === RW.RUN_SAVE_V && RW.CLASSES[sv.cls] ? { hero: RW.CLASSES[sv.cls].name, wave: sv.wave + 1, danger: sv.danger, endless: sv.endless, daily: sv.daily } : null; }
   // 同一套设置立刻再开一局（英雄、危险、变异器；每日挑战用当天的种子）
   function startWith(hero, daily) {
+    g._sessionNoted = false;
+    if (RW.AdsCrazy && RW.AdsCrazy.beginRun) RW.AdsCrazy.beginRun();
     clearRun();
     if (daily) { var ds = RW.dailySetup(daily); g.startRun(ds.hero, { danger: ds.danger, mutators: ds.mutators, seed: ds.seed, daily: daily, map: ds.map }); }
     else g.startRun(hero, { danger: Math.min(UI.runDanger, UI.maxDanger(g, hero)), mutators: UI.runMuts, map: RW.mapOpen(UI.runMap, g.prog) ? UI.runMap : 'village' });
     resetStick(); buildMenu = false; D.camSnap = true; if (RW.W3) RW.W3.snap = true;
   }
   function inBattle() { return g.mode === 'battle' || g.mode === 'clear' || g.mode === 'down'; }
+  // 离开结算前：crazygames 适配器自己决定要不要中插（前两局、看过激励、间隔不够都会跳过）。
+  function afterResult(next) {
+    if (g.mode === 'result' && P.adProvider === 'crazygames' && RW.AdsCrazy && RW.AdsCrazy.midgame) {
+      RW.AdsCrazy.midgame(function () { next(); });
+      return;
+    }
+    next();
+  }
   function resetStick() { js.active = false; js.id = null; js.mx = js.my = js.kx = js.ky = 0; }
 
   function start() {
@@ -310,9 +320,13 @@
     if (cmd !== 'wslot') UI.sel = null;
     S.play({ type: 'ui' });
     switch (cmd) {
-      case 'start': case 'again': g.rollStartOffers(); RW.loadMap(UI.runMap); break;
+      case 'start': case 'again':
+        if (cmd === 'again' && g.mode === 'result') { afterResult(function () { g.rollStartOffers(); RW.loadMap(UI.runMap); }); break; }
+        g.rollStartOffers(); RW.loadMap(UI.runMap); break;
       case 'night':
         paused = false; resetStick(); buildMenu = false;
+        g._sessionNoted = false;
+        if (RW.AdsCrazy && RW.AdsCrazy.beginRun) RW.AdsCrazy.beginRun();
         g.startNight({ seed: RW.QA && RW.QA.seed != null ? RW.QA.seed : undefined });
         break;
       case 'map':
@@ -332,6 +346,13 @@
       case 'lang': if (RW.I18n) { RW.I18n.setLang(RW.I18n.lang === 'en' ? 'zh' : 'en'); persist(); } break;
       case 'music': musicOff = !musicOff; UI.musicOff = musicOff; S.setMusicOff(musicOff); persist(); break;
       case 'back': case 'home':
+        if (g.mode === 'result') {
+          afterResult(function () {
+            if (g.nightOn) { g.nightOn = false; RW.loadMap(UI.runMap || 'village'); }
+            g.mode = 'title';
+          });
+          break;
+        }
         if (g.nightOn) { g.nightOn = false; RW.loadMap(UI.runMap || 'village'); }
         g.mode = 'title'; break;
       case 'hero': UI.heroSel = arg; break;
@@ -347,14 +368,22 @@
         break;
       case 'retry':   // 结算页 / 暂停页：同设置立刻再来
         var last = g.result || {}, hero = last.hero || g.clsId, dly = last.daily || g.daily || '';
-        if (last.night) {
-          if (g.nightLock > 0) break;
-          if (RW.QA) RW.QA.hit(g, 'restartClick');
-          paused = false; resetStick();
-          g.startNight({ seed: RW.QA && RW.QA.seed != null ? RW.QA.seed : undefined });
+        if (g.mode === 'result') {
+          afterResult(function () {
+            if (last.night) {
+              if (g.nightLock > 0) return;
+              if (RW.QA) RW.QA.hit(g, 'restartClick');
+              paused = false; resetStick();
+              g._sessionNoted = false;
+              if (RW.AdsCrazy && RW.AdsCrazy.beginRun) RW.AdsCrazy.beginRun();
+              g.startNight({ seed: RW.QA && RW.QA.seed != null ? RW.QA.seed : undefined });
+              return;
+            }
+            startWith(hero, dly);
+          });
           break;
         }
-        if (g.mode !== 'result') { paused = false; g.finishRun(); }
+        paused = false; g.finishRun();
         startWith(hero, dly);
         break;
       case 'toTitle': paused = false; resetStick(); g.mode = 'title'; break;
@@ -413,6 +442,19 @@
       case 'giveup': g.finishRun(); break;
       case 'exitGame': if (root.desktop) root.desktop.quit(); break;
       case 'fullscreen': if (root.desktop) root.desktop.toggleFullscreen(); break;
+      case 'goldRevive':
+        if (g.payRevive()) { resetStick(); UI.toast('已用金币重燃'); }
+        else { UI.toast('金币不足'); S.play({ type: 'deny' }); }
+        break;
+      case 'doubleAd':
+        P.showReward('double', function () {
+          if (g.doubleReward(false)) { persist(); UI.toast('本局金币已翻倍'); }
+        }, function (msg) { UI.toast(msg); });
+        break;
+      case 'doubleGold':
+        if (g.doubleReward(true)) { persist(); UI.toast('本局金币已翻倍'); }
+        else { UI.toast('金币不足'); S.play({ type: 'deny' }); }
+        break;
       case 'reroll': if (!g.reroll(false)) UI.toast('金币不足，刷新要 ' + g.rerollCost()); break;
       case 'adReroll':
         P.showReward('reroll', function (r) {
@@ -449,7 +491,14 @@
     var ev = g.events;
     for (var i = 0; i < ev.length; i++) {
       S.play(ev[i]);
-      if (ev[i].type === 'result' || ev[i].type === 'victory') { persist(); clearRun(); }
+      if (ev[i].type === 'result' || ev[i].type === 'victory') {
+        // 通关后接无尽会再结算一次，同一局只记一次，避免把「前 2 局不中插」提前用完
+        if (RW.AdsCrazy && RW.AdsCrazy.noteRun && !g._sessionNoted) {
+          g._sessionNoted = true;
+          RW.AdsCrazy.noteRun();
+        }
+        persist(); clearRun();
+      }
       if (ev[i].type === 'shop' || (ev[i].type === 'buy' && ev[i].a === 'bless')) saveRunNow();
       if (ev[i].type === 'shop') { UI.sel = null; buildMenu = false; if (g.shop.interest > 0) UI.toast('利息到账 +' + g.shop.interest + ' 金币'); }
     }

@@ -44,9 +44,18 @@
       document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
       fit();
     }
-    // 优先用 WebGL 画 3D，2D 画面（HUD/菜单）画到离屏画布上再贴上去；不支持 WebGL 时退回纯 2D
+    // 优先用 WebGL 画 3D，2D 画面（HUD/菜单）画到离屏画布上再贴上去；不支持 WebGL 时退回纯 2D。
+    // three 0.186.1（r186）从 r163 起只要 WebGL2。先在扔掉的画布上探测，失败就不要碰游戏画布，
+    // 否则 WebGL 上下文占住画布，getContext('2d') 会得到 null，画面全黑。?2d 不探测、不盖提示。
     var force2d = !isWx && typeof location !== 'undefined' && /[?&]2d\b/.test(location.search);
-    try { Plat.gl3d = !force2d && !!(RW.GL && RW.GL.init(Plat.canvas)); } catch (err) { console.error(err); Plat.gl3d = false; }
+    var skip3d = force2d;
+    if (!isWx && !force2d && !Plat.webgl2()) {
+      skip3d = true;
+      Plat.webgl2Missing = true;
+      Plat.webgl2Msg = 'This browser does not support WebGL 2. Ringwatch uses Three.js r186, which needs WebGL 2, so the 3D view cannot start.';
+      console.error(Plat.webgl2Msg);
+    }
+    try { Plat.gl3d = !skip3d && !!(RW.GL && RW.GL.init(Plat.canvas)); } catch (err) { console.error(err); Plat.gl3d = false; }
     if (Plat.gl3d) {
       if (isWx) Plat.hud = Plat.createOffscreen(Plat.canvas.width, Plat.canvas.height);
       else {
@@ -59,7 +68,45 @@
       }
       Plat.ctx = Plat.hud.getContext('2d');
     } else Plat.ctx = Plat.canvas.getContext('2d');
+    if (Plat.webgl2Missing) Plat.showWebgl2Notice(Plat.webgl2Msg, !Plat.ctx);
     Plat.computeView();
+  };
+
+  // 扔掉的画布上试 WebGL2，成功后立刻丢掉上下文，避免占满浏览器的上下文名额。
+  Plat.webgl2 = function () {
+    if (typeof document === 'undefined') return true;
+    var c = document.createElement('canvas'), gl = null;
+    try { gl = c.getContext('webgl2'); } catch (e) { gl = null; }
+    if (!gl) return false;
+    try {
+      var lose = gl.getExtension('WEBGL_lose_context');
+      if (lose) lose.loseContext();
+    } catch (e2) {}
+    return true;
+  };
+  // 提示写在 DOM 上：游戏画布可能已经没有 3D。2D 还能用时给一个继续按钮；2D 也失败就只留说明。
+  Plat.showWebgl2Notice = function (msg, stuck) {
+    if (typeof document === 'undefined' || !document.body || document.getElementById('rw-webgl2')) return;
+    var box = document.createElement('div');
+    box.id = 'rw-webgl2';
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(4,6,13,0.92);color:#f4efe6;font:16px/1.45 system-ui,sans-serif;padding:24px;text-align:center';
+    var inner = document.createElement('div');
+    inner.style.cssText = 'max-width:520px';
+    var p = document.createElement('p');
+    p.style.margin = '0';
+    p.textContent = stuck ? (msg + ' The 2D view could not start either. Try another browser.') : msg;
+    inner.appendChild(p);
+    if (!stuck) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = 'Continue in 2D';
+      b.style.cssText = 'margin-top:16px;padding:10px 18px;font:15px system-ui,sans-serif;background:#c4552a;color:#fff;border:0;border-radius:6px;cursor:pointer';
+      b.onclick = function () { if (box.parentNode) box.parentNode.removeChild(box); };
+      inner.appendChild(b);
+    }
+    box.appendChild(inner);
+    document.body.appendChild(box);
   };
 
   // 网页包读安全区；桌面与微信是 0。读不到 env() 就当没有。

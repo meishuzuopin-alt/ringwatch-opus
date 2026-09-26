@@ -59,6 +59,23 @@ npm run web:smoke
 
 `crazygames` 适配器还会在加载和进入/离开战斗时调用 `SDK.game.loadingStart` / `loadingStop` / `gameplayStart` / `gameplayStop`。战斗中的 `gameplayStart` 才算「进入可玩状态」，标题和选人不算。广告占用期间模拟暂停、音效静音。
 
+次数在 `js/data.js` 的 `RW.AD`，由适配器强制，不靠界面自己藏按钮：
+
+| 点位 | 上限 | 不用广告也能拿到 |
+|---|---|---|
+| 复活 | 一次打开游戏 1 次。圣火熄灭时不再插中插 | 局内金币（`REVIVE_GOLD`）。桌面版仍是直接重燃，不走这个上限 |
+| 结算翻倍 | 每局 1 次，翻的是已经入账的局外金币 | 同一笔奖励可以用局外金币买（`DOUBLE_GOLD_RATE` / `DOUBLE_GOLD_MIN`） |
+| 整备刷新 | 每局 1 次广告。金币刷新不限，价格逐次上升 | 本来就有的金币刷新 |
+| 中插 | 本会话前 2 局结束时不请求；之后本地至少隔 180 秒才再请求。这一局如果已经看过激励，离开结算时也不再请求 | — |
+
+中插由 SDK 决定实际出不出，本地间隔只是避免连着调用 `requestAd`。复活、刷新、翻倍只在 `adFinished` 且视为看完时计数；`adError` 或 `isEnded: false` 不计数、不发奖。
+
+## WebGL 2 与机型覆盖
+
+`package.json` 里的 Three.js 是 **0.186.1**（r186）。r163 起 Three 只保留 WebGL2，本仓库没有锁在 r162。有开发者自述：切到只要 WebGL2 之后，低收入地区不支持的设备变多，跳出大约多 5%，收入掉了大约三分之一，改回之后才恢复（见 `docs/MONETIZATION.md`，这是开发者自述，不是 CrazyGames 的官方统计）。
+
+启动时先在一张扔掉的画布上探测 `webgl2`。没有的话**不会**在游戏画布上创建 WebGL 上下文（那样 2D 也会拿不到，画面全黑），而是 `console.error` 一句英文，并盖一层说明：Three.js r186 需要 WebGL 2，3D 起不来。2D 上下文还能用时，玩家可以点 “Continue in 2D” 接着玩；`?2d` 本来就不走 3D，不探测、不盖这层。微信小游戏入口不盖这层 DOM。
+
 Basic Launch **不要**用 `--ads=crazygames` 去播广告。文档写明：Basic 即使接了 SDK，广告也会被关掉。Full Launch 才要求广告走他们的 SDK，并且开着广告拦截器也能玩——失败路径已经是「不发奖、继续游戏」。
 
 ## CrazyGames 提交清单
@@ -116,6 +133,7 @@ Basic Launch **不要**用 `--ads=crazygames` 去播广告。文档写明：Basi
 - 上表那些封面和预览视频还不在仓库里。应用图标已经放进 `assets/branding/`，封面仍要另做原创图，不能从别的游戏抠。
 - 默认 zip **不包含** SDK 脚本。QA 工具若要求页面里有 SDK 标签，不要把 CDN 地址写进 `index.html`；用他们的预览器注入，或只在 Full Launch 时确认预览器已经提供 `window.CrazyGames.SDK`。
 - `--ads=crazygames` 时适配器只在宿主注入 SDK 之后才会去请求广告。Basic Launch 请保持 `--ads=none`。
+- 机型如果没有 WebGL 2，3D 起不来。页面会给出英文说明并尽量退回 2D，但 CrazyGames 上这部分设备的跳出和收入风险见上面「WebGL 2 与机型覆盖」。变现节奏和广告点位的全文在 `docs/MONETIZATION.md`。
 
 ## Poki
 

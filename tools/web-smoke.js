@@ -57,10 +57,12 @@ function serve(dir) {
   const brand = await page.evaluate(() => ({
     icon: !!document.querySelector('link[rel="icon"][href="assets/branding/icon_128.png"]'),
     manifest: !!document.querySelector('link[rel="manifest"]'),
-    splash: !!document.getElementById('rw-splash')
+    splash: !!document.getElementById('rw-splash'),
+    webgl2: !!document.getElementById('rw-webgl2')
   }));
   if (!brand.icon || !brand.manifest) errors.push('favicon 或 manifest 没挂上');
   if (brand.splash) errors.push('加载画面在第一帧之后还在');
+  if (brand.webgl2) errors.push('?2d 仍盖了 WebGL2 提示');
   fs.mkdirSync(shotDir, { recursive: true });
   await page.screenshot({ path: path.join(shotDir, 'web-boot.png') });
   await page.setViewportSize({ width: 844, height: 390 });
@@ -78,11 +80,33 @@ function serve(dir) {
   });
   await page.touchscreen.tap(start[0], start[1]);
   await page.waitForFunction(() => RW.game.mode === 'pick', null, { timeout: 10000 });
+  // 没有 WebGL2 时要有英文说明，并且还能用 2D 接着玩。?2d 那一页不走这条。
+  const page2 = await browser.newPage();
+  page2.on('pageerror', e => errors.push('webgl2-page: ' + e.message));
+  page2.on('console', m => {
+    if (m.type() !== 'error') return;
+    if (/does not support WebGL 2/.test(m.text())) return;
+    errors.push('webgl2-page: ' + m.text());
+  });
+  await page2.addInitScript(() => {
+    const orig = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type) {
+      if (type === 'webgl2' || type === 'webgl' || type === 'experimental-webgl') return null;
+      return orig.apply(this, arguments);
+    };
+  });
+  await page2.goto('http://127.0.0.1:' + port + '/index.html', { waitUntil: 'load' });
+  await page2.waitForSelector('#rw-webgl2', { timeout: 30000 });
+  const note = await page2.locator('#rw-webgl2').innerText();
+  if (!/WebGL 2/.test(note) || !/Three\.js r186/.test(note)) errors.push('WebGL2 提示不够清楚: ' + note);
+  await page2.waitForFunction(() => window.RW && RW.game && RW.game.mode === 'title' && RW.Plat && RW.Plat.gl3d === false && RW.Plat.ctx, null, { timeout: 30000 });
+  await page2.getByRole('button', { name: 'Continue in 2D' }).click();
+  if (await page2.locator('#rw-webgl2').count()) errors.push('Continue in 2D 没有关掉提示');
   await browser.close();
   server.close();
   if (errors.length) {
     console.error(errors.join('\n'));
     process.exit(1);
   }
-  console.log('网页包冒烟通过：英文标题、无外链、隐身存档、缩放留边、触摸进入选人');
+  console.log('网页包冒烟通过：英文标题、无外链、隐身存档、缩放留边、触摸进入选人、无 WebGL2 时有英文提示');
 })().catch(err => { console.error(err); process.exit(1); });

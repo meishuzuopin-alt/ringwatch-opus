@@ -421,7 +421,11 @@
     if (!THREE) return false;
     var r;
     try { r = new THREE.WebGLRenderer({ canvas: canvas, antialias: false, powerPreference: 'high-performance' }); } catch (e) { return false; }
-    if (!r.capabilities.isWebGL2) return false;
+    // r163 起只要 WebGL2。这里失败必须丢掉上下文，否则游戏画布被占住，后面的 2D 也画不出来。
+    if (!r.capabilities.isWebGL2) {
+      try { r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); } catch (e2) {}
+      return false;
+    }
     GL.renderer = r; GL.gl = r.getContext();
     tmpC = new THREE.Color();
     r.setPixelRatio(1);   // 画布尺寸由 platform.js 按设备像素比设置好了

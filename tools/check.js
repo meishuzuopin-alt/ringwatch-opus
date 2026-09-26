@@ -202,6 +202,7 @@ console.log('广告');
   } catch (e) { bad('广告完成判定失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
   const cg2 = `
     const root = ${JSON.stringify(root)};
+    require(root + '/js/data.js');
     require(root + '/js/ads-crazygames.js');
     const RW = globalThis.RW;
     let last = null;
@@ -227,12 +228,44 @@ console.log('广告');
     if (err !== '0:1:0' || half !== '0:1:0' || done !== '1:0:0' || mid !== '1:0') {
       console.error([err, half, done, mid].join(' | ')); process.exit(1);
     }
+    let extra = 0;
+    globalThis.CrazyGames.SDK.ad.requestAd = function (kind, cbs) { extra++; last = { kind: kind, cbs: cbs }; };
+    function grant(kind) {
+      let g = 0, f = 0, n0 = extra;
+      RW.AdsCrazy.show(kind, function () { g++; }, function () { f++; });
+      const requested = extra > n0;
+      if (requested && last && last.cbs) last.cbs.adFinished();
+      return g + ':' + f + ':' + (requested ? 'ad' : 'noad');
+    }
+    const capRevive = grant('revive');
+    const reroll1 = grant('reroll');
+    const reroll2 = grant('reroll');
+    const double1 = grant('double');
+    const double2 = grant('double');
+    RW.AdsCrazy.beginRun();
+    const skipN = (RW.AD && RW.AD.MIDGAME_SKIP_RUNS != null) ? RW.AD.MIDGAME_SKIP_RUNS : 2;
+    const nEarly = extra;
+    for (let i = 0; i < skipN; i++) RW.AdsCrazy.noteRun();
+    RW.AdsCrazy.midgame(function () {});
+    const early = extra - nEarly;
+    RW.AdsCrazy.noteRun();
+    const nLate = extra;
+    RW.AdsCrazy.midgame(function () {});
+    if (extra > nLate && last && last.cbs) last.cbs.adFinished();
+    const late = extra - nLate;
+    const nAgain = extra;
+    RW.AdsCrazy.midgame(function () {});
+    const again = extra - nAgain;
+    if (capRevive !== '0:1:noad' || reroll1 !== '1:0:ad' || reroll2 !== '0:1:noad' || double1 !== '1:0:ad' || double2 !== '0:1:noad' || early !== 0 || late !== 1 || again !== 0) {
+      console.error(['caps', capRevive, reroll1, reroll2, double1, double2, 'mid', early, late, again].join(' '));
+      process.exit(1);
+    }
     console.log('ok');
   `;
   try {
     const out = execFileSync(process.execPath, ['-e', cg2], { encoding: 'utf8' });
     if (!/ok/.test(out)) bad('CrazyGames 适配器异常\n' + out);
-    else ok('CrazyGames：未回调 / 出错 / isEnded 为假不发奖，看完才发，拦广告也不卡住');
+    else ok('CrazyGames：看完才发；复活每会话 1 次，刷新和翻倍每局 1 次；前两局不中插，中插至少隔 3 分钟');
   } catch (e) { bad('CrazyGames 适配器失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 }
 

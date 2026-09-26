@@ -597,7 +597,9 @@
     var rc = g.rerollCost();
     UI.button('reroll', 16, by, 120, 50, '刷新', { sub: rc + ' 金币', disabled: g.shardCount < rc, why: '金币不足，刷新要 ' + rc });
     var adOk = !!adLabel && g.wave >= RW.AD.FIRST_AD_WAVE;   // 桌面版没有广告入口
-    if (adOk) UI.button('adReroll', 144, by, 116, 50, adLabel, { style: 'ad', sub: shop.adUsed ? '本轮已用' : '免费刷新 1 次', size: 13, disabled: shop.adUsed, why: '每轮整备只能用一次' });
+    var cgAds = !!(RW.Plat && RW.Plat.adProvider === 'crazygames' && RW.AdsCrazy);
+    var adSpent = cgAds ? !RW.AdsCrazy.allow('reroll') : !!shop.adUsed;
+    if (adOk) UI.button('adReroll', 144, by, 116, 50, adLabel, { style: 'ad', sub: adSpent ? (cgAds ? '本局已用' : '本轮已用') : (cgAds ? '本局 1 次' : '免费刷新 1 次'), size: 13, disabled: adSpent, why: cgAds ? '每局只能看一次广告刷新' : '每轮整备只能用一次' });
     UI.button('next', adOk ? 268 : 144, by, adOk ? 136 : 260, 50, '迎战', { style: 'primary', size: adOk ? 15 : 18, sub: '第 ' + (g.wave + 1) + ' 波' });
   };
 
@@ -769,12 +771,21 @@
       UI.button('giveup', cx - 190, 300, 380, 52, '查看结算', { style: 'ghost', size: 14, sub: '今夜的守护到此为止' });
       return;
     }
-    UI.button('revive', cx - 190, 244, 380, 70, '重燃圣火', { style: 'ad', size: 18, sub: (adLabel ? adLabel + ' · ' : '') + '剩 ' + left + '/' + all + ' 次 · 恢复半数火光' });
+    var cg = RW.Plat && RW.Plat.adProvider === 'crazygames';
+    var adLeft = !cg || !RW.AdsCrazy || RW.AdsCrazy.allow('revive');
+    if (cg) {
+      // 会话里只给 1 次广告复活；其余次数用局内金币买，和「看广告」一样大。
+      if (adLeft) UI.button('revive', cx - 190, 248, 380, 52, '重燃圣火', { style: 'ad', size: 16, sub: (adLabel ? adLabel + ' · ' : '') + '剩 ' + left + '/' + all + ' 次' });
+      var rg = (RW.AD && RW.AD.REVIVE_GOLD) || 0;
+      UI.button('goldRevive', cx - 190, adLeft ? 306 : 248, 380, adLeft ? 40 : 70, '金币重燃', { size: adLeft ? 14 : 18, sub: rg + ' 金币 · 剩 ' + left + '/' + all + ' 次', disabled: g.shardCount < rg, why: '金币不足' });
+    } else {
+      UI.button('revive', cx - 190, 244, 380, 70, '重燃圣火', { style: 'ad', size: 18, sub: (adLabel ? adLabel + ' · ' : '') + '剩 ' + left + '/' + all + ' 次 · 恢复半数火光' });
+    }
     for (var ri = 0; ri < all; ri++) {   // 三簇小火苗：亮着的是还能用的重燃
       var fx2 = cx - (all - 1) * 14 + ri * 28, on = ri < left;
       D.ctx.fillStyle = on ? '#ffb347' : '#3a2a20'; D.ctx.beginPath(); D.ctx.moveTo(fx2, 226); D.ctx.quadraticCurveTo(fx2 + 8, 236, fx2, 242); D.ctx.quadraticCurveTo(fx2 - 8, 236, fx2, 226); D.ctx.fill();
     }
-    if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
+    if (!cg && adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', cx, 328, 10, C.dim, 'center');
     UI.button('giveup', cx - 190, 352, 380, 52, '查看结算', { style: 'ghost', size: 14, sub: '今夜的守护到此为止' });
   };
 
@@ -877,7 +888,15 @@
     } else UI.button('retry', RX, 396, RWd, 52, '再守一夜', { style: 'primary', size: 18, sub: same });
     UI.button('again', RX, 456, RWd / 2 - 5, 38, '重新选择', { size: 13 });
     UI.button('home', RX + RWd / 2 + 5, 456, RWd / 2 - 5, 38, '返回标题', { size: 13 });
-    D.text('Enter 同设置再来' + (r.canEndless ? ' · C 继续无尽' : ''), RX + RWd / 2, 508, 10, C.faint, 'center');
+    if (RW.Plat && RW.Plat.adProvider === 'crazygames' && r.shards > 0) {
+      if (r.doubled) D.text('本局金币已翻倍', RX + RWd / 2, 516, 12, C.gold, 'center', true);
+      else {
+        var allowD = !RW.AdsCrazy || RW.AdsCrazy.allow('double');
+        var dc = g.doubleCost(), bank = (g.prog && g.prog.coins) || 0;
+        UI.button('doubleAd', RX, 498, RWd / 2 - 5, 36, '看广告翻倍', { style: 'ad', size: 13, disabled: !allowD, why: '每局一次' });
+        UI.button('doubleGold', RX + RWd / 2 + 5, 498, RWd / 2 - 5, 36, '金币翻倍', { size: 13, sub: dc + ' 金币', disabled: bank < dc, why: '金币不足' });
+      }
+    } else D.text('Enter 同设置再来' + (r.canEndless ? ' · C 继续无尽' : ''), RX + RWd / 2, 508, 10, C.faint, 'center');
   };
   UI.adviceFor = function (r) {
     var h = r.hits[r.hits.length - 1];
