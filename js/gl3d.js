@@ -158,7 +158,7 @@
   Batch.prototype.reset = function () { this.n = 0; };
 
   var GL = {
-    ok: false, hex: hex, shade: shade, mix: mixc, M4: M4, GB: GB,
+    ok: false, hex: hex, shade: shade, mix: mixc, lin: lin, M4: M4, GB: GB,
     view: new Float32Array(16), proj: new Float32Array(16), vp: new Float32Array(16),
     cam: [0, 0, 0], camRight: [1, 0, 0], camUp: [0, 1, 0],
     // 画质开关：阴影 / 描边 / 泛光 / 环境光遮蔽。地址加 ?lowfx 全关；帧率持续偏低时 world3d 会逐级自动关闭
@@ -169,7 +169,9 @@
     // 默认开着的只有低风险三项：描边（本色压暗）、只给火焰 / 法术 / 敌眼的局部泛光、轻暗角。
     // 浏览器里加 ?art=all 全开，?art=toon,ao 只开其中几项（截图对照用）
     ART: { aces: false, toon: false, noise: false, ao: false, nightFog: false, rim: false, grad: false, coreLight: false, night35: false },
-    meshes: [], statics: []
+    meshes: [], statics: [],
+    // 每帧渲染前 / 后的回调（精灵图层在这里提交实例、清空计数）
+    preRender: [], postRender: []
   };
 
   // ---------- 材质 ----------
@@ -193,45 +195,72 @@
     'float fgNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);',
     '  return mix(mix(fgHash(i), fgHash(i+vec2(1,0)), f.x), mix(fgHash(i+vec2(0,1)), fgHash(i+vec2(1,1)), f.x), f.y); }'
   ].join('\n');
+  // 把本项目的光照扩展注进 Three 的材质着色器：自发光 / 闪白 / 顶点渐变 / 斑驳 / 圣火暖光圈 / 边缘光 / 低雾。
+  // sprite = true 是贴图立牌（精灵图）：没有顶点色和 aEm，颜色来自图集贴图；每实例 iFrame 选图集里的一格
+  //   （iFrame = [u0, v0, u 宽（负数 = 水平镜像）, v 高]）；不加斑驳和顶点渐变，画好的画面不再叠笔触
+  function fgInject(sh, water, sprite) {
+    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce'].forEach(function (k) { sh.uniforms[k] = U[k]; });
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\n' + (sprite ? 'attribute vec4 iFrame;\n' : 'attribute float aEm;\n') + 'varying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (sprite ? 'vEm = 0.0;\nvGrad = 1.0;\n' : 'vEm = aEm;\n' +
+        // 顶点色渐变：模型底部偏暗、顶部偏亮（贴地的平地面不压暗）
+        'vGrad = mix(1.0, (normal.y > 0.9 && position.y < 2.0) ? 1.0 : mix(0.74, 1.06, smoothstep(0.0, 42.0, position.y)), uGradK);\n') +
+        '#ifdef USE_INSTANCING\nvFlash = iFlash;\n#else\nvFlash = 0.0;\n#endif' +
+        (water ? '\ntransformed.y += sin(transformed.x*0.05 + uTime*2.0)*2.0 + cos(transformed.z*0.06 + uTime*1.6)*2.0;\nvGrad = 1.0;' : ''))
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
+    if (sprite) sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv = vec2(iFrame.x + uv.x * iFrame.z, iFrame.y + uv.y * iFrame.w);\n#endif');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\n' + NOISE_GLSL)
+      .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' +
+        // 圣火暖光圈：圈内是暖光，边缘在最后 6% 半径内收掉，圈外全交给冷色环境光
+        '{ float cd = length(vWp.xz - uCore.xy);\n  float cm = uCore.w * (1.0 - smoothstep(uCore.z * 0.94, uCore.z, cd)) * (0.55 + 0.45 * (1.0 - cd / max(uCore.z, 1.0)));\n  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * cm; }\n' +
+        // 冷色边缘光：掠射角的面亮一圈月青色
+        '{ float fr = 1.0 - saturate(dot(normalize(geometryNormal), normalize(geometryViewDir)));\n  reflectedLight.indirectDiffuse += uRim.rgb * uRim.w * smoothstep(0.5, 0.95, fr); }')
+      .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0), vFlash);')
+      // 雾：距离雾 + 贴地的低矮冷雾；自发光（圣火、敌人眼睛、法术）穿透雾
+      .replace('#include <fog_fragment>', [
+        '#ifdef USE_FOG',
+        '  float fgF = smoothstep(fogNear, fogFar, vFogDepth);',
+        '  float fgLow = uFogLow.x * (1.0 - smoothstep(0.0, uFogLow.y, vWp.y)) * smoothstep(uFogLow.z, uFogLow.w, length(vWp.xz - uCore.xy));',
+        '  fgF = clamp(fgF + fgLow, 0.0, 1.0) * (1.0 - uFogPierce * clamp(vEm * 1.6, 0.0, 0.92));',
+        '  gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fgF);',
+        '#endif'
+      ].join('\n'));
+    if (sprite) return;
+    sh.fragmentShader = sh.fragmentShader
+      // 斑驳：两层世界坐标噪声，石头、木头、茅草、草地都带一点笔触感
+      .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);')
+      // 自发光进 HDR（乘 uEmHDR），只有它和法术光效能过泛光阈值
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost * uEmHDR;' +
+        (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.85 + 0.25*s1;\ntotalEmissiveRadiance += vec3(0.35,0.6,0.9) * smoothstep(0.82, 0.98, s1) * 0.8;' : ''));
+  }
   // toon = true 用三段色阶，false 用原版的 MeshStandardMaterial（平直着色、粗糙 0.92）
   function meshMaterial(water, toon) {
     var m = toon ? new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GL.ramp })
       : new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.92, metalness: 0 });
-    m.onBeforeCompile = function (sh) {
-      ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce'].forEach(function (k) { sh.uniforms[k] = U[k]; });
-      sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float aEm;\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEm = aEm;\n' +
-          // 顶点色渐变：模型底部偏暗、顶部偏亮（贴地的平地面不压暗）
-          'vGrad = mix(1.0, (normal.y > 0.9 && position.y < 2.0) ? 1.0 : mix(0.74, 1.06, smoothstep(0.0, 42.0, position.y)), uGradK);\n' +
-          '#ifdef USE_INSTANCING\nvFlash = iFlash;\n#else\nvFlash = 0.0;\n#endif' +
-          (water ? '\ntransformed.y += sin(transformed.x*0.05 + uTime*2.0)*2.0 + cos(transformed.z*0.06 + uTime*1.6)*2.0;\nvGrad = 1.0;' : ''))
-        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
-      sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\n' + NOISE_GLSL)
-        // 斑驳：两层世界坐标噪声，石头、木头、茅草、草地都带一点笔触感
-        .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);')
-        // 自发光进 HDR（乘 uEmHDR），只有它和法术光效能过泛光阈值
-        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost * uEmHDR;' +
-          (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.85 + 0.25*s1;\ntotalEmissiveRadiance += vec3(0.35,0.6,0.9) * smoothstep(0.82, 0.98, s1) * 0.8;' : ''))
-        .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' +
-          // 圣火暖光圈：圈内是暖光，边缘在最后 6% 半径内收掉，圈外全交给冷色环境光
-          '{ float cd = length(vWp.xz - uCore.xy);\n  float cm = uCore.w * (1.0 - smoothstep(uCore.z * 0.94, uCore.z, cd)) * (0.55 + 0.45 * (1.0 - cd / max(uCore.z, 1.0)));\n  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * cm; }\n' +
-          // 冷色边缘光：掠射角的面亮一圈月青色
-          '{ float fr = 1.0 - saturate(dot(normalize(geometryNormal), normalize(geometryViewDir)));\n  reflectedLight.indirectDiffuse += uRim.rgb * uRim.w * smoothstep(0.5, 0.95, fr); }')
-        .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0), vFlash);')
-        // 雾：距离雾 + 贴地的低矮冷雾；自发光（圣火、敌人眼睛、法术）穿透雾
-        .replace('#include <fog_fragment>', [
-          '#ifdef USE_FOG',
-          '  float fgF = smoothstep(fogNear, fogFar, vFogDepth);',
-          '  float fgLow = uFogLow.x * (1.0 - smoothstep(0.0, uFogLow.y, vWp.y)) * smoothstep(uFogLow.z, uFogLow.w, length(vWp.xz - uCore.xy));',
-          '  fgF = clamp(fgF + fgLow, 0.0, 1.0) * (1.0 - uFogPierce * clamp(vEm * 1.6, 0.0, 0.92));',
-          '  gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fgF);',
-          '#endif'
-        ].join('\n'));
-    };
+    m.onBeforeCompile = function (sh) { fgInject(sh, water, false); };
     return m;
   }
+  // 精灵图立牌材质：Lambert 受光（半球光 + 太阳 + 阴影 + 雾都照常作用在画好的角色上），alphaTest 抠像，写深度
+  // 贴图：sRGB；线性过滤 + mipmap（图集约为游戏尺寸的 2.2 倍，最近邻会闪烁，见 docs/ART.md）
+  GL.spriteTexture = function (url, onLoad, nearest) {
+    var tex = new THREE.TextureLoader().load(url, function (t) {
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.generateMipmaps = !nearest;
+      t.minFilter = nearest ? THREE.NearestFilter : THREE.LinearMipmapLinearFilter;
+      t.magFilter = nearest ? THREE.NearestFilter : THREE.LinearFilter;
+      t.anisotropy = 1; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+      t.needsUpdate = true;
+      if (onLoad) onLoad(t);
+    }, undefined, function () { if (onLoad) onLoad(null); });
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+  GL.spriteMaterial = function (tex) {
+    var m = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, transparent: false, side: THREE.DoubleSide });
+    m.onBeforeCompile = function (sh) { fgInject(sh, false, true); };
+    return m;
+  };
   // 描边：背面外壳，沿平滑法线外扩（外扩量随离镜头距离变化，屏幕上粗细基本一致）
   // 颜色 = 物体本色压暗（顶点色 × 实例色 × 压暗系数），不用纯黑；角色 2 像素、建筑 1.5 像素（按 960×540 计）
   function lineMaterial(wU) {
@@ -366,6 +395,10 @@
     sun.shadow.bias = -0.0006; sun.shadow.normalBias = 1.2;
     sun.shadow.camera.near = 100; sun.shadow.camera.far = 5000;
     sc.add(sun); sc.add(sun.target);
+    // 英雄提灯的小暖光（唯一的点光源）：强度由 world3d 每帧按闪烁 / 施法闪光设置，0 = 关
+    GL.lamp = new THREE.PointLight(0xffb347, 0, 190, 2);
+    GL.lamp.castShadow = false;
+    sc.add(GL.lamp);
     GL.ramp = toonRamp();
     U.uRim.value = new THREE.Vector4(0.37, 0.66, 0.78, 0.2);
     U.uCore.value = new THREE.Vector4(0, 0, 0, 0); U.uCoreCol.value = new THREE.Color(1, 0.5, 0.16);   // 圣火金偏余烬橙（线性空间）
@@ -587,7 +620,7 @@
     M4.mul(GL.vp, GL.proj, GL.view);
     GL.cam[0] = eye[0]; GL.cam[1] = eye[1]; GL.cam[2] = eye[2];
     var v = GL.view;
-    GL.camRight = [v[0], v[4], v[8]]; GL.camUp = [v[1], v[5], v[9]];
+    GL.camRight = [v[0], v[4], v[8]]; GL.camUp = [v[1], v[5], v[9]]; GL.camBack = [v[2], v[6], v[10]];   // camBack：从场景指向镜头
   };
   GL.updateBillboardAxes = function () {};
   // 世界坐标 -> NDC（返回 null 表示在相机后面）
@@ -644,7 +677,10 @@
     GL.bloomPass.strength = Math.min(0.9, (env.bloom || 0) * 0.9); GL.bloomPass.threshold = GL.BLOOM_THR; GL.bloomPass.radius = 0.45;
     commitInstances();
     commitFx(GL.fxAlphaMesh); commitFx(GL.fxAddMesh);
+    var i;
+    for (i = 0; i < GL.preRender.length; i++) GL.preRender[i]();
     GL.composer.render();
+    for (i = 0; i < GL.postRender.length; i++) GL.postRender[i]();
     resetInstances(); GL.fxAdd.reset(); GL.fxAlpha.reset();
   };
 
