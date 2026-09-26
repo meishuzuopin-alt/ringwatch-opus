@@ -1,0 +1,69 @@
+# 圣火守护者（Ringwatch）项目交接 · 2026-09-26 23:20（北京时间）
+
+交接给：Cursor（本机 Cursor 或 Cursor 云端代理）。原来的总调度额度快用完了，从现在起由你接手调度。
+
+## 0. 老板（用户）的硬规矩
+- 用户只看图。技术、代码、PR 的决策你自己拍板；汇报以对比图为主，文字尽量少。需要审美选择时，给出并排对比图让用户挑。
+- 额度要省：每个需求默认只出一版，方向确认后再加量。Codex/ChatGPT 推理强度用「高」，不用「极高」。Cursor 云端代理用 grok-4.7，reasoning high，fast 关闭，不要用 Auto。
+- 分工：Codex 负责出图和写部分代码；Cursor 负责写代码、把资产接进游戏；Antigravity（本机命令 agy，调用 Gemini）负责驱动 Blender 建模和审图；Claude 只啃最难的工程。
+- 版权：玩法可以借鉴，代码和美术不能抄。所有 AI 资产都要登记到 `docs/ART.md`；过程稿（PSD、.blend、Git 提交记录）要保留，作为侵权举证。
+- 门面图（图标、商店胶囊图、主视觉）必须由用户亲手精修，保留分层 PSD 和过程截图，并逐步登记。不许伪造过程文件，也不许让 AI 直接出最终门面图。
+- 本机主副本 `D:\开源游戏\_try_opus\ringwatch-opus`（main 上有用户未提交的改动）绝对不要碰。干活用工作副本 `ringwatch-opus-worker`，或者新开 git worktree。
+
+## 1. 项目基本信息
+- 仓库：GitHub `meishuzuopin-alt/ringwatch-opus`，JS + Three.js r186。自检命令 `node tools/check.js`，必须退出码为 0。
+- 用户电脑：DESKTOP-A6JV5CO（Quadro P2000）。真显卡截图脚本在 `%TEMP%\rwshot\bake.js`（seed=1，快进到开战第 20 秒，端口 8766，1280×720）。云端机器没有显卡，截图要在本机拍。
+- 常用网址参数：`?day`、`?night`（北桥夜战）、`?tex=0`（关闭贴图）、`?skipopening`（跳过开局）。
+
+## 2. 今天合进 main 的内容
+| PR | 内容 | 做的人 |
+|---|---|---|
+| #26 | 英文网页版（给 CrazyGames）：i18n、广告适配器（none/CrazyGames/微信）、WebGL2 检测、`docs/MONETIZATION.md`、`docs/WEB_PORTALS.md` | Cursor |
+| #28 | 「风格化写实」光照：去掉硬边光圈、暗部用蓝紫色、6 张柔和手绘贴图（`assets/textures/soft/`，参数在 `RW.TEXTURES`）、修复 check.js 在 Windows CRLF 下误报 | Cursor（在美术对比测试中胜出） |
+| #30 | 夜战「三选一」：12 张卡在 `js/data.js` 的 `NIGHT.picks`，每局约 6 次；免费重抽 1 次，看广告再重抽 1 次 | Cursor |
+| #29 | 开局钩子（参考《Inside》）：一开始就能操作，捧火种走到祭坛点火，之后出标题再进夜战，约 31 秒；存档记录 `openingSeen`，玩过后跳过 | Codex |
+- 已关闭：#27（Antigravity 的画风版本，效果弱）。
+- 注意：合并 #28 和 #30 时 GitHub 检查状态是 UNSTABLE（有检查失败或还没跑完），没有深究。接手后先看一眼 main 的 CI，失败就修。
+
+## 3. 画风定稿
+- 「风格化写实」：写实的 AAA 光影、材质和体积感，加上手绘笔触和柔和配色。
+- 目标图：白天 H1（融白1），夜晚 H3（融夜1）。原图在总调度电脑的 `/workspace/arttarget/hybrid/`，已复制到本机 worktree 的 `.ref/`；需要的话让用户从聊天里重新下载。
+- C1「光即色彩」：圣火光圈内是暖色、饱和；光圈外褪成冷色靛蓝，暗处不能压成纯黑；不要硬边光圈。
+- 和目标图的差距：场景太空，缺少树、石头、花草和灯；房子、树、桥还是方块。解决办法是 Blender 建模，再加上 Codex 画的道具。
+
+## 4. 正在进行中的工作（接手后继续）
+1. **Codex 全套美术资产**：在总调度电脑的 ChatGPT 网页里生成，输出到 `/workspace/assets_full/<类别>/`。
+   - 已完成：12 张卡牌插画和 6 档稀有度卡框（普通灰、优秀绿、稀有蓝、史诗紫、传说橙金、神话红带圣火光，稀有度分档思路借鉴《土豆兄弟》）。
+   - 进行中：敌人、角色、道具、村子、特效、UI、地砖、资源图标。
+   - 计划推到分支 `grok/art-assets-full`，开草稿 PR，并登记到 ART.md。
+   - 如果总调度停了，这些资产可能只做了一半、还没推送。接手后先看 GitHub 上有没有这个分支；没有就在本机用 Codex 重新出图，只补缺的部分。
+2. **Blender 试做**：Antigravity 在本机建一棵树（1500 三角面以内）和一栋小屋（3000 三角面以内），导出 glb 到 `assets/models/trial/`，.blend 源文件放 `art_src/blender/`，渲染预览放 `docs/art-upgrade/models-trial/`。分支 `grok/models-trial`，worktree 在 `D:\开源游戏\_try_opus\ringwatch-models`。效果满意后再批量做房子、树、桥、石头和灯。
+3. **三选一接入卡牌美术**：把 12 张插画和 6 档卡框装进选卡界面；稀有度从现在的档位改成 6 档，并同步修改 `NIGHT.picks` 的数据。
+
+## 5. 接下来的路线（按顺序）
+1. 场景填充：把 Blender 模型和道具摆进场景，拍同机位对比图，逼近 H1/H3。
+2. 白天经营循环（借鉴《无尽冬日》的玩法机制，不抄美术）：在火光圈里采集、搬运、堆放资源，村民排队，建房，扩大火光圈。必须在 11 月网页测试前做完，目标人均时长 10 分钟以上、次日留存 10% 以上。
+3. 夜战后续：合成、大招、翻盘爆发、剪影敌人；守卫分三段进化，五种火色互相克制。
+4. UI：已给用户看过三个方案（U1 融进场景、U2 手绘卷轴、U3 极简），推荐极简，**用户还没选**。
+5. CrazyGames 上架素材：封面 1920×1080、800×1200、800×800，两段 15–20 秒无声预览视频（1920×1080 和 1080×1620），英文介绍。封面属于门面图，必须由用户亲手精修。
+6. 以后再做：护火远征模式、装备系统。
+
+## 6. 变现与发行
+- 10 月：CrazyGames 网页版，靠激励视频广告赚钱。
+- 11 月中：Steam「即将推出」页面，攒愿望单。
+- 之后：用数据去谈海外移动端发行商（Supersonic、Voodoo）。
+- 最后：Steam 买断制，定价 $6.99 / ¥28。参加 2027 年 2 月 Next Fest 要在 1/10 前报名，最好有 1000 个以上愿望单；正式发售的门槛是 7000 个愿望单。
+- 国内：用户先以个人身份做微信/抖音小游戏，只能靠广告变现，需要软著。软著热线 010-61090099（官方要求承诺没用 AI，AI 辅助开发的软件目前没有正式办理途径，等用户打电话问清楚再说）。
+- Steam 要披露玩家能看到的 AI 内容；AI 辅助写的代码没有问题。
+
+## 7. 队友分工速查
+- Codex（ChatGPT 网页 / Codex cloud）：出图（卡牌、角色、道具、贴图、UI），也写中等难度的功能（开局就是它写的）。它的 cloud 版不能调推理强度，分支名会自动生成。
+- Cursor 云端代理：主力写代码和接资产。没有显卡，每次最多截 1 张图。
+- Antigravity `agy`（本机，路径 `C:\Users\x\AppData\Local\agy\bin\agy.exe`）：驱动 Blender 建模、真显卡截图、审图提意见。命令：`agy -p "任务" --add-dir <目录> --dangerously-skip-permissions --effort high --output-format json --print-timeout 60m`
+- Claude（claude.ai/code）：只啃最难的工程，派活要用户批准。小活用 Sonnet，省额度。
+- Gemini 网页：第二意见，审图和设计评审。
+
+## 8. 本机工作副本清理
+- `D:\开源游戏\_try_opus\ringwatch-agy`（已关闭的 #27 的分支）可以用 `git worktree remove` 删除。
+- `ringwatch-base` 可能已经被 Blender 试做任务删掉了；如果还在，也可以删除。
+- 以上都在主副本的 `.git` 里注册，删除时只用 git worktree 命令，不要直接删主副本的文件。
