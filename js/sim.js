@@ -2611,6 +2611,38 @@
     this.mode = 'battle';
     this.emit('revive');
   };
+  // 激励次数用完后，用局内金币买一次重燃。花费在 RW.AD.REVIVE_GOLD。
+  G.payRevive = function () {
+    var cost = (RW.AD && RW.AD.REVIVE_GOLD) || 0;
+    if (cost < 1 || this.revivesLeft <= 0 || this.shardCount < cost) return false;
+    this.shardCount -= cost;
+    this.revive();
+    return true;
+  };
+  // 结算翻倍的金币花费：本局金币 × 比例，不低于下限。
+  G.doubleCost = function () {
+    var AD = RW.AD || {}, shards = (this.result && this.result.shards) || 0;
+    var rate = AD.DOUBLE_GOLD_RATE != null ? AD.DOUBLE_GOLD_RATE : 0.4;
+    var min = AD.DOUBLE_GOLD_MIN != null ? AD.DOUBLE_GOLD_MIN : 6;
+    return Math.max(min, Math.round(shards * rate));
+  };
+  // 把本局已经入账的金币再加一遍。paid 为真时先从局外金币里扣 doubleCost。
+  G.doubleReward = function (paid) {
+    var r = this.result;
+    if (!r || r.doubled) return false;
+    var bonus = r.shards || 0;
+    if (bonus <= 0) return false;
+    var pr = this.prog || (this.prog = {});
+    if (paid) {
+      var c = this.doubleCost();
+      if ((pr.coins || 0) < c) return false;
+      pr.coins = (pr.coins || 0) - c;
+    }
+    pr.coins = (pr.coins || 0) + bonus;
+    r.doubled = true;
+    r.shards = bonus * 2;
+    return true;
+  };
   G.finishRun = function () {
     var reached = this.wave;
     var newBest = reached > this.best;

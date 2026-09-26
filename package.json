@@ -30,7 +30,9 @@
     "dist:win": "node tools/icon.js && electron-builder --win --dir",
     "dist:linux": "node tools/icon.js && electron-builder --linux --dir",
     "dist:mac": "node tools/icon.js && electron-builder --mac --dir",
-    "sync": "node tools/sync-status.js"
+    "sync": "node tools/sync-status.js",
+    "web:build": "node tools/build-web.js",
+    "web:smoke": "node tools/web-smoke.js"
   },
   "devDependencies": {
     "electron": "44.4.5",
@@ -60,6 +62,7 @@
       "vendor/**",
       "fonts/**",
       "assets/sprites/**",
+      "assets/branding/**",
       "package.json"
     ],
     "asar": true,

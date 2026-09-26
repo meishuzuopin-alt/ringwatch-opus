@@ -13,7 +13,7 @@ const bad = msg => { failed++; console.log('  ✗ ' + msg); };
 
 function walk(dir, ext, acc = []) {
   for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (f.name.startsWith('.') || f.name === 'node_modules' || f.name === 'shots' || f.name === 'dist') continue;
+    if (f.name.startsWith('.') || f.name === 'node_modules' || f.name === 'shots' || f.name === 'dist' || f.name === 'dist-web') continue;
     const p = path.join(dir, f.name);
     if (f.isDirectory()) walk(p, ext, acc); else if (p.endsWith(ext)) acc.push(p);
   }
@@ -75,6 +75,7 @@ ok(`游戏文件约 ${(bytes / 1024).toFixed(0)} KB（不含 Electron 运行时�
 // json 里的元数据必须和 js/sprites.js 内嵌的 SPR.META 一致（运行时不读 json，Electron 的 file:// 下 fetch 不可靠）
 console.log('精灵图集');
 const spriteOK = new Set();
+const brandOK = new Set();
 {
   const dir = path.join(root, 'assets', 'sprites');
   const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
@@ -115,12 +116,36 @@ console.log('字体与素材');
   else ok(`字体子集覆盖全部 ${have.size} 个字（fonts/，OFL 授权）`);
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const files = pkg.build.files;
+  const brandRel = ['assets/branding/icon_1024.png', 'assets/branding/icon_512.png', 'assets/branding/icon_256.png', 'assets/branding/icon_128.png'];
+  const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
+  for (const rel of brandRel) {
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) { bad('缺正式图标 ' + rel); continue; }
+    const buf = Buffer.alloc(24);
+    const fd = fs.openSync(p, 'r');
+    fs.readSync(fd, buf, 0, 24, 0);
+    fs.closeSync(fd);
+    const want = +rel.match(/icon_(\d+)/)[1];
+    const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
+    if (buf.toString('ascii', 1, 4) !== 'PNG' || w !== want || h !== want) bad(rel + ' 应为 ' + want + '×' + want + ' PNG');
+    else brandOK.add(rel);
+  }
+  const brandDir = path.join(root, 'assets', 'branding');
+  if (fs.existsSync(brandDir)) {
+    const stray = walk(brandDir, '').map(f => path.relative(root, f)).filter(f => !brandOK.has(f));
+    if (stray.length) bad('assets/branding/ 只放正式图标：' + stray.join(', '));
+  }
+  if (!artDoc.includes('assets/branding/icon_1024.png') || !artDoc.includes('ChatGPT') || !artDoc.includes('2026-09-26') || !artDoc.includes('石台')) bad('docs/ART.md 没有登记正式图标的来源、日期和候选 2（石台 / 火盆）');
+  else if (brandOK.size === brandRel.length) ok('正式图标 1024 / 512 / 256 / 128 已登记');
   if (files.some(f => /^docs|^shots|^tools/.test(f))) bad('安装包白名单里不能有 docs/、shots/、tools/：' + files.join(', '));
   const media = [];
   for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
-    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(path.relative(root, f))) media.push(path.relative(root, f));
-  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集除外）：' + media.join(', '));
-  else ok('安装包白名单：' + files.join('、') + '；除字体和批准过的精灵图集外没有外部素材');
+    for (const f of walk(path.join(root, d), '')) {
+      const rel = path.relative(root, f);
+      if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(rel) && !brandOK.has(rel)) media.push(rel);
+    }
+  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集和正式图标除外）：' + media.join(', '));
+  else ok('安装包白名单：' + files.join('、') + '；除字体、批准过的精灵图集和正式图标外没有外部素材');
 }
 
 console.log('夜战');
@@ -175,7 +200,81 @@ console.log('广告');
     if (!/ok/.test(out)) bad('广告完成判定异常\n' + out);
     else ok('未结束 / 看完一半不发奖，isEnded 为真才发');
   } catch (e) { bad('广告完成判定失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
+  const cg2 = `
+    const root = ${JSON.stringify(root)};
+    require(root + '/js/data.js');
+    require(root + '/js/ads-crazygames.js');
+    const RW = globalThis.RW;
+    let last = null;
+    globalThis.CrazyGames = { SDK: { game: {
+      gameplayStart() {}, gameplayStop() {}, loadingStart() {}, loadingStop() {}
+    }, ad: { requestAd(kind, cbs) { last = { kind, cbs }; } } } };
+    function once(fire) {
+      let g = 0, f = 0;
+      RW.AdsCrazy.show('revive', () => { g++; }, () => { f++; });
+      fire(last.cbs);
+      return g + ':' + f + ':' + (RW.AdsCrazy.holding ? 1 : 0);
+    }
+    const err = once(cbs => cbs.adError(new Error('blocked')));
+    const half = once(cbs => { cbs.adStarted(); cbs.adFinished({ isEnded: false }); });
+    const done = once(cbs => { cbs.adStarted(); cbs.adFinished(); });
+    const mid = (function () {
+      let g = 0, f = 0;
+      RW.AdsCrazy.show('midgame', () => { g++; }, () => { f++; });
+      last.cbs.adFinished();
+      return g + ':' + f;
+    })();
+    if (last.kind !== 'midgame') { console.error('kind ' + last.kind); process.exit(1); }
+    if (err !== '0:1:0' || half !== '0:1:0' || done !== '1:0:0' || mid !== '1:0') {
+      console.error([err, half, done, mid].join(' | ')); process.exit(1);
+    }
+    let extra = 0;
+    globalThis.CrazyGames.SDK.ad.requestAd = function (kind, cbs) { extra++; last = { kind: kind, cbs: cbs }; };
+    function grant(kind) {
+      let g = 0, f = 0, n0 = extra;
+      RW.AdsCrazy.show(kind, function () { g++; }, function () { f++; });
+      const requested = extra > n0;
+      if (requested && last && last.cbs) last.cbs.adFinished();
+      return g + ':' + f + ':' + (requested ? 'ad' : 'noad');
+    }
+    const capRevive = grant('revive');
+    const reroll1 = grant('reroll');
+    const reroll2 = grant('reroll');
+    const double1 = grant('double');
+    const double2 = grant('double');
+    RW.AdsCrazy.beginRun();
+    const skipN = (RW.AD && RW.AD.MIDGAME_SKIP_RUNS != null) ? RW.AD.MIDGAME_SKIP_RUNS : 2;
+    const nEarly = extra;
+    for (let i = 0; i < skipN; i++) RW.AdsCrazy.noteRun();
+    RW.AdsCrazy.midgame(function () {});
+    const early = extra - nEarly;
+    RW.AdsCrazy.noteRun();
+    const nLate = extra;
+    RW.AdsCrazy.midgame(function () {});
+    if (extra > nLate && last && last.cbs) last.cbs.adFinished();
+    const late = extra - nLate;
+    const nAgain = extra;
+    RW.AdsCrazy.midgame(function () {});
+    const again = extra - nAgain;
+    if (capRevive !== '0:1:noad' || reroll1 !== '1:0:ad' || reroll2 !== '0:1:noad' || double1 !== '1:0:ad' || double2 !== '0:1:noad' || early !== 0 || late !== 1 || again !== 0) {
+      console.error(['caps', capRevive, reroll1, reroll2, double1, double2, 'mid', early, late, again].join(' '));
+      process.exit(1);
+    }
+    console.log('ok');
+  `;
+  try {
+    const out = execFileSync(process.execPath, ['-e', cg2], { encoding: 'utf8' });
+    if (!/ok/.test(out)) bad('CrazyGames 适配器异常\n' + out);
+    else ok('CrazyGames：看完才发；复活每会话 1 次，刷新和翻倍每局 1 次；前两局不中插，中插至少隔 3 分钟');
+  } catch (e) { bad('CrazyGames 适配器失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 }
+
+console.log('网页包');
+try {
+  const out = execFileSync(process.execPath, [path.join(__dirname, 'build-web.js')], { encoding: 'utf8' });
+  if (!/网页包通过体积与外链检查/.test(out)) bad('网页包检查没通过\n' + out);
+  else ok(out.trim().split('\n').slice(-6).join('；'));
+} catch (e) { bad('网页包构建失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 
 if (failed) { console.log(`\n${failed} 项失败`); process.exit(1); }
 console.log('\n全部通过');
