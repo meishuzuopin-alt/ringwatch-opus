@@ -37,11 +37,22 @@
     marsh: { grass: '#4f6b3a', grass2: '#56713c', grassDark: '#465f34', moss: '#4a6232', dirt: '#6e5f3e', dirt2: '#66583a',
       water: '#3f6a4a', bed: '#2f3f2a', leaf: '#3d5a2a', leaf2: '#4a6a32', leaf3: '#34502a', trunk: '#4a3a26', skirt: '#1f2c18', willow: 1 }
   };
+  // 手绘柔光：村落用 RW.PAINTERLY.palette 的整套颜色；别的地貌按 biomeMix 往这套颜色靠。
+  function applyPainterlyPalette(B) {
+    var P = RW.PAINTERLY;
+    if (!P || !P.enabled || !P.palette) return;
+    var mix = P.biomeMix == null ? 1 : P.biomeMix, k;
+    for (k in P.palette) {
+      if (!PAL[k] || typeof P.palette[k] !== 'string') continue;
+      PAL[k] = GL.mix(PAL[k], hex(P.palette[k]), B[k] ? mix : 1);
+    }
+  }
   function applyBiome(name) {
     var B = BIOMES[name] || BIOMES.meadow, k;
     for (k in BASE_PAL) PAL[k] = BASE_PAL[k];
     PAL.pine = PAL.willow = 0;
     for (k in B) PAL[k] = typeof B[k] === 'string' ? hex(B[k]) : B[k];
+    applyPainterlyPalette(B);
   }
 
   // ================= 地形 =================
@@ -1118,8 +1129,26 @@
   // 色弱辅助：预警用的几种红换成蓝 / 黄这组红绿色弱也分得清的高对比色（审计：红色预警压在绿草地上）
   var CB_MAP = { '#ff3b5c': '#3d7bff', '#ff2a5a': '#3d7bff', '#ff1a3a': '#2f5bff', '#ff4a4a': '#5a8cff', '#ff3a10': '#ffd400', '#ff8a3a': '#ffe34d', '#ff3b8c': '#4d7cff', '#3a0010': '#000a3a', '#3a0020': '#000a3a' };
   function C(h) { if (RW.opt && RW.opt.cb && CB_MAP[h]) h = CB_MAP[h]; return colCache[h] || (colCache[h] = hex(h)); }
+  // 慢速光尘：复用绿萤火的发光点。颜色绿通道更高，吃到特效着色器里的压暗，留在泛光阈值下。
+  function drawMotes() {
+    var P = RW.PAINTERLY;
+    if (!P || !P.enabled || !P.motes) return;
+    var M = P.motes, n = M.count | 0, t = W3.t, ct = W3.camT, col = hex(M.color), i;
+    if (n > 24) n = 24;
+    for (i = 0; i < n; i++) {
+      var a = i * 2.399 + t * M.speed;
+      var rad = M.radius * (0.25 + 0.75 * ((i * 0.618) % 1));
+      var x = ct.x + Math.cos(a) * rad;
+      var z = ct.z + Math.sin(a * 0.77 + i) * rad * 0.72;
+      var y = M.height + Math.sin(t * M.bob + i * 1.3) * M.bobAmp + (i % 5) * 3;
+      var tw = 0.62 + 0.38 * Math.sin(t * M.twinkle + i * 2.2);
+      if (!W3.inView(x, z, 20)) continue;
+      GL.glow(x, y, z, M.size * (0.75 + 0.25 * tw), col, M.alpha * tw);
+    }
+  }
   function drawFx(g, env) {
     var t = W3.t, i, k;
+    drawMotes();
     // 夜晚灯光
     if (env.lamp > 0.05) {
       for (i = 0; i < W3.lamps.length; i++) {

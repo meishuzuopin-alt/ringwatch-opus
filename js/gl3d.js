@@ -189,7 +189,9 @@
     uCool: { value: new THREE.Vector3(0.46, 0.40, 1.06) }, uGreen: { value: new THREE.Vector2(0.78, 0.25) },
     uWarmAdd: { value: 1.25 }, uFall: { value: 1.4 }, uChill: { value: 0 },
     uFogWarm: { value: new THREE.Vector3(1.0, 0.45, 0.12) }, uFogK: { value: new THREE.Vector3(0.78, 1.05, 0.42) },
-    uEnemyGain: { value: 0.42 }
+    uEnemyGain: { value: 0.42 },
+    // 手绘柔光（RW.PAINTERLY）。uPaint = (开, 圈外降饱和, 圈内暖, 圈内饱和)，uPaintWarm = 圈内暖色倍率
+    uPaint: { value: new THREE.Vector4(0, 0.32, 0.42, 1.12) }, uPaintWarm: { value: new THREE.Vector3(1.14, 0.97, 0.74) }
   };
   // 固有色随距离收向去饱和冷蓝。圈内只压暗并杀掉亮柠绿，留下更深的绿褐，饱和不降。宽 smoothstep。
   var C1_ALBEDO = [
@@ -206,6 +208,13 @@
     '    float fgS = smoothstep(fgR * 0.45, fgR * 1.55, fgCd);',
     '    float fgLe = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
     '    diffuseColor.rgb = mix(diffuseColor.rgb, fgLe * uCool * uEnemyGain, fgS);',
+    '  }',
+    '  if (uPaint.x > 0.5) {',
+    '    float pL = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
+    '    vec3 pOut = mix(diffuseColor.rgb, vec3(pL), uPaint.y * fgT);',
+    '    vec3 pIn = pOut * mix(vec3(1.0), uPaintWarm, (1.0 - fgT) * uPaint.z);',
+    '    float pLi = dot(pIn, vec3(0.2126, 0.7152, 0.0722));',
+    '    diffuseColor.rgb = mix(vec3(pLi), pIn, mix(1.0, uPaint.w, 1.0 - fgT));',
     '  }',
     '}'
   ].join('\n');
@@ -233,7 +242,7 @@
   // sprite = true 是贴图立牌（精灵图）：没有顶点色和 aEm，颜色来自图集贴图；每实例 iFrame 选图集里的一格
   //   （iFrame = [u0, v0, u 宽（负数 = 水平镜像）, v 高]）；不加斑驳和顶点渐变，画好的画面不再叠笔触
   function fgInject(sh, water, sprite) {
-    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uCool', 'uGreen', 'uWarmAdd', 'uFall', 'uChill', 'uFogWarm', 'uFogK', 'uEnemyGain'].forEach(function (k) { sh.uniforms[k] = U[k]; });
+    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uCool', 'uGreen', 'uWarmAdd', 'uFall', 'uChill', 'uFogWarm', 'uFogK', 'uEnemyGain', 'uPaint', 'uPaintWarm'].forEach(function (k) { sh.uniforms[k] = U[k]; });
     sh.uniforms.uEnemy = { value: sprite === 'enemy' ? 1.0 : 0.0 };
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + (sprite ? 'attribute vec4 iFrame;\n' : 'attribute float aEm;\n') + 'varying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
@@ -245,7 +254,7 @@
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
     if (sprite) sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv = vec2(iFrame.x + uv.x * iFrame.z, iFrame.y + uv.y * iFrame.w);\n#endif');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uCool;\nuniform vec2 uGreen;\nuniform float uWarmAdd;\nuniform float uFall;\nuniform float uChill;\nuniform vec3 uFogWarm;\nuniform vec3 uFogK;\nuniform float uEnemy;\nuniform float uEnemyGain;\n' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uCool;\nuniform vec2 uGreen;\nuniform float uWarmAdd;\nuniform float uFall;\nuniform float uChill;\nuniform vec3 uFogWarm;\nuniform vec3 uFogK;\nuniform float uEnemy;\nuniform float uEnemyGain;\nuniform vec4 uPaint;\nuniform vec3 uPaintWarm;\n' + NOISE_GLSL)
       .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' +
         // 圣火暖光圈：圈内是暖光，边缘在最后 6% 半径内收掉，圈外全交给冷色环境光
         '{ float cd = length(vWp.xz - uCore.xy);\n  float cm = uCore.w * (1.0 - smoothstep(uCore.z * 0.94, uCore.z, cd)) * (0.55 + 0.45 * (1.0 - cd / max(uCore.z, 1.0)));\n  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * cm; }\n' +
@@ -417,6 +426,80 @@
     return p;
   }
 
+  // 手绘柔光全屏通道（唯一多出来的一遍）：轻量四象限 Kuwahara、斜向羽化光柱、边缘暗框。
+  // 采样步进由 kuwahara.step 决定（2 = 按半分辨率取邻域）。界面画在另一张画布上，不经过这里。
+  // 高对比的地方（立牌轮廓）按边缘把滤镜混回去，避免笔触把角色糊掉。
+  function painterlyPass() {
+    return new THREE.ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null }, uTime: { value: 0 },
+        uTexel: { value: new THREE.Vector2(1 / 480, 1 / 270) },
+        uKuw: { value: new THREE.Vector4(1.35, 0.32, 0.02, 0.1) },
+        uRay: { value: new THREE.Vector4(0.38, 0.92, 0.1, 0.06) },
+        uRayCol: { value: new THREE.Vector3(1, 0.84, 0.58) },
+        uDrift: { value: 0.12 },
+        uFrame: { value: new THREE.Vector4(1.12, 0.86, 0.52, 1.12) },
+        uFrameCol: { value: new THREE.Vector3(0.36, 0.42, 0.32) },
+        uFrameK: { value: new THREE.Vector2(0.7, 0.55) }
+      },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: [
+        'uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uTexel; varying vec2 vUv;',
+        'uniform vec4 uKuw; uniform vec4 uRay; uniform vec3 uRayCol; uniform float uDrift;',
+        'uniform vec4 uFrame; uniform vec3 uFrameCol; uniform vec2 uFrameK;',
+        'float fgHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'float fgNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
+        '  return mix(mix(fgHash(i), fgHash(i + vec2(1.0, 0.0)), f.x), mix(fgHash(i + vec2(0.0, 1.0)), fgHash(i + vec2(1.0, 1.0)), f.x), f.y); }',
+        'void fgQuad(vec2 uv, vec2 a, vec2 b, vec2 c, vec3 orig, inout vec3 mean, inout float sigma){',
+        '  vec3 cA = texture2D(tDiffuse, uv + a).rgb; vec3 cB = texture2D(tDiffuse, uv + b).rgb; vec3 cC = texture2D(tDiffuse, uv + c).rgb;',
+        '  mean = (orig + cA + cB + cC) * 0.25;',
+        '  vec3 v = (orig * orig + cA * cA + cB * cB + cC * cC) * 0.25 - mean * mean;',
+        '  sigma = v.r + v.g + v.b;',
+        '}',
+        'void main(){',
+        '  vec3 orig = texture2D(tDiffuse, vUv).rgb;',
+        '  vec2 r = uTexel * uKuw.x;',
+        '  vec3 m0 = vec3(0.0); vec3 m1 = vec3(0.0); vec3 m2 = vec3(0.0); vec3 m3 = vec3(0.0);',
+        '  float s0 = 0.0; float s1 = 0.0; float s2 = 0.0; float s3 = 0.0;',
+        '  fgQuad(vUv, r * vec2(-0.25, -0.25), r * vec2(-0.85, -0.20), r * vec2(-0.20, -0.85), orig, m0, s0);',
+        '  fgQuad(vUv, r * vec2( 0.25, -0.25), r * vec2( 0.85, -0.20), r * vec2( 0.20, -0.85), orig, m1, s1);',
+        '  fgQuad(vUv, r * vec2(-0.25,  0.25), r * vec2(-0.85,  0.20), r * vec2(-0.20,  0.85), orig, m2, s2);',
+        '  fgQuad(vUv, r * vec2( 0.25,  0.25), r * vec2( 0.85,  0.20), r * vec2( 0.20,  0.85), orig, m3, s3);',
+        '  vec3 pick = m0; float best = s0;',
+        '  if (s1 < best) { best = s1; pick = m1; }',
+        '  if (s2 < best) { best = s2; pick = m2; }',
+        '  if (s3 < best) { best = s3; pick = m3; }',
+        '  float edge = length(dFdx(orig)) + length(dFdy(orig));',
+        '  float k = uKuw.y * (1.0 - smoothstep(uKuw.z, uKuw.w, edge));',
+        '  vec3 c = mix(orig, pick, clamp(k, 0.0, 1.0));',
+        '  vec2 dir = uRay.xy; float dl = length(dir); dir = dl > 0.001 ? dir / dl : vec2(0.0, 1.0);',
+        '  float coord = dot(vUv - vec2(0.5), vec2(-dir.y, dir.x));',
+        '  float along = dot(vUv, dir);',
+        '  float rays = 0.0;',
+        '  for (int i = 0; i < 4; i++) {',
+        '    float fi = float(i);',
+        '    float center = -0.46 + fi * 0.30 + sin(uTime * uDrift + fi * 1.7) * 0.045;',
+        '    float sig = max(uRay.z, 0.02);',
+        '    float beam = exp(-(coord - center) * (coord - center) / (sig * sig));',
+        '    float ax = along - (0.62 + sin(uTime * uDrift * 0.35 + fi) * 0.06);',
+        '    float axial = exp(-ax * ax * 2.2);',
+        '    float fade = smoothstep(-0.05, 0.55, along) * (1.0 - smoothstep(0.85, 1.25, along));',
+        '    rays += beam * axial * fade;',
+        '  }',
+        '  c += uRayCol * rays * uRay.w;',
+        '  vec2 vd = (vUv - 0.5) * uFrame.xy; float rad = length(vd);',
+        '  float vig = smoothstep(uFrame.z, uFrame.w, rad);',
+        '  float n = fgNoise(vUv * vec2(2.2, 1.6) + 3.0) * 0.65 + fgNoise(vUv * vec2(4.0, 3.1) + 11.0) * 0.35;',
+        '  float fol = smoothstep(0.38, 0.82, n);',
+        '  float edgeM = smoothstep(uFrame.z * 0.85, uFrame.w, rad);',
+        '  float frame = clamp(max(vig, edgeM * fol * uFrameK.y), 0.0, 1.0);',
+        '  c = mix(c, c * uFrameCol, frame * uFrameK.x);',
+        '  gl_FragColor = vec4(max(c, vec3(0.0)), 1.0);',
+        '}'
+      ].join('\n')
+    });
+  }
+
   GL.init = function (canvas) {
     if (!THREE) return false;
     var r;
@@ -457,7 +540,7 @@
     GL.fxAlpha = new Batch(2000, 16);
     GL.fxAddMesh = fxMesh(GL.fxAdd, true); GL.fxAlphaMesh = fxMesh(GL.fxAlpha, false);
     sc.add(GL.fxAlphaMesh); sc.add(GL.fxAddMesh);
-    // 后处理：多重采样 HDR 渲染（带深度）-> 环境光遮蔽 -> 泛光（只抓自发光和法术）-> 调色 + 暗角 -> ACES + sRGB
+    // 后处理：多重采样 HDR 渲染（带深度）-> 环境光遮蔽 -> 泛光（只抓自发光和法术）-> 调色 + 暗角 -> ACES + sRGB -> 手绘柔光（可关）
     var rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
     rt.depthTexture = new THREE.DepthTexture(4, 4); rt.depthTexture.type = THREE.UnsignedIntType;
     var comp = GL.composer = new THREE.EffectComposer(r, rt);
@@ -497,6 +580,9 @@
     });
     comp.addPass(GL.gradePass);
     comp.addPass(new THREE.OutputPass());
+    GL.paintPass = painterlyPass();
+    GL.paintPass.enabled = !!(RW.PAINTERLY && RW.PAINTERLY.enabled);
+    comp.addPass(GL.paintPass);
     GL.ok = true;
     return true;
   };
@@ -508,6 +594,8 @@
     GL.composer.setSize(w, h);
     GL.bloomPass.resolution.set(w, h);
     GL.aoPass.uniforms.uRes.value.set(w, h);
+    var step = (RW.PAINTERLY && RW.PAINTERLY.kuwahara && RW.PAINTERLY.kuwahara.step) || 2;
+    if (GL.paintPass) GL.paintPass.uniforms.uTexel.value.set(step / w, step / h);
   };
 
   // ---------- 网格上传：GB -> BufferGeometry + InstancedMesh（+ 描边外壳） ----------
@@ -701,6 +789,11 @@
     var amb = env.amb == null ? 1 : env.amb;   // 昼夜亮度倍率（夜晚约为白天的 35%）
     GL.hemi.color.copy(srgb(env.sky)); GL.hemi.groundColor.copy(srgb(env.ground)); GL.hemi.intensity = PI * 1.25 * amb;
     GL.sun.color.copy(srgb(env.sun)); GL.sun.intensity = PI * 1.05 * amb;
+    var PY = RW.PAINTERLY, paintOn = !!(PY && PY.enabled);
+    if (paintOn && PY.light) {
+      GL.sun.color.lerp(srgb(hex(PY.light.sun)), PY.light.sunMix);
+      GL.hemi.color.lerp(srgb(hex(PY.light.sky)), PY.light.skyMix);
+    }
     var L = env.light, D = 2000, sb = shadowBox;
     GL.sun.position.set(sb.cx + L[0] * D, L[1] * D, sb.cz + L[2] * D);
     GL.sun.target.position.set(sb.cx, 0, sb.cz); GL.sun.target.updateMatrixWorld();
@@ -736,6 +829,9 @@
       U.uChill.value = ck;
       U.uEnemyGain.value = C1.enemy.gain;
       U.uCoreCol.value.setRGB(fl.color[0], fl.color[1], fl.color[2], THREE.SRGBColorSpace);
+      var pg = paintOn && PY.grade;
+      U.uPaint.value.set(paintOn ? 1 : 0, pg ? pg.outDesat : 0, pg ? pg.inWarm : 0, pg ? pg.inRich : 1);
+      if (pg) U.uPaintWarm.value.set(pg.warm[0], pg.warm[1], pg.warm[2]);
       var fw = fg.warm;
       tmpC.setRGB(fw[0], fw[1], fw[2], THREE.SRGBColorSpace);
       U.uFogWarm.value.set(tmpC.r, tmpC.g, tmpC.b);
@@ -760,6 +856,24 @@
     var bloomAdd = (C1 && C1.bloom) ? C1.bloom.add : 0;
     GL.bloomPass.strength = Math.min(0.55, (env.bloom || 0) * 0.4 + bloomAdd);
     if (!(C1 && C1.bloom)) { GL.bloomPass.threshold = GL.BLOOM_THR; GL.bloomPass.radius = 0.45; }
+    if (GL.paintPass) {
+      GL.paintPass.enabled = paintOn;
+      if (paintOn) {
+        var pk = PY.kuwahara, pr = PY.rays, pf = PY.frame, pu = GL.paintPass.uniforms;
+        pu.uTime.value = env.time;
+        if (pk) pu.uKuw.value.set(pk.radius, pk.strength, pk.edge0, pk.edge1);
+        if (pr) {
+          pu.uRay.value.set(pr.dir[0], pr.dir[1], pr.sigma, pr.alpha);
+          pu.uRayCol.value.set(pr.color[0], pr.color[1], pr.color[2]);
+          pu.uDrift.value = pr.drift;
+        }
+        if (pf) {
+          pu.uFrame.value.set(pf.aspect[0], pf.aspect[1], pf.inner, pf.outer);
+          pu.uFrameCol.value.set(pf.color[0], pf.color[1], pf.color[2]);
+          pu.uFrameK.value.set(pf.strength, pf.foliage);
+        }
+      }
+    }
     commitInstances();
     commitFx(GL.fxAlphaMesh); commitFx(GL.fxAddMesh);
     var i;
