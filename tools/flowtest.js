@@ -18,7 +18,7 @@ fs.mkdirSync(out, { recursive: true });
     window.__pad = { buttons: new Array(17).fill(0), axes: [0, 0, 0, 0] };
     navigator.getGamepads = () => [{ connected: true, id: 'test-pad', mapping: 'standard', buttons: window.__pad.buttons.map(v => ({ pressed: v > 0.5, value: v })), axes: window.__pad.axes }];
   });
-  await page.goto(`http://localhost:${server.address().port}/preview.html`);
+  await page.goto(`http://localhost:${server.address().port}/preview.html?skipopening`);
   await page.waitForTimeout(400);
   const toS = (x, y) => page.evaluate(([x, y]) => { const v = RW.Plat.view; return [v.ox + x * v.s, v.oy + y * v.s]; }, [x, y]);
   const tap = async (x, y) => { const [a, b] = await toS(x, y); await page.mouse.click(a, b); await page.waitForTimeout(150); };

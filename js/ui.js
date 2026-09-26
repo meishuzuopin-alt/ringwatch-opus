@@ -78,6 +78,31 @@
     c.globalAlpha = 1;
   };
 
+  // 首次启动不放菜单：玩家从第一帧就能拿着火种走向祭坛。
+  UI.opening = function (g) {
+    var o = g.opening, c = D.ctx;
+    if (!o) return;
+    UI.btns.length = 0;
+    if (!o.ignited) {
+      var dx = o.target.x - g.player.x, dy = o.target.y - g.player.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      c.globalAlpha = Math.min(1, o.time / 1.2) * Math.min(1, dist / 90);
+      D.text('把火种带到祭坛', W / 2, 58, 17, D.UIC.parch, 'center', true, 4);
+      D.text('WASD / 方向键 / 按住鼠标或手指拖动', W / 2, 82, 11, C.dim, 'center', false, 3);
+      c.globalAlpha = 1;
+      if (o.near > 0) {
+        D.text('点燃圣火', W / 2, H - 74, 14, C.gold, 'center', true, 3);
+        c.fillStyle = 'rgba(16,12,8,0.8)'; c.fillRect(W / 2 - 90, H - 56, 180, 4);
+        c.fillStyle = C.gold; c.fillRect(W / 2 - 90, H - 56, 180 * Math.min(1, o.near / 1.8), 4);
+      }
+    } else {
+      c.globalAlpha = o.titleAlpha();
+      D.glowText('圣火守护者', W / 2, H / 2 - 12, 52, '#FFB547', 'center', 22);
+      D.text('Ringwatch', W / 2, H / 2 + 40, 18, D.UIC.parch, 'center', true, 5);
+      c.globalAlpha = 1;
+    }
+  };
+
   // ================= 标题 =================
   UI.title = function (g, muted) {
     var c = D.ctx, t = UI.t;

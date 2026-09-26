@@ -19,7 +19,7 @@ fs.mkdirSync(out, { recursive: true });
   const errors = [];
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-  await page.goto(`http://localhost:${port}/preview.html`);
+  await page.goto(`http://localhost:${port}/preview.html?skipopening`);
   const balSrc = fs.readFileSync(path.join(root, 'tools/balance.js'), 'utf8');
   const botSrc = balSrc.slice(balSrc.indexOf('function botInput'), balSrc.indexOf('var PREF'));
   await page.addScriptTag({ content: botSrc });

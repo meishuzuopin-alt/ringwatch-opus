@@ -78,7 +78,7 @@ function collect() {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`http://localhost:${server.address().port}/preview.html`);
+  await page.goto(`http://localhost:${server.address().port}/preview.html?skipopening`);
   await page.waitForFunction(() => window.RW && RW.Draw && RW.UI && RW.game, null, { timeout: 60000 });
   await page.evaluate(hook);
   // 商店卡片的说明行：每种建筑每一阶都生成一遍（审计：兵营科技卡引用了已删除的字段，只在随机刷到时才崩）

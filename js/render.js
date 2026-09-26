@@ -395,6 +395,11 @@
   D.core = function (g) {
     var c = D.ctx, co = g.core, t = D.t;
     if (!D.inView(co.x, co.y, 80)) return;
+    if (g.mode === 'opening' && g.opening && !g.opening.ignited) {
+      c.fillStyle = '#161820'; c.strokeStyle = '#6a7680'; c.lineWidth = 3;
+      D.circle(co.x, co.y, co.r); c.fill(); c.stroke();
+      return;
+    }
     var k = co.hp / co.maxHp, hurt = co.flash > 0;
     D.add();
     c.fillStyle = 'rgba(94,242,255,' + (0.06 + 0.03 * Math.sin(t * 2)).toFixed(3) + ')';

@@ -8,6 +8,9 @@
   // 整句优先；更长的词先替换，避免「圣火」先把「圣火守护者」拆碎。
   var PH = {
     '圣火守护者': 'Ringwatch',
+    '把火种带到祭坛': 'Carry the ember to the altar',
+    'WASD / 方向键 / 按住鼠标或手指拖动': 'WASD / arrows / hold and drag with mouse or touch',
+    '点燃圣火': 'Ignite the sacred flame',
     '中文': '中文',
     '长夜围住村庄，你是火旁最后的守护者。': 'The long night has the village. You are the last one by the flame.',
     '第一簇火，正等你点亮。': 'The first flame is waiting.',

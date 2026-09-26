@@ -2,6 +2,7 @@
 require('./js/data.js');
 require('./js/map.js');
 require('./js/sim.js');
+require('./js/opening.js');
 require('./js/night.js');
 require('./js/nightpick.js');
 require('./js/qa.js');
