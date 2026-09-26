@@ -1057,7 +1057,48 @@
     ' 级 ': ' ',
     ' 局': ' runs',
     ' 波 · 还剩 ': ' · ',
-    's · 贯穿 · 射程 ': 's · pierce · range '
+    's · 贯穿 · 射程 ': 's · pierce · range ',
+    '择火': 'Choose a Flame',
+    '三选一 · 本局一直有效': 'Pick one. It lasts this night.',
+    '免费重抽': 'Free reroll',
+    '看广告重抽': 'Ad reroll',
+    '看完才重抽': 'Reroll after the ad',
+    '本局已用': 'Used this run',
+    '没有广告': 'No ads',
+    '本局 1 次': 'Once this run',
+    '已经用过': 'Already used',
+    '本局免费重抽已用完': 'No free reroll left',
+    '点一张，或按 1 2 3': 'Tap a card, or press 1 2 3',
+    '已选：': 'Picked: ',
+    '此版本不播放广告': 'This build has no ads',
+    '广告未看完，没有重抽': 'Ad not finished. No reroll.',
+    '格挡': 'Block',
+    '火种已满': 'Spark full',
+    '火种 ': 'Spark ',
+    '圣火扩环': 'Wider Hearth',
+    '火舌打得更远，圣火周围多一圈灼烧': 'Flame bolts reach farther, and a scorch ring grows around the hearth',
+    '疾斩': 'Quick Cut',
+    '挥砍更快，近身清兵更密': 'Slashes come faster',
+    '贯焰': 'Piercing Flame',
+    '圣火火舌穿过敌人，还能打到后面的': 'Flame bolts pass through foes',
+    '环焰': 'Orbiting Embers',
+    '一颗余烬绕着你转，擦到就烫': 'An ember circles you and burns what it touches',
+    '灼痕': 'Scorch',
+    '火焰命中后还会继续烧一会儿': 'Fire hits keep burning',
+    '斥浪': 'Repulse',
+    '定时推开身边的敌人': 'A pulse knocks nearby foes back',
+    '汲火': 'Fire Leech',
+    '造成的火焰伤害会给圣火回一丝血': 'Fire damage heals the flame',
+    '双舌': 'Extra Tongue',
+    '圣火额外吐出一道火舌': 'The flame spits another bolt',
+    '疾步': 'Long Stride',
+    '跑得更快，方便卡住桥口': 'You move faster, easier to hold the bridge mouth',
+    '火盾': 'Fire Ward',
+    '替你挡下一击，过一会儿再充好': 'Block one hit, then the ward recharges',
+    '链电': 'Chain Lightning',
+    '电弧在附近的敌人之间跳': 'A bolt jumps between nearby foes',
+    '霜环': 'Frost Ring',
+    '定时放出一圈霜，踩中的敌人变慢': 'A ring of frost slows foes it touches'
   };
   for (var mk in MORE) PH[mk] = MORE[mk];
 
@@ -1076,7 +1117,10 @@
     [/今日 (\d+) 分/g, 'today $1'],
     [/通关 (\d+) 次/g, '$1 clears'],
     [/最高分 (\d+)/g, 'best $1'],
-    [/(\d+) 个成就/g, '$1 achievements']
+    [/(\d+) 个成就/g, '$1 achievements'],
+    [/现 (\d+)\/(\d+)/g, 'now $1/$2'],
+    [/可叠 (\d+) 层/g, 'stacks to $1'],
+    [/ · (\d+) 层/g, ' · rank $1']
   ];
   // 标点放在拆词之后，否则「，。」会把整句词条拆开。
   var PUNCT = [

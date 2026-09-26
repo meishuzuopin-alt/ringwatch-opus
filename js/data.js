@@ -1010,6 +1010,58 @@
     overload: { threshold: 40, duration: 8, cooldown: 40, towerRateMul: 2, slashRadiusMul: 1.4, shockDmg: 60 },
     comeback: { flameBelow: 0.3, thresholdMul: 0.5, dmgMul: 1.5, perNight: 1 },
     towers: [{ kind: 'sentry', tier: 1 }, { kind: 'sentry', tier: 1 }],
-    result: { stars: [0.7, 0.4], showDelay: 0.8, restartLock: 0.3 }
+    result: { stars: [0.7, 0.4], showDelay: 0.8, restartLock: 0.3 },
+    // 夜战局内三选一。击杀攒火种，跨过 steps（累计）就暂停给 3 张牌，选 1 张。
+    // 一局 180 秒大约 5–7 次。改这里即生效。祝福三选一（整备前）不走这张表。
+    picks: {
+      offer: 3,
+      freeRerolls: 1,          // 每局免费重抽。广告重抽另走 RW.AD.REROLL_PER_RUN，没有广告时不发奖
+      ownedWeight: 0.72,       // 已经叠过的牌，权重乘这个数，新牌更容易出现
+      xp: { mite: 2, dasher: 4, spitter: 3, warden: 16 },
+      steps: [30, 72, 124, 188, 268, 364, 452],
+      rarity: {
+        common: { name: '普通', w: 62, color: '#d9c7a6' },
+        rare: { name: '精良', w: 28, color: '#8fd0ff' },
+        epic: { name: '稀有', w: 10, color: '#e2b0ff' }
+      },
+      cards: [
+        { id: 'hearth', name: '圣火扩环', rarity: 'common', max: 3,
+          desc: '火舌打得更远，圣火周围多一圈灼烧',
+          range: 34, aura: 28, auraDps: 7, tick: 0.5 },
+        { id: 'tempo', name: '疾斩', rarity: 'common', max: 3,
+          desc: '挥砍更快，近身清兵更密',
+          rate: 0.18, min: 0.22 },
+        { id: 'pierce', name: '贯焰', rarity: 'rare', max: 2,
+          desc: '圣火火舌穿过敌人，还能打到后面的',
+          extra: 1 },
+        { id: 'embers', name: '环焰', rarity: 'rare', max: 3,
+          desc: '一颗余烬绕着你转，擦到就烫',
+          count: 1, dmg: 9, dmgLv: 3, radius: 50, hitR: 16, hitCd: 0.55, knock: 36, spin: 2.1 },
+        { id: 'scorch', name: '灼痕', rarity: 'common', max: 3,
+          desc: '火焰命中后还会继续烧一会儿',
+          dps: 6, time: 2.1, tick: 0.4 },
+        { id: 'pulse', name: '斥浪', rarity: 'rare', max: 2,
+          desc: '定时推开身边的敌人',
+          cd: 6.4, cdStep: 1.3, cdMin: 3.4, radius: 96, radiusStep: 22, knock: 300, dmg: 7 },
+        { id: 'leech', name: '汲火', rarity: 'epic', max: 2,
+          desc: '造成的火焰伤害会给圣火回一丝血',
+          ratio: 0.06, cap: 12 },
+        { id: 'volley', name: '双舌', rarity: 'rare', max: 2,
+          desc: '圣火额外吐出一道火舌',
+          extra: 1, spread: 0.22, dmgMul: 1 },
+        { id: 'stride', name: '疾步', rarity: 'common', max: 3,
+          desc: '跑得更快，方便卡住桥口',
+          speed: 0.14 },
+        { id: 'ward', name: '火盾', rarity: 'rare', max: 2,
+          desc: '替你挡下一击，过一会儿再充好',
+          charges: 1, cd: 16, cdStep: 4, cdMin: 8, inv: 0.35 },
+        { id: 'chain', name: '链电', rarity: 'epic', max: 2,
+          desc: '电弧在附近的敌人之间跳',
+          cd: 3.6, cdStep: 0.7, cdMin: 2.2, jumps: 2, jumpStep: 1, range: 190, hop: 120, dmg: 14, knock: 24 },
+        { id: 'frost', name: '霜环', rarity: 'common', max: 3,
+          desc: '定时放出一圈霜，踩中的敌人变慢',
+          cd: 4.2, cdStep: 0.7, cdMin: 2.4, radius: 84, radiusStep: 18, slow: 0.32, slowStep: 0.08, slowCap: 0.55, time: 1.35 }
+      ]
+    }
   };
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));

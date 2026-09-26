@@ -4,6 +4,7 @@ require('../js/data.js');
 require('../js/map.js');
 require('../js/sim.js');
 require('../js/night.js');
+require('../js/nightpick.js');
 var RW = globalThis.RW;
 
 function arg(name, fallback) {
@@ -83,12 +84,33 @@ Mid.prototype.step = function (g) {
   return { mx: 0, my: 0, dash: false };
 };
 
+// 选牌暂停时自动选一张。第一张先用掉免费重抽，并确认没有广告时广告重抽不会发奖。
+function resolvePick(g, seed, flags) {
+  if (!flags.ad) {
+    flags.ad = true;
+    var before = (g.nightOffers || []).join(',');
+    var started = g.nightAdReroll(function () {});
+    if (started || (g.nightOffers || []).join(',') !== before) flags.adGrant = true;
+  }
+  if (!flags.free && g.nightFreeLeft > 0) {
+    g.nightFreeReroll();
+    flags.free = true;
+  }
+  var n = (g.nightOffers || []).length;
+  if (!n || !g.nightChoose((seed + (g.pkTaken || 0)) % n)) return false;
+  return true;
+}
 function one(seed, policy) {
   var g = new RW.Game({ seed: seed });
   g.startNight({ seed: seed, god: policy === 'god' });
   var bot = policy === 'mid' ? new Mid(seed) : null;
   var guard = 0, cap = 60 * (RW.NIGHT.duration + RW.NIGHT.introSec + 45);
+  var flags = { ad: false, free: false, adGrant: false };
   while (g.mode !== 'result' && guard++ < cap) {
+    if (g.mode === 'npick') {
+      if (!resolvePick(g, seed, flags)) { flags.stuck = true; break; }
+      continue;
+    }
     var inp = bot ? bot.step(g) : { mx: 0, my: 0 };
     g.update(inp);
     if (g.events.length > 200) g.events.length = 0;
@@ -99,21 +121,28 @@ function one(seed, policy) {
     won: won, time: g.nightT || 0, overloads: g.overloads || 0, kills: g.kills || 0,
     downs: g._downs || 0, coreDmg: g._coreDmg || {},
     flame: g.core ? g.core.hp : 0, first: g.firstKillT, stars: g.result ? g.result.stars : 0,
-    done: g.mode === 'result'
+    done: g.mode === 'result', picks: g.pkTaken || 0, xp: g.pkXp || 0,
+    adGrant: !!flags.adGrant, stuck: !!flags.stuck
   };
 }
 
-var wins = 0, ovSum = 0, ovNights = 0, tSum = 0, firsts = [], bad = 0;
+var wins = 0, ovSum = 0, ovNights = 0, tSum = 0, firsts = [], bad = 0, pickSum = 0, pickBad = 0, adBad = 0;
+var t0 = Date.now();
+var BUDGET_MS = 8000;
 for (var n = 0; n < runs; n++) {
   var r = one((seed0 + n) >>> 0, policy);
   if (r.won) wins++;
   ovSum += r.overloads;
   if (r.overloads > 0) ovNights++;
   tSum += r.time;
+  pickSum += r.picks;
   if (r.first >= 0) firsts.push(r.first);
-  if (!r.done) bad++;
-  if (!quiet) console.log('  #' + (n + 1) + ' ' + (r.won ? 'win' : 'lose') + ' t=' + r.time.toFixed(1) + ' ov=' + r.overloads + ' kills=' + r.kills + ' flame=' + Math.round(r.flame) + ' first=' + (r.first < 0 ? '-' : r.first.toFixed(2)) + ' downs=' + r.downs + ' core=' + JSON.stringify(r.coreDmg));
+  if (!r.done || r.stuck) bad++;
+  if (r.adGrant) adBad++;
+  if (policy === 'god' && r.done && (r.picks < 5 || r.picks > 7)) pickBad++;
+  if (!quiet) console.log('  #' + (n + 1) + ' ' + (r.won ? 'win' : 'lose') + ' t=' + r.time.toFixed(1) + ' ov=' + r.overloads + ' kills=' + r.kills + ' picks=' + r.picks + ' xp=' + r.xp + ' flame=' + Math.round(r.flame) + ' first=' + (r.first < 0 ? '-' : r.first.toFixed(2)) + ' downs=' + r.downs + ' core=' + JSON.stringify(r.coreDmg));
 }
+var elapsed = Date.now() - t0;
 var hold = wins / runs;
 var w = wilson(wins, runs);
 // 无头画一帧夜战 HUD。真机上 D.tutorialScroll 在 g.wt 为空时会抛，rAF 就此停掉。
@@ -141,9 +170,17 @@ function assertNightHud() {
 }
 try { assertNightHud(); }
 catch (err) { console.error('night hud frame threw: ' + (err && err.stack || err)); process.exit(1); }
-var line = 'policy=' + policy + ' runs=' + runs + ' hold=' + (hold * 100).toFixed(1) + '% wilson=[' + (w[0] * 100).toFixed(1) + ',' + (w[1] * 100).toFixed(1) + '] overloads/night=' + (ovSum / runs).toFixed(2) + ' withOverload=' + (ovNights / runs * 100).toFixed(0) + '% meanT=' + (tSum / runs).toFixed(1) + ' won=' + wins + (bad ? ' unfinished=' + bad : '');
+var line = 'policy=' + policy + ' runs=' + runs + ' hold=' + (hold * 100).toFixed(1) + '% wilson=[' + (w[0] * 100).toFixed(1) + ',' + (w[1] * 100).toFixed(1) + '] overloads/night=' + (ovSum / runs).toFixed(2) + ' withOverload=' + (ovNights / runs * 100).toFixed(0) + '% meanT=' + (tSum / runs).toFixed(1) + ' picks=' + (pickSum / runs).toFixed(1) + ' won=' + wins + ' ms=' + elapsed + (bad ? ' unfinished=' + bad : '');
 console.log(line);
-if (policy === 'god' && (wins !== runs || bad || tSum / runs < RW.NIGHT.duration - 1)) {
-  console.error('god night did not hold');
+if (adBad) {
+  console.error('ad reroll granted with no ads');
+  process.exit(1);
+}
+if (elapsed > BUDGET_MS * runs) {
+  console.error('night sim over budget ' + (BUDGET_MS * runs) + 'ms');
+  process.exit(1);
+}
+if (policy === 'god' && (wins !== runs || bad || pickBad || tSum / runs < RW.NIGHT.duration - 1)) {
+  console.error('god night did not hold' + (pickBad ? ' picks outside 5-7' : ''));
   process.exit(1);
 }

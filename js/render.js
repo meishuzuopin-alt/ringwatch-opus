@@ -239,6 +239,7 @@
     D.chests(g);
     D.enemies(g);
     D.player(g);
+    D.nightPickWorld(g, null);
     D.bullets(g);
     D.fx(g);
     D.parts(g);
@@ -1108,11 +1109,33 @@
     }
     c.globalAlpha = 1;
     if (g.flash > 0 && RW.opt.flash > 0) { c.fillStyle = 'rgba(255,245,225,' + (g.flash * 0.3 * RW.opt.flash).toFixed(3) + ')'; c.fillRect(V.x, V.y, V.w, V.h); }
+    D.nightPickWorld(g, function (x, y) { return W3.toScreen(x, 8, y); });
     D.streakUI(g);
     D.edgeArrows(g);
     D.minimap(g);
     D.bossBar(g);
     D.momentumBar(g);
+  };
+  // 夜战三选一的常驻标记：圣火灼烧圈、绕身余烬。3D 时用屏幕投影，不改光照。
+  D.nightPickWorld = function (g, project) {
+    if (!g.nightOn || !g.pk || !g.pk.any) return;
+    var c = D.ctx;
+    function at(x, y) { return project ? project(x, y) : { x: x, y: y, ok: true }; }
+    if (g.pk.hearth && g.pkAura > 0) {
+      var c0 = at(g.core.x, g.core.y), c1 = at(g.core.x + g.pkAura, g.core.y);
+      if (c0.ok && c1.ok) {
+        var dx = c1.x - c0.x, dy = c1.y - c0.y, rr = project ? Math.sqrt(dx * dx + dy * dy) : g.pkAura;
+        c.strokeStyle = 'rgba(232,112,42,0.45)'; c.lineWidth = 2;
+        c.beginPath(); c.arc(c0.x, c0.y, Math.max(2, rr), 0, TAU); c.stroke();
+      }
+    }
+    var n = g._embN || 0, xy = g._embXY, i;
+    for (i = 0; i < n; i++) {
+      var s = at(xy[i * 2], xy[i * 2 + 1]);
+      if (!s.ok) continue;
+      c.fillStyle = '#ffb15a'; c.beginPath(); c.arc(s.x, s.y, 5, 0, TAU); c.fill();
+      c.fillStyle = '#fff6df'; c.beginPath(); c.arc(s.x, s.y, 2, 0, TAU); c.fill();
+    }
   };
   D.momentumBar = function (g) {
     if (g.mode !== 'battle' && g.mode !== 'clear') return;
@@ -1365,7 +1388,9 @@
       D.text(g.nightPhase === 'intro' ? '守桥一夜' : '守桥', px + 12, 26, 13, C.text, 'left', true);
       D.text(g.nightPhase === 'intro' ? '即将' : (nleft + ' 秒'), px + 176, 28, 16, nleft <= 10 ? U.parch : C.text, 'right', true);
       var ov = g.ovLeft > 0 ? ('超载 ' + g.ovLeft.toFixed(1)) : (g.ovCd > 0 ? ('冷却 ' + Math.ceil(g.ovCd)) : '连击 ' + (g.nCombo || 0));
+      var spark = (!g.pkLeft) ? '火种已满' : ('火种 ' + Math.min(99, Math.floor((g.pkXp || 0) / (g.pkNeed || 1) * 100)) + '%');
       D.text(ov, px + 12, 48, 11, g.ovLeft > 0 ? '#ffa24a' : C.dim, 'left', true);
+      D.text(spark, px + 176, 48, 11, C.dim, 'right', true);
       D.text('击杀 ' + g.kills, px + 176, 58, 10, C.dim, 'right');
     } else {
     D.text(g.endless ? '无尽 · 第 ' + g.wave + ' 波' : '第 ' + g.wave + ' 波', px + 12, 25, 13, C.text, 'left', true);

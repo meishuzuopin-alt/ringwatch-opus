@@ -186,6 +186,10 @@
       if (inBattle()) { paused = !paused; resetStick(); }
       return;
     }
+    if (g.mode === 'npick') {
+      if (/^Digit[123]$/.test(code)) action('npick:' + (+code.slice(5) - 1));
+      return;
+    }
     if (inBattle() && !paused) {
       if (/^Digit[1-4]$/.test(code)) { if (!g.nightOn) battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
       if (ka === 'dash' || ka === 'build' || (ka && ka.indexOf('cmd:') === 0)) { battleButton(ka); return; }
@@ -286,7 +290,7 @@
     return null;
   }
   function defaultFocus(btns) {
-    var pref = /^(coreForm:|settingsClose|statsClose|howtoClose|resume|continueRun|start|pick:|bless:0|next|retry|revive)/;
+    var pref = /^(coreForm:|settingsClose|statsClose|howtoClose|resume|continueRun|start|pick:|npick:0|bless:0|next|retry|revive)/;
     for (var i = 0; i < btns.length; i++) if (pref.test(btns[i].id)) return btns[i].id;
     return btns[0].id;
   }
@@ -423,6 +427,17 @@
         var rb = g.chooseBless(+arg);
         if (rb !== 'ok') { UI.toast(rb); S.play({ type: 'deny' }); }
         break;
+      case 'npick':
+        var nid = g.nightOffers && g.nightOffers[+arg];
+        if (!g.nightChoose(+arg)) { S.play({ type: 'deny' }); break; }
+        if (nid && g.nightCard) UI.toast(g.nightCard(nid).name + ' · ' + g.pk[nid] + ' 层', 1.2);
+        break;
+      case 'nfree':
+        if (!g.nightFreeReroll()) { UI.toast('本局免费重抽已用完'); S.play({ type: 'deny' }); }
+        break;
+      case 'nad':
+        if (!g.nightAdReroll(function (ok, msg) { if (!ok && msg) UI.toast(msg); })) S.play({ type: 'deny' });
+        break;
       case 'evolve':
         var re = g.evolveWeapon(+arg);
         if (re !== 'ok') { UI.toast(re); S.play({ type: 'deny' }); }
@@ -525,10 +540,10 @@
     // 音乐状态：菜单 / 整备放慢速重型段落；战斗按强度换段落；Boss 在场换 Boss 段落；暂停、倒地时停
     var mstate = 'menu';
     if (paused || g.mode === 'down' || g.mode === 'revive') mstate = 'off';
-    else if (inBattle()) mstate = (g.boss && g.boss.on) || g.bossAlert > 0 ? 'boss' : 'battle';
+    else if (inBattle() || g.mode === 'npick') mstate = (g.boss && g.boss.on) || g.bossAlert > 0 ? 'boss' : 'battle';
     if (S.themeMap !== RW.MAP.id) { S.setTheme(RW.MAP.music); S.themeMap = RW.MAP.id; }   // 每张地图一套音乐主题与环境声
     S.updateMusic(mstate, intensity);
-    if (inBattle() || g.mode === 'revive') D.updateCamera(g, paused ? 0 : dt);
+    if (inBattle() || g.mode === 'revive' || g.mode === 'npick') D.updateCamera(g, paused ? 0 : dt);
     render(paused ? 0 : dt);
     // 桌面版启动计时：第一帧画完记一笔（写进 startup.log）
     if (!booted) {
@@ -546,7 +561,7 @@
     var gl3 = P.gl3d && RW.W3 && RW.W3.ready;
     if (gl3) {
       // 3D 铺满整个画布，HUD 画在上层的透明画布上
-      var cw = P.canvas.width, ch = P.canvas.height, battle = inBattle() || g.mode === 'revive';
+      var cw = P.canvas.width, ch = P.canvas.height, battle = inBattle() || g.mode === 'revive' || g.mode === 'npick';
       RW.GL.resize(cw, ch);
       RW.W3.draw(g, [0, 0, cw, ch], dt || 0, !battle);
     }
@@ -563,6 +578,10 @@
       case 'revive': if (gl3) D.overlay3D(g); else D.world(g); D.hud(g, UI, false); UI.btns.length = 0; UI.revive(g, P.adProvider === 'none' ? null : (P.hasAds ? P.adLabel('revive') : '')); break;
       case 'shop': UI.shop(g, P.hasAds ? P.adLabel('reroll') : ''); break;
       case 'bless': UI.bless(g); break;
+      case 'npick':
+        if (gl3) D.overlay3D(g); else D.world(g);
+        UI.nightPick(g);
+        break;
       case 'result': UI.result(g); break;
       case 'records': UI.records(g); break;
     }
