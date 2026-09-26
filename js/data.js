@@ -370,8 +370,23 @@
     rain: { cd: 2.2, dmgMul: 3, blast: 70, skyCd: 1.2 },   // 流星：伤害 = 火舌伤害 × dmgMul；天火时更频繁
     judge: { burn: 0.6, taken: 0.2 },                      // 9 级：灼烧每秒 = 火舌伤害 × burn；受到伤害 +20%
     skyRange: 99999,
-    dim: 0.32                                              // 圣域外的土地压暗多少（还没被圣火照亮）
+    dim: 0.32
   };
+  // C1「光即是色」（概念 mj_style_C1.png）。场景冷暖只调这一处：圈内橙金 / 琥珀，圈外冷靛蓝，宽而软的过渡。
+  // inner / outer 是圣域半径的倍数：inner 以内全暖，outer 以外全冷，中间 smoothstep，没有硬边。
+  // tint 乘在部分去饱和后的固有色上（线性空间）。sat：1 保留原饱和，0 变成灰。gain：明度。
+  // add：同一条过渡带上额外的暖色照明，夜里更强。昼夜预设的 chill（0 白天 … 1 夜晚）在两端之间混合。
+  // veil：圣域外旧的黑色压暗叠层，改得很淡，避免再切出一圈硬边；冷暖本身在着色器里。
+  // 地形、房屋、树和手绘精灵走同一条着色器（js/gl3d.js）。不改玩法数值。
+  RW.C1_LIGHT = {
+    inner: 0.42,
+    outer: 1.32,
+    warm: { tint: [1.48, 0.72, 0.36], sat: 0.8, gain: 1.04 },
+    day:   { tint: [0.40, 0.48, 1.12], sat: 0.2, gain: 0.64, add: 0.14 },
+    night: { tint: [0.28, 0.36, 1.02], sat: 0.12, gain: 0.40, add: 0.40 },
+    veil: 0.04
+  };
+  RW.SANCTUARY.dim = RW.C1_LIGHT.veil;
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
   RW.FRONTS = [null];
 

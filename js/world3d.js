@@ -524,22 +524,22 @@
     // grade = [饱和度, 对比度, 边缘光, 亮度偏移]；shadowDark = 阴影里保留多少直射光；line = 描边颜色；
     // bloom = 泛光强度，thr = 旧的泛光阈值（阶段 1 起阈值固定，只有自发光和法术发光）
     // rim = 冷色边缘光 [r, g, b, 强度]；fogLow = 光圈外低矮冷雾 [浓度, 高度, 从光圈边缘到最浓的距离]；vig = 暗角；
-    // amb = 环境与主光亮度倍率；a35 = 夜晚提亮到白天 35% 的备选颜色（GL.ART.night35 打开时用，默认用原版颜色）
+    // amb = 环境与主光亮度倍率；chill = C1 冷暖混合（0 白天端，1 夜晚端，见 RW.C1_LIGHT）；a35 = 夜晚提亮到白天 35% 的备选颜色
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: hex('#fff0d4'), sky: shade(hex('#bcd4ff'), 0.55), ground: shade(hex('#6b5a40'), 0.4), fog: hex('#a9c6e8'), clear: hex('#9fc3ea'), fogNear: 1400, fogFar: 3200, em: 1.0, lamp: 0.15,
-        grade: [1.12, 1.06, 0.18, 0.0], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9,
-        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.16, amb: 1 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#8a7fb8'), 0.55), ground: shade(hex('#5a3a30'), 0.4), fog: hex('#7a5f80'), clear: hex('#5e4a70'), fogNear: 1300, fogFar: 3000, em: 1.2, lamp: 0.6,
-        grade: [1.15, 1.08, 0.3, 0.0], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78,
-        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.2, amb: 1 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4ff'), 0.4), sky: shade(hex('#3a5088'), 0.55), ground: shade(hex('#1c1c30'), 0.4), fog: hex('#141c30'), clear: hex('#0c1222'), fogNear: 1200, fogFar: 2800, em: 1.5, lamp: 1.0,
-        grade: [1.1, 1.1, 0.35, 0.01], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62,
-        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.26, amb: 1,
+      day: { light: [-0.45, 0.82, 0.36], sun: hex('#ffe4c0'), sky: shade(hex('#8eabcc'), 0.5), ground: shade(hex('#3d4a62'), 0.55), fog: hex('#7d94b0'), clear: hex('#6d86a6'), fogNear: 1050, fogFar: 2500, em: 1.0, lamp: 0.15,
+        grade: [0.94, 1.04, 0.1, -0.012], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9,
+        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.22, amb: 0.86, chill: 0 },
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#6a6890'), 0.48), ground: shade(hex('#3a3548'), 0.5), fog: hex('#5a6078'), clear: hex('#3e455c'), fogNear: 980, fogFar: 2300, em: 1.2, lamp: 0.6,
+        grade: [0.9, 1.05, 0.16, -0.012], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78,
+        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.24, amb: 0.82, chill: 0.45 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#7a92d8'), 0.34), sky: shade(hex('#243860'), 0.5), ground: shade(hex('#121624'), 0.45), fog: hex('#141c32'), clear: hex('#0c1424'), fogNear: 900, fogFar: 2100, em: 1.5, lamp: 1.0,
+        grade: [0.8, 1.08, 0.2, -0.02], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62,
+        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.32, amb: 0.78, chill: 1,
         // 备选（GL.ART.night35）：夜晚光圈外亮度约为白天 35% 的提亮版
         a35: { sun: shade(hex('#8aa4ff'), 0.72), sky: shade(hex('#5a74b8'), 0.8), ground: shade(hex('#2a2c48'), 0.6), fog: hex('#34497a'), clear: hex('#141e36') } },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#6a3050'), 0.55), ground: shade(hex('#2a1418'), 0.4), fog: hex('#3a1420'), clear: hex('#200a14'), fogNear: 1200, fogFar: 2800, em: 1.4, lamp: 0.9,
-        grade: [1.14, 1.12, 0.35, 0.0], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66,
-        rim: [0.55, 0.35, 0.75, 0.3], fogLow: [0.5, 34, 380], vig: 0.26, amb: 1,
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#5a3058'), 0.5), ground: shade(hex('#241820'), 0.45), fog: hex('#2a1828'), clear: hex('#160c16'), fogNear: 980, fogFar: 2200, em: 1.4, lamp: 0.9,
+        grade: [0.9, 1.08, 0.22, -0.01], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66,
+        rim: [0.55, 0.35, 0.75, 0.3], fogLow: [0.5, 34, 380], vig: 0.3, amb: 0.85, chill: 0.72,
         a35: { sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#7a4070'), 0.8), ground: shade(hex('#3a1c28'), 0.6), fog: hex('#4a2038'), clear: hex('#200a14'), amb: 1 } }
     };
     var e = P[kind];
@@ -547,7 +547,7 @@
     var l = e.light, ll = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
     return { light: [l[0] / ll, l[1] / ll, l[2] / ll], sun: e.sun.slice(), sky: e.sky.slice(), ground: e.ground.slice(), fog: e.fog.slice(), clear: e.clear.slice(), fogNear: e.fogNear, fogFar: e.fogFar, em: e.em, lamp: e.lamp,
       grade: e.grade.slice(), shadowDark: e.shadowDark, line: e.line.slice(), bloom: e.bloom, thr: e.thr, time: 0,
-      rim: e.rim.slice(), fogLow: e.fogLow.slice(), vig: e.vig, amb: e.amb };
+      rim: e.rim.slice(), fogLow: e.fogLow.slice(), vig: e.vig, amb: e.amb, chill: e.chill || 0 };
   }
   W3.envFor = function (g) {
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
@@ -561,7 +561,7 @@
     ['light', 'sun', 'sky', 'ground', 'fog', 'clear', 'line'].forEach(function (key) { for (var i = 0; i < 3; i++) a[key][i] += (b[key][i] - a[key][i]) * k; });
     for (var j = 0; j < 4; j++) { a.grade[j] += (b.grade[j] - a.grade[j]) * k; a.rim[j] += (b.rim[j] - a.rim[j]) * k; }
     for (j = 0; j < 3; j++) a.fogLow[j] += (b.fogLow[j] - a.fogLow[j]) * k;
-    ['fogNear', 'fogFar', 'em', 'lamp', 'shadowDark', 'bloom', 'thr', 'vig', 'amb'].forEach(function (key) { a[key] += (b[key] - a[key]) * k; });
+    ['fogNear', 'fogFar', 'em', 'lamp', 'shadowDark', 'bloom', 'thr', 'vig', 'amb', 'chill'].forEach(function (key) { a[key] += (b[key] - a[key]) * k; });
   }
 
   // ================= 初始化 =================
