@@ -168,7 +168,7 @@
     //   rim 冷色边缘光 · grad 顶点下暗上亮 · coreLight 圣火暖光圈 · night35 夜晚提亮到白天 35% 的备选预设
     // 默认开着的只有低风险三项：描边（本色压暗）、只给火焰 / 法术 / 敌眼的局部泛光、轻暗角。
     // 浏览器里加 ?art=all 全开，?art=toon,ao 只开其中几项（截图对照用）
-    ART: { aces: false, toon: false, noise: false, ao: false, nightFog: false, rim: false, grad: false, coreLight: false, night35: false },
+    ART: { aces: true, toon: false, noise: false, ao: false, nightFog: false, rim: false, grad: false, coreLight: false, night35: false },
     meshes: [], statics: [],
     // 每帧渲染前 / 后的回调（精灵图层在这里提交实例、清空计数）
     preRender: [], postRender: []
@@ -183,28 +183,39 @@
     uTime: { value: 0 }, uEmBoost: { value: 1 }, uGrade: { value: null }, uLineW: { value: 1.2 }, uLineWB: { value: 0.9 },
     uRim: { value: null }, uNoise: { value: 0.12 }, uCore: { value: null }, uCoreCol: { value: null },
     uFogLow: { value: null }, uEmHDR: { value: 2.2 }, uGradK: { value: 0 }, uFogPierce: { value: 0 },
-    // C1 色温过渡（参数在 RW.C1_LIGHT）：uBand = (inner, outer, 暖饱和, 冷饱和)，uGain = (暖明度, 冷明度)
-    uBand: { value: new THREE.Vector4(0.42, 1.32, 0.8, 0.2) }, uGain: { value: new THREE.Vector2(1.04, 0.64) },
-    uWarm: { value: new THREE.Vector3(1.48, 0.72, 0.36) }, uCool: { value: new THREE.Vector3(0.40, 0.48, 1.12) },
-    uWarmAdd: { value: 0.14 }, uChill: { value: 0 }
+    // C1（参数在 RW.C1_LIGHT）。uBand=(inner, outer, 圈内饱和, 圈外饱和)，uGain=(圈内明度, 圈外明度)
+    // uGreen=(圈内去柠绿, 圈外去柠绿)，uCool=圈外冷蓝（g 不高于 r），uWarmAdd=圣火强度，uFall=指数陡度
+    uBand: { value: new THREE.Vector4(0.2, 1.7, 1.12, 0.06) }, uGain: { value: new THREE.Vector2(0.74, 0.62) },
+    uCool: { value: new THREE.Vector3(0.46, 0.40, 1.06) }, uGreen: { value: new THREE.Vector2(0.78, 0.25) },
+    uWarmAdd: { value: 1.25 }, uFall: { value: 1.4 }, uChill: { value: 0 },
+    uFogWarm: { value: new THREE.Vector3(1.0, 0.45, 0.12) }, uFogK: { value: new THREE.Vector3(0.78, 1.05, 0.42) },
+    uEnemyGain: { value: 0.42 }
   };
-  // 固有色按离圣火的距离从暖色收到冷靛蓝。宽 smoothstep，不在半径上切一刀。
+  // 固有色随距离收向去饱和冷蓝。圈内只压暗并杀掉亮柠绿，留下更深的绿褐，饱和不降。宽 smoothstep。
   var C1_ALBEDO = [
     '{',
     '  float fgCd = length(vWp.xz - uCore.xy);',
     '  float fgR = max(uCore.z, 1.0);',
-    '  float fgT = uCore.z < 2.0 ? mix(0.35, 0.85, uChill) : smoothstep(fgR * uBand.x, fgR * uBand.y, fgCd);',
+    '  float fgT = uCore.z < 2.0 ? mix(0.2, 0.85, uChill) : smoothstep(fgR * uBand.x, fgR * uBand.y, fgCd);',
     '  float fgL = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
-    '  diffuseColor.rgb = mix(vec3(fgL), diffuseColor.rgb, mix(uBand.z, uBand.w, fgT)) * mix(uWarm, uCool, fgT) * mix(uGain.x, uGain.y, fgT);',
+    '  vec3 fgB = diffuseColor.rgb;',
+    '  fgB.g = mix(fgB.g, min(fgB.g, fgB.r * 0.72 + fgL * 0.06), mix(uGreen.x, uGreen.y, fgT));',
+    '  vec3 fgIn = mix(vec3(fgL), fgB, mix(uBand.z, uBand.w, fgT));',
+    '  diffuseColor.rgb = mix(fgIn, fgL * uCool, fgT) * mix(uGain.x, uGain.y, fgT);',
+    '  if (uEnemy > 0.5) {',
+    '    float fgS = smoothstep(fgR * 0.45, fgR * 1.55, fgCd);',
+    '    float fgLe = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
+    '    diffuseColor.rgb = mix(diffuseColor.rgb, fgLe * uCool * uEnemyGain, fgS);',
+    '  }',
     '}'
   ].join('\n');
-  // 同一条过渡带上的暖色补光（没有 6% 硬边）。ART.coreLight 的旧硬光圈仍走 uCore.w，默认关。
+  // 圣火主光：指数衰减，中心最暖，远处剩一条软尾巴，不在半径上切断。
   var C1_FILL = [
     '{',
-    '  float fgCd2 = length(vWp.xz - uCore.xy);',
+    '  float fgD = length(vWp.xz - uCore.xy);',
     '  float fgR2 = max(uCore.z, 1.0);',
-    '  float fgT2 = uCore.z < 2.0 ? 1.0 : smoothstep(fgR2 * uBand.x, fgR2 * uBand.y, fgCd2);',
-    '  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * uWarmAdd * (1.0 - fgT2);',
+    '  float fgE = uCore.z < 2.0 ? 0.0 : exp(-uFall * fgD / fgR2);',
+    '  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * uWarmAdd * fgE;',
     '}'
   ].join('\n');
   // 3 格渐变：暗面 / 中间调 / 亮面（最近邻采样，形成清楚的色阶）
@@ -222,7 +233,8 @@
   // sprite = true 是贴图立牌（精灵图）：没有顶点色和 aEm，颜色来自图集贴图；每实例 iFrame 选图集里的一格
   //   （iFrame = [u0, v0, u 宽（负数 = 水平镜像）, v 高]）；不加斑驳和顶点渐变，画好的画面不再叠笔触
   function fgInject(sh, water, sprite) {
-    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uWarm', 'uCool', 'uWarmAdd', 'uChill'].forEach(function (k) { sh.uniforms[k] = U[k]; });
+    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uCool', 'uGreen', 'uWarmAdd', 'uFall', 'uChill', 'uFogWarm', 'uFogK', 'uEnemyGain'].forEach(function (k) { sh.uniforms[k] = U[k]; });
+    sh.uniforms.uEnemy = { value: sprite === 'enemy' ? 1.0 : 0.0 };
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + (sprite ? 'attribute vec4 iFrame;\n' : 'attribute float aEm;\n') + 'varying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (sprite ? 'vEm = 0.0;\nvGrad = 1.0;\n' : 'vEm = aEm;\n' +
@@ -233,7 +245,7 @@
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
     if (sprite) sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv = vec2(iFrame.x + uv.x * iFrame.z, iFrame.y + uv.y * iFrame.w);\n#endif');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uWarm;\nuniform vec3 uCool;\nuniform float uWarmAdd;\nuniform float uChill;\n' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uCool;\nuniform vec2 uGreen;\nuniform float uWarmAdd;\nuniform float uFall;\nuniform float uChill;\nuniform vec3 uFogWarm;\nuniform vec3 uFogK;\nuniform float uEnemy;\nuniform float uEnemyGain;\n' + NOISE_GLSL)
       .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' +
         // 圣火暖光圈：圈内是暖光，边缘在最后 6% 半径内收掉，圈外全交给冷色环境光
         '{ float cd = length(vWp.xz - uCore.xy);\n  float cm = uCore.w * (1.0 - smoothstep(uCore.z * 0.94, uCore.z, cd)) * (0.55 + 0.45 * (1.0 - cd / max(uCore.z, 1.0)));\n  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * cm; }\n' +
@@ -246,8 +258,11 @@
         '#ifdef USE_FOG',
         '  float fgF = smoothstep(fogNear, fogFar, vFogDepth);',
         '  float fgLow = uFogLow.x * (1.0 - smoothstep(0.0, uFogLow.y, vWp.y)) * smoothstep(uFogLow.z, uFogLow.w, length(vWp.xz - uCore.xy));',
-        '  fgF = clamp(fgF + fgLow, 0.0, 1.0) * (1.0 - uFogPierce * clamp(vEm * 1.6, 0.0, 0.92));',
-        '  gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fgF);',
+        '  float fgRd = max(uCore.z, 1.0);',
+        '  float fgOut = uCore.z < 2.0 ? uChill : smoothstep(fgRd * uFogK.x, fgRd * (uFogK.x + uFogK.y), length(vWp.xz - uCore.xy));',
+        '  vec3 fgFog = mix(uFogWarm, fogColor, fgOut);',
+        '  fgF = clamp(fgF * mix(0.28, 1.0, fgOut) + fgLow + fgOut * uFogK.z, 0.0, 0.9) * (1.0 - uFogPierce * clamp(vEm * 1.6, 0.0, 0.92));',
+        '  gl_FragColor.rgb = mix(gl_FragColor.rgb, fgFog, fgF);',
         '#endif'
       ].join('\n'));
     if (sprite) {
@@ -284,9 +299,10 @@
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   };
-  GL.spriteMaterial = function (tex) {
+  // enemy：敌人立牌。圈外再收成冷色剪影；英雄和盾卫不走这一档。
+  GL.spriteMaterial = function (tex, enemy) {
     var m = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, transparent: false, side: THREE.DoubleSide });
-    m.onBeforeCompile = function (sh) { fgInject(sh, false, true); };
+    m.onBeforeCompile = function (sh) { fgInject(sh, false, enemy ? 'enemy' : true); };
     return m;
   };
   // 描边：背面外壳，沿平滑法线外扩（外扩量随离镜头距离变化，屏幕上粗细基本一致）
@@ -409,7 +425,7 @@
     tmpC = new THREE.Color();
     r.setPixelRatio(1);   // 画布尺寸由 platform.js 按设备像素比设置好了
     r.outputColorSpace = THREE.SRGBColorSpace;
-    r.toneMapping = THREE.NeutralToneMapping; r.toneMappingExposure = 1.0;   // 默认沿用原版；ART.aces 打开时换 ACES
+    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.06;
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;   // r18x 起 PCFSoftShadowMap 已移除（会报警告），PCFShadowMap 本身已是柔化过滤
     var sc = GL.scene = new THREE.Scene();
     sc.fog = new THREE.Fog(0x7a5f80, 1300, 3000);
@@ -451,17 +467,29 @@
     comp.addPass(GL.bloomPass);
     U.uGrade.value = new THREE.Vector4(1, 1, 0, 0);
     GL.gradePass = new THREE.ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uGrade: U.uGrade, uVig: { value: 0.22 } },
+      uniforms: {
+        tDiffuse: { value: null }, uGrade: U.uGrade, uVig: { value: 0.22 },
+        uSplit: { value: new THREE.Vector2(0.62, 0.4) },
+        uShad: { value: new THREE.Vector3(0.10, 0.08, 0.26) },
+        uHigh: { value: new THREE.Vector3(1.12, 0.58, 0.16) }
+      },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: [
         'uniform sampler2D tDiffuse; uniform vec4 uGrade; uniform float uVig; varying vec2 vUv;',
+        'uniform vec2 uSplit; uniform vec3 uShad; uniform vec3 uHigh;',
         'void main(){',
         '  vec4 c = texture2D(tDiffuse, vUv);',
         '  float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));',
         '  c.rgb = mix(vec3(l), c.rgb, uGrade.x);',
-        '  c.rgb = max(vec3(0.0), (c.rgb - 0.18) * uGrade.y + 0.18 + uGrade.w);',   // 以中灰为支点做对比度
+        '  c.rgb = max(vec3(0.0), (c.rgb - 0.18) * uGrade.y + 0.18 + uGrade.w);',
+        '  float sh = 1.0 - smoothstep(0.03, 0.46, l);',
+        '  float hi = smoothstep(0.4, 0.9, l);',
+        '  vec3 shCol = mix(c.rgb, uShad * max(l, 0.015), 0.9);',
+        '  shCol.g = min(shCol.g, shCol.r * 0.9);',
+        '  c.rgb = mix(c.rgb, shCol, sh * uSplit.x);',
+        '  c.rgb = mix(c.rgb, c.rgb * uHigh, hi * uSplit.y);',
         '  vec2 vd = (vUv - 0.5) * vec2(1.0, 0.78);',
-        '  c.rgb *= 1.0 - uVig * smoothstep(0.28, 0.62, length(vd));',   // 轻微暗角，把视线收向画面中间
+        '  c.rgb *= 1.0 - uVig * smoothstep(0.28, 0.62, length(vd));',
         '  gl_FragColor = c;',
         '}'
       ].join('\n')
@@ -693,16 +721,31 @@
     U.uRim.value.set(rim[0], rim[1], rim[2], A.rim ? rim[3] : 0);
     var cl = env.coreLight;
     if (cl) U.uCore.value.set(cl.x, cl.z, cl.r, A.coreLight ? cl.k : 0); else U.uCore.value.w = 0;
-    // C1：按 chill 在白天端和夜晚端之间混合。参数只写在 RW.C1_LIGHT。
+    // C1：圣火指数主光、圈外冷蓝、近暖远靛的雾。参数只写在 RW.C1_LIGHT。chill 0 白天 … 1 夜晚。
     var C1 = RW.C1_LIGHT, ck = env.chill || 0;
     if (C1) {
-      var dC = C1.day, nC = C1.night, wC = C1.warm;
-      U.uBand.value.set(C1.inner, C1.outer, wC.sat, dC.sat + (nC.sat - dC.sat) * ck);
-      U.uGain.value.set(wC.gain, dC.gain + (nC.gain - dC.gain) * ck);
-      U.uWarm.value.set(wC.tint[0], wC.tint[1], wC.tint[2]);
-      U.uCool.value.set(dC.tint[0] + (nC.tint[0] - dC.tint[0]) * ck, dC.tint[1] + (nC.tint[1] - dC.tint[1]) * ck, dC.tint[2] + (nC.tint[2] - dC.tint[2]) * ck);
-      U.uWarmAdd.value = dC.add + (nC.add - dC.add) * ck;
+      var al = C1.albedo, fl = C1.flame, fg = C1.fog, gr = C1.grade;
+      function c1l(a) { return a[0] + (a[1] - a[0]) * ck; }
+      U.uBand.value.set(C1.band.inner, C1.band.outer, al.inSat, al.outSat);
+      U.uGain.value.set(al.inGain, c1l(al.outGain));
+      U.uGreen.value.set(al.greenKill[0], al.greenKill[1]);
+      U.uCool.value.set(C1.cool[0], C1.cool[1], C1.cool[2]);
+      U.uFall.value = fl.fall;
+      U.uWarmAdd.value = c1l(fl.gain);
       U.uChill.value = ck;
+      U.uEnemyGain.value = C1.enemy.gain;
+      U.uCoreCol.value.setRGB(fl.color[0], fl.color[1], fl.color[2], THREE.SRGBColorSpace);
+      var fw = fg.warm;
+      tmpC.setRGB(fw[0], fw[1], fw[2], THREE.SRGBColorSpace);
+      U.uFogWarm.value.set(tmpC.r, tmpC.g, tmpC.b);
+      U.uFogK.value.set(fg.start, fg.thick, c1l(fg.amount));
+      var gp = GL.gradePass.uniforms;
+      gp.uSplit.value.set(gr.shadow, gr.high);
+      gp.uShad.value.set(gr.shad[0], gr.shad[1], gr.shad[2]);
+      gp.uHigh.value.set(gr.highCol[0], gr.highCol[1], gr.highCol[2]);
+      GL.renderer.toneMappingExposure = C1.exposure;
+      GL.bloomPass.threshold = C1.bloom.thr;
+      GL.bloomPass.radius = C1.bloom.radius;
     }
     // 低矮冷雾从光圈边缘往外 fogLow[2] 距离内渐浓
     var fl = env.fogLow || [0, 40, 360], r0 = cl ? cl.r : 600;
@@ -713,7 +756,9 @@
     GL.gradePass.uniforms.uVig.value = env.vig == null ? 0.22 : env.vig;
     // 泛光：阈值固定在 HDR 1.05，普通受光表面不发光，只有自发光和法术光效会晕开
     GL.bloomPass.enabled = GL.fx.bloom;
-    GL.bloomPass.strength = Math.min(0.9, (env.bloom || 0) * 0.9); GL.bloomPass.threshold = GL.BLOOM_THR; GL.bloomPass.radius = 0.45;
+    var bloomAdd = (C1 && C1.bloom) ? C1.bloom.add : 0;
+    GL.bloomPass.strength = Math.min(0.55, (env.bloom || 0) * 0.4 + bloomAdd);
+    if (!(C1 && C1.bloom)) { GL.bloomPass.threshold = GL.BLOOM_THR; GL.bloomPass.radius = 0.45; }
     commitInstances();
     commitFx(GL.fxAlphaMesh); commitFx(GL.fxAddMesh);
     var i;

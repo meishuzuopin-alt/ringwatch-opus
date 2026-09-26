@@ -526,20 +526,20 @@
     // rim = 冷色边缘光 [r, g, b, 强度]；fogLow = 光圈外低矮冷雾 [浓度, 高度, 从光圈边缘到最浓的距离]；vig = 暗角；
     // amb = 环境与主光亮度倍率；chill = C1 冷暖混合（0 白天端，1 夜晚端，见 RW.C1_LIGHT）；a35 = 夜晚提亮到白天 35% 的备选颜色
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: hex('#ffe4c0'), sky: shade(hex('#8eabcc'), 0.5), ground: shade(hex('#3d4a62'), 0.55), fog: hex('#7d94b0'), clear: hex('#6d86a6'), fogNear: 1050, fogFar: 2500, em: 1.0, lamp: 0.15,
-        grade: [0.94, 1.04, 0.1, -0.012], shadowDark: 0.42, line: hex('#2a2230'), bloom: 0.35, thr: 0.9,
-        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.22, amb: 0.86, chill: 0 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#ffae6a'), 0.95), sky: shade(hex('#6a6890'), 0.48), ground: shade(hex('#3a3548'), 0.5), fog: hex('#5a6078'), clear: hex('#3e455c'), fogNear: 980, fogFar: 2300, em: 1.2, lamp: 0.6,
-        grade: [0.9, 1.05, 0.16, -0.012], shadowDark: 0.4, line: hex('#24162a'), bloom: 0.6, thr: 0.78,
-        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.24, amb: 0.82, chill: 0.45 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#7a92d8'), 0.34), sky: shade(hex('#243860'), 0.5), ground: shade(hex('#121624'), 0.45), fog: hex('#141c32'), clear: hex('#0c1424'), fogNear: 900, fogFar: 2100, em: 1.5, lamp: 1.0,
-        grade: [0.8, 1.08, 0.2, -0.02], shadowDark: 0.5, line: hex('#0a0c16'), bloom: 0.95, thr: 0.62,
-        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.32, amb: 0.78, chill: 1,
+      day: { light: [-0.45, 0.82, 0.36], sun: shade(hex('#a8c0e8'), 0.38), sky: shade(hex('#9ec0ff'), 0.4), ground: shade(hex('#161432'), 0.6), fog: hex('#3a4e84'), clear: hex('#4a6298'), fogNear: 1700, fogFar: 2700, em: 1.0, lamp: 0.15,
+        grade: [1.02, 1.04, 0.06, 0.0], shadowDark: 0.28, line: hex('#1a1830'), bloom: 0.35, thr: 0.9,
+        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.18, amb: 0.46, chill: 0 },
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#8aa0d0'), 0.32), sky: shade(hex('#6070b0'), 0.38), ground: shade(hex('#141228'), 0.55), fog: hex('#2a3868'), clear: hex('#323e6c'), fogNear: 1500, fogFar: 2400, em: 1.2, lamp: 0.6,
+        grade: [0.98, 1.05, 0.1, -0.01], shadowDark: 0.26, line: hex('#161428'), bloom: 0.6, thr: 0.78,
+        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.22, amb: 0.34, chill: 0.45 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#6880c0'), 0.26), sky: shade(hex('#3a58a0'), 0.32), ground: shade(hex('#100e22'), 0.5), fog: hex('#1c2a56'), clear: hex('#10162c'), fogNear: 1300, fogFar: 2100, em: 1.5, lamp: 1.0,
+        grade: [0.92, 1.06, 0.12, -0.01], shadowDark: 0.22, line: hex('#0c0e18'), bloom: 0.95, thr: 0.62,
+        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.28, amb: 0.24, chill: 1,
         // 备选（GL.ART.night35）：夜晚光圈外亮度约为白天 35% 的提亮版
         a35: { sun: shade(hex('#8aa4ff'), 0.72), sky: shade(hex('#5a74b8'), 0.8), ground: shade(hex('#2a2c48'), 0.6), fog: hex('#34497a'), clear: hex('#141e36') } },
-      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#5a3058'), 0.5), ground: shade(hex('#241820'), 0.45), fog: hex('#2a1828'), clear: hex('#160c16'), fogNear: 980, fogFar: 2200, em: 1.4, lamp: 0.9,
-        grade: [0.9, 1.08, 0.22, -0.01], shadowDark: 0.45, line: hex('#12060a'), bloom: 0.85, thr: 0.66,
-        rim: [0.55, 0.35, 0.75, 0.3], fogLow: [0.5, 34, 380], vig: 0.3, amb: 0.85, chill: 0.72,
+      boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#8090c8'), 0.3), sky: shade(hex('#503868'), 0.4), ground: shade(hex('#1a1020'), 0.5), fog: hex('#2a2048'), clear: hex('#1a1430'), fogNear: 1400, fogFar: 2200, em: 1.4, lamp: 0.9,
+        grade: [0.96, 1.06, 0.12, -0.008], shadowDark: 0.24, line: hex('#12060a'), bloom: 0.85, thr: 0.66,
+        rim: [0.55, 0.35, 0.75, 0.3], fogLow: [0.5, 34, 380], vig: 0.26, amb: 0.3, chill: 0.72,
         a35: { sun: shade(hex('#ff9a7a'), 0.7), sky: shade(hex('#7a4070'), 0.8), ground: shade(hex('#3a1c28'), 0.6), fog: hex('#4a2038'), clear: hex('#200a14'), amb: 1 } }
     };
     var e = P[kind];
