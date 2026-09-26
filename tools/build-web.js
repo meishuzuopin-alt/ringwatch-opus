@@ -60,6 +60,7 @@ function walkCopy(rel) {
   }
 }
 walkCopy('assets/sprites');
+if (fs.existsSync(path.join(root, 'assets', 'branding'))) walkCopy('assets/branding');
 
 const adapter = ads === 'crazygames' ? 'js/ads-crazygames.js' : 'js/ads-none.js';
 copyFile(adapter);
@@ -71,14 +72,21 @@ const html = `<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>${lang === 'en' ? 'Ringwatch' : '圣火守护者'}</title>
+<link rel="icon" type="image/png" sizes="128x128" href="assets/branding/icon_128.png">
+<link rel="apple-touch-icon" href="assets/branding/icon_256.png">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
   html, body { margin: 0; height: 100%; background: #04060d; overflow: hidden;
     touch-action: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
     -webkit-touch-callout: none; }
   canvas { display: block; touch-action: none; position: absolute; left: 0; top: 0; }
+  #rw-splash { position: fixed; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
+    background: #04060d; pointer-events: none; }
+  #rw-splash img { width: 128px; height: 128px; }
 </style>
 </head>
 <body>
+<div id="rw-splash"><img src="assets/branding/icon_256.png" width="128" height="128" alt="${lang === 'en' ? 'Ringwatch' : '圣火守护者'}"></div>
 <canvas id="game"></canvas>
 <script>window.RW_WEB = { web: true, lang: ${JSON.stringify(lang)}, ads: ${JSON.stringify(ads)} };</script>
 ${tags}
@@ -88,6 +96,18 @@ ${tags}
 </html>
 `;
 fs.writeFileSync(path.join(outDir, 'index.html'), html);
+const manifest = {
+  name: lang === 'en' ? 'Ringwatch' : '圣火守护者',
+  short_name: lang === 'en' ? 'Ringwatch' : '圣火守护者',
+  start_url: './index.html',
+  display: 'fullscreen',
+  background_color: '#04060d',
+  theme_color: '#04060d',
+  icons: [128, 256, 512, 1024].map(function (n) {
+    return { src: 'assets/branding/icon_' + n + '.png', sizes: n + 'x' + n, type: 'image/png', purpose: 'any' };
+  })
+};
+fs.writeFileSync(path.join(outDir, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2) + '\n');
 
 // 英文包要能翻开菜单、教程、HUD、结算里的关键句
 if (lang === 'en') {

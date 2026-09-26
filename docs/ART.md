@@ -143,9 +143,37 @@
 - **没做的（等 PR #6）**：全套图标注册表。正本是 PR #6（`codex/ui-icon-system-v1`，本地 Codex 在重写色表、尺寸档和夜战亮度），PR #7 的 V2 只是对照稿，不照做。现有图标（技能、武器首字、塔名）暂时保留，PR #6 定稿后再接。
 - 截图：`shots/audit/01_title.png`、`06_battle_w1.png`（教程卷轴 + 圣火信息卡）、`07b_alerts.png`（Boss 横幅 + 红箭头 + 兵营信息卡）、`08_respawn.png`、`12_shop.png`。
 
-### 游戏图标（FG-ART-002 阶段 0）
+### 游戏图标（正式稿，2026-09-26）
 
-`desktop/icon.js` 用代码画：夜蓝圆角底板、圣火金到余烬橙的火焰、铜色火盆和石台，4×4 超采样。打包前 `tools/icon.js` 生成 `build/icon.ico`（16–256）和 `build/icon.png`（1024），`build/` 不入库；桌面版运行时也用它设窗口图标。造型可以由 Codex 直接改 `sample()`。
+正式图标是 AI 辅助的手绘稿，不是代码画的那一版。文件在 `assets/branding/`，进安装包白名单，网页包用它做 favicon、`manifest.webmanifest` 和加载画面。
+
+| 项 | 内容 |
+|---|---|
+| 文件 | `assets/branding/icon_1024.png`（1024×1024），以及同源缩小的 `icon_512.png`、`icon_256.png`、`icon_128.png` |
+| 来源 | ChatGPT 图像生成（chatgpt.com，内置图像生成，推理档 High）。AI 辅助，2026-09-26 |
+| 选定 | 候选 **#2**「石台 / 火盆」（stone altar / brazier）。同一次还出了火焰、持火把的守护者、莲花 / 凤凰火三张，未采用 |
+| 用途 | 网页包 favicon（128）、苹果触摸图标（256）、manifest 四档、加载画面居中的 256。浏览器预览的 `preview.html` 同样指向 128 |
+
+提示词原文：
+
+```
+Please use image generation to create 4 SEPARATE square 1:1 images (four individual images, one per variation — not a single grid/collage). Generate each at full resolution.
+
+Brief — app icon / avatar for an original mobile + web game called "Ringwatch" (圣火守护者). The icon must read clearly when shrunk to 144px: one bold central subject, simple silhouette, strong value contrast.
+
+Core subject: a sacred flame held inside a luminous ring of light. Concept "light is color": inside the ring, warm saturated hand-painted colors (gold, amber, ember red); outside the ring, everything fades into cool indigo / ink-wash silhouette.
+
+Style: natural hand-painted brushwork, painterly, visible brush texture, soft glowing light edges. Full-bleed square artwork.
+Avoid: hard-edged spotlight circle, thick bevelled frame, stacked borders, over-glossy gradients / outlines / highlights, sticker look, any text or letters, watermark. Original design only — do not reference or imitate any existing game's logo or icon.
+
+The 4 variations:
+1. The flame alone, floating inside a soft ring of light on a deep indigo background.
+2. The flame burning on a small stone altar / brazier, with the ring glow around it.
+3. A tiny guardian silhouette holding a torch, facing the dark, with the flame's ring of light encircling them.
+4. A stylized flame shaped like a lotus / phoenix, within the ring of light.
+```
+
+`desktop/icon.js` 仍用代码画一版夜蓝底板、圣火和火盆，给 `tools/icon.js` 生成 `build/icon.ico` / `build/icon.png`（`build/` 不入库），桌面窗口图标暂时还用这一版。造型可以改 `sample()`，或以后改成直接读 `assets/branding/`。
 
 ### 渲染管线（`js/gl3d.js`，基于 Three.js）
 
@@ -165,5 +193,5 @@
 
 ## 红线
 
-- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体和「AI 素材」一节登记过的精灵图集（见 `AGENTS.md` 硬规则 1 的例外；`tools/check.js` 会拦下没登记的）。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
+- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体、「AI 素材」一节登记过的精灵图集，以及上面登记过的正式图标 `assets/branding/icon_*.png`（`tools/check.js` 会拦下没登记的）。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
 - 不做影响读图的全屏效果（大面积暗角、强烈镜头光晕、全屏抖动）。

@@ -482,7 +482,15 @@
     if (inBattle() || g.mode === 'revive') D.updateCamera(g, paused ? 0 : dt);
     render(paused ? 0 : dt);
     // 桌面版启动计时：第一帧画完记一笔（写进 startup.log）
-    if (!booted) { booted = true; portalCall('loadingStop'); if (typeof window !== 'undefined' && window.desktop && window.desktop.boot) window.desktop.boot('第一帧画面'); }
+    if (!booted) {
+      booted = true;
+      portalCall('loadingStop');
+      if (typeof document !== 'undefined') {
+        var splash = document.getElementById('rw-splash');
+        if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+      }
+      if (typeof window !== 'undefined' && window.desktop && window.desktop.boot) window.desktop.boot('第一帧画面');
+    }
     P.raf(frame);
   }
   function render(dt) {

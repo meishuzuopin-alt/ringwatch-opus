@@ -54,6 +54,13 @@ function serve(dir) {
   if (title !== 'Ringwatch') errors.push('title ' + title);
   const provider = await page.evaluate(() => RW.Plat.adProvider);
   if (provider !== 'none') errors.push('ads ' + provider);
+  const brand = await page.evaluate(() => ({
+    icon: !!document.querySelector('link[rel="icon"][href="assets/branding/icon_128.png"]'),
+    manifest: !!document.querySelector('link[rel="manifest"]'),
+    splash: !!document.getElementById('rw-splash')
+  }));
+  if (!brand.icon || !brand.manifest) errors.push('favicon 或 manifest 没挂上');
+  if (brand.splash) errors.push('加载画面在第一帧之后还在');
   fs.mkdirSync(shotDir, { recursive: true });
   await page.screenshot({ path: path.join(shotDir, 'web-boot.png') });
   await page.setViewportSize({ width: 844, height: 390 });

@@ -75,6 +75,7 @@ ok(`游戏文件约 ${(bytes / 1024).toFixed(0)} KB（不含 Electron 运行时�
 // json 里的元数据必须和 js/sprites.js 内嵌的 SPR.META 一致（运行时不读 json，Electron 的 file:// 下 fetch 不可靠）
 console.log('精灵图集');
 const spriteOK = new Set();
+const brandOK = new Set();
 {
   const dir = path.join(root, 'assets', 'sprites');
   const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
@@ -115,12 +116,36 @@ console.log('字体与素材');
   else ok(`字体子集覆盖全部 ${have.size} 个字（fonts/，OFL 授权）`);
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const files = pkg.build.files;
+  const brandRel = ['assets/branding/icon_1024.png', 'assets/branding/icon_512.png', 'assets/branding/icon_256.png', 'assets/branding/icon_128.png'];
+  const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
+  for (const rel of brandRel) {
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) { bad('缺正式图标 ' + rel); continue; }
+    const buf = Buffer.alloc(24);
+    const fd = fs.openSync(p, 'r');
+    fs.readSync(fd, buf, 0, 24, 0);
+    fs.closeSync(fd);
+    const want = +rel.match(/icon_(\d+)/)[1];
+    const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
+    if (buf.toString('ascii', 1, 4) !== 'PNG' || w !== want || h !== want) bad(rel + ' 应为 ' + want + '×' + want + ' PNG');
+    else brandOK.add(rel);
+  }
+  const brandDir = path.join(root, 'assets', 'branding');
+  if (fs.existsSync(brandDir)) {
+    const stray = walk(brandDir, '').map(f => path.relative(root, f)).filter(f => !brandOK.has(f));
+    if (stray.length) bad('assets/branding/ 只放正式图标：' + stray.join(', '));
+  }
+  if (!artDoc.includes('assets/branding/icon_1024.png') || !artDoc.includes('ChatGPT') || !artDoc.includes('2026-09-26') || !artDoc.includes('石台')) bad('docs/ART.md 没有登记正式图标的来源、日期和候选 2（石台 / 火盆）');
+  else if (brandOK.size === brandRel.length) ok('正式图标 1024 / 512 / 256 / 128 已登记');
   if (files.some(f => /^docs|^shots|^tools/.test(f))) bad('安装包白名单里不能有 docs/、shots/、tools/：' + files.join(', '));
   const media = [];
   for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
-    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(path.relative(root, f))) media.push(path.relative(root, f));
-  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集除外）：' + media.join(', '));
-  else ok('安装包白名单：' + files.join('、') + '；除字体和批准过的精灵图集外没有外部素材');
+    for (const f of walk(path.join(root, d), '')) {
+      const rel = path.relative(root, f);
+      if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(rel) && !brandOK.has(rel)) media.push(rel);
+    }
+  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集和正式图标除外）：' + media.join(', '));
+  else ok('安装包白名单：' + files.join('、') + '；除字体、批准过的精灵图集和正式图标外没有外部素材');
 }
 
 console.log('夜战');
