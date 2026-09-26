@@ -526,15 +526,15 @@
     // rim = 冷色边缘光 [r, g, b, 强度]；fogLow = 光圈外低矮冷雾 [浓度, 高度, 从光圈边缘到最浓的距离]；vig = 暗角；
     // amb = 环境与主光亮度倍率；chill = C1 冷暖混合（0 白天端，1 夜晚端，见 RW.C1_LIGHT）；a35 = 夜晚提亮到白天 35% 的备选颜色
     var P = {
-      day: { light: [-0.45, 0.82, 0.36], sun: shade(hex('#a8c0e8'), 0.38), sky: shade(hex('#9ec0ff'), 0.4), ground: shade(hex('#161432'), 0.6), fog: hex('#3a4e84'), clear: hex('#4a6298'), fogNear: 1700, fogFar: 2700, em: 1.0, lamp: 0.15,
-        grade: [1.02, 1.04, 0.06, 0.0], shadowDark: 0.28, line: hex('#1a1830'), bloom: 0.35, thr: 0.9,
-        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.18, amb: 0.46, chill: 0 },
-      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#8aa0d0'), 0.32), sky: shade(hex('#6070b0'), 0.38), ground: shade(hex('#141228'), 0.55), fog: hex('#2a3868'), clear: hex('#323e6c'), fogNear: 1500, fogFar: 2400, em: 1.2, lamp: 0.6,
-        grade: [0.98, 1.05, 0.1, -0.01], shadowDark: 0.26, line: hex('#161428'), bloom: 0.6, thr: 0.78,
-        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.22, amb: 0.34, chill: 0.45 },
-      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#6880c0'), 0.26), sky: shade(hex('#3a58a0'), 0.32), ground: shade(hex('#100e22'), 0.5), fog: hex('#1c2a56'), clear: hex('#10162c'), fogNear: 1300, fogFar: 2100, em: 1.5, lamp: 1.0,
-        grade: [0.92, 1.06, 0.12, -0.01], shadowDark: 0.22, line: hex('#0c0e18'), bloom: 0.95, thr: 0.62,
-        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.28, amb: 0.24, chill: 1,
+      day: { light: [-0.45, 0.82, 0.36], sun: shade(hex('#b7ccec'), 0.50), sky: shade(hex('#a8c4ee'), 0.58), ground: shade(hex('#2c3c5c'), 0.85), fog: hex('#4e709e'), clear: hex('#5e82b0'), fogNear: 1900, fogFar: 3200, em: 1.0, lamp: 0.5,
+        grade: [1.04, 1.02, 0.04, 0.02], shadowDark: 0.52, line: hex('#1a1830'), bloom: 0.35, thr: 0.9,
+        rim: [0.37, 0.66, 0.78, 0.12], fogLow: [0, 40, 360], vig: 0.12, amb: 0.62, chill: 0 },
+      dusk: { light: [-0.7, 0.55, 0.3], sun: shade(hex('#9eb6dc'), 0.48), sky: shade(hex('#7c9cc8'), 0.55), ground: shade(hex('#28344c'), 0.82), fog: hex('#3e5a86'), clear: hex('#3e5c88'), fogNear: 1750, fogFar: 2900, em: 1.2, lamp: 0.75,
+        grade: [1.0, 1.02, 0.05, 0.01], shadowDark: 0.5, line: hex('#161428'), bloom: 0.45, thr: 0.85,
+        rim: [0.45, 0.6, 0.85, 0.2], fogLow: [0.25, 36, 420], vig: 0.14, amb: 0.58, chill: 0.45 },
+      night: { light: [-0.35, 0.8, 0.45], sun: shade(hex('#8aa4d0'), 0.50), sky: shade(hex('#7090c4'), 0.62), ground: shade(hex('#24344e'), 0.90), fog: hex('#3a5680'), clear: hex('#243656'), fogNear: 1700, fogFar: 2800, em: 1.5, lamp: 1.0,
+        grade: [0.98, 1.02, 0.06, 0.01], shadowDark: 0.48, line: hex('#0c0e18'), bloom: 0.55, thr: 0.85,
+        rim: [0.37, 0.66, 0.78, 0.32], fogLow: [0.55, 34, 380], vig: 0.16, amb: 0.62, chill: 1,
         // 备选（GL.ART.night35）：夜晚光圈外亮度约为白天 35% 的提亮版
         a35: { sun: shade(hex('#8aa4ff'), 0.72), sky: shade(hex('#5a74b8'), 0.8), ground: shade(hex('#2a2c48'), 0.6), fog: hex('#34497a'), clear: hex('#141e36') } },
       boss: { light: [-0.5, 0.7, 0.4], sun: shade(hex('#8090c8'), 0.3), sky: shade(hex('#503868'), 0.4), ground: shade(hex('#1a1020'), 0.5), fog: hex('#2a2048'), clear: hex('#1a1430'), fogNear: 1400, fogFar: 2200, em: 1.4, lamp: 0.9,
@@ -1067,9 +1067,9 @@
     if (au > 0 && !sky) {
       var R0 = 2600;
       GL.ground(false, co.x, 0.6, co.y, R0, 1, 1 - au / R0, BLACK, SA.dim);
-      GL.ground(true, co.x, 1.3, co.y, au, 1, 0.012, F ? C(F.color) : hex('#ffd27a'), 0.28 + 0.06 * Math.sin(t * 2));
+      GL.ground(true, co.x, 1.3, co.y, au * 1.08, 1, 0.42, hex('#ffd27a'), (RW.C1_LIGHT && RW.C1_LIGHT.ring != null) ? RW.C1_LIGHT.ring : 0.06);
     }
-    if (!sky && co.gunRange < 3000) GL.ground(true, co.x, 1.3, co.y, co.gunRange || T.core.gunRange, 1, 0.01, hex('#ffd27a'), 0.12);
+    if (!sky && co.gunRange < 3000) GL.ground(true, co.x, 1.3, co.y, co.gunRange || T.core.gunRange, 1, 0.08, hex('#ffd27a'), 0.035);
     // 圣域收成：被照亮的房屋上方飘起金色的光点（安详生产）
     if (lv >= 2 && W3.houses) {
       for (var hi = 0; hi < W3.houses.length; hi++) {

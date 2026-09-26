@@ -184,7 +184,7 @@
     uRim: { value: null }, uNoise: { value: 0.12 }, uCore: { value: null }, uCoreCol: { value: null },
     uFogLow: { value: null }, uEmHDR: { value: 2.2 }, uGradK: { value: 0 }, uFogPierce: { value: 0 },
     // C1（参数在 RW.C1_LIGHT）。uBand=(inner, outer, 圈内饱和, 圈外饱和)，uGain=(圈内明度, 圈外明度)
-    // uGreen=(圈内去柠绿, 圈外去柠绿)，uCool=圈外冷蓝（g 不高于 r），uWarmAdd=圣火强度，uFall=指数陡度
+    // uGreen=(圈内去柠绿, 圈外去柠绿)，uCool=圈外蓝灰（红低于绿，蓝最高），uWarmAdd=圣火强度，uFall=指数陡度
     uBand: { value: new THREE.Vector4(0.2, 1.7, 1.12, 0.06) }, uGain: { value: new THREE.Vector2(0.74, 0.62) },
     uCool: { value: new THREE.Vector3(0.46, 0.40, 1.06) }, uGreen: { value: new THREE.Vector2(0.78, 0.25) },
     uWarmAdd: { value: 1.25 }, uFall: { value: 1.4 }, uChill: { value: 0 },
@@ -274,7 +274,7 @@
       // 斑驳：两层世界坐标噪声，石头、木头、茅草、草地都带一点笔触感。C1 色温接在斑驳之后。
       .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);\n' + C1_ALBEDO)
       // 自发光进 HDR（乘 uEmHDR），只有它和法术光效能过泛光阈值
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost * uEmHDR;' +
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost * uEmHDR * mix(1.0, 0.4, smoothstep(0.02, 0.18, vColor.g - max(vColor.r, vColor.b)));' +
         (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.85 + 0.25*s1;\ntotalEmissiveRadiance += vec3(0.35,0.6,0.9) * smoothstep(0.82, 0.98, s1) * 0.8;' : ''));
   }
   // toon = true 用三段色阶，false 用原版的 MeshStandardMaterial（平直着色、粗糙 0.92）
@@ -346,7 +346,8 @@
     '  else if (vKind < 2.5) { a = smoothstep(1.0, 0.9 - vParam*0.5, r); }',
     '  else { float y = abs(vUv.y); float x = abs(vUv.x); a = pow(max(0.0, 1.0 - y), 1.5) * smoothstep(1.0, 0.7, x); }',
     '  if (a < 0.004) discard;',
-    '  gl_FragColor = vec4(vCol.rgb * uGain, vCol.a * a);',
+    '  float gDom = smoothstep(0.02, 0.18, vCol.g - max(vCol.r, vCol.b));',
+    '  gl_FragColor = vec4(vCol.rgb * uGain * mix(1.0, 0.36, gDom), vCol.a * a);',
     '}'
   ].join('\n');
   function fxMesh(B, additive) {
@@ -485,7 +486,7 @@
         '  float sh = 1.0 - smoothstep(0.03, 0.46, l);',
         '  float hi = smoothstep(0.4, 0.9, l);',
         '  vec3 shCol = mix(c.rgb, uShad * max(l, 0.015), 0.9);',
-        '  shCol.g = min(shCol.g, shCol.r * 0.9);',
+        '  shCol.g = min(shCol.g, mix(shCol.r, shCol.b, 0.55));',
         '  c.rgb = mix(c.rgb, shCol, sh * uSplit.x);',
         '  c.rgb = mix(c.rgb, c.rgb * uHigh, hi * uSplit.y);',
         '  vec2 vd = (vUv - 0.5) * vec2(1.0, 0.78);',
