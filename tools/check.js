@@ -63,8 +63,43 @@ function sizeOf(p) {
   if (!st.isDirectory()) return st.size;
   return fs.readdirSync(p).reduce((n, f) => n + sizeOf(path.join(p, f)), 0);
 }
-for (const f of ['preview.html', 'js', 'vendor', 'desktop', 'fonts']) if (fs.existsSync(path.join(root, f))) bytes += sizeOf(path.join(root, f));
+for (const f of ['preview.html', 'js', 'vendor', 'desktop', 'fonts', 'assets']) if (fs.existsSync(path.join(root, f))) bytes += sizeOf(path.join(root, f));
 ok(`游戏文件约 ${(bytes / 1024).toFixed(0)} KB（不含 Electron 运行时）`);
+
+// 精灵图集（负责人批准的 AI 生成素材，docs/ART.md「AI 素材」一节）：assets/sprites/<名>/<名>.png + <名>.json，
+// json 里的元数据必须和 js/sprites.js 内嵌的 SPR.META 一致（运行时不读 json，Electron 的 file:// 下 fetch 不可靠）
+console.log('精灵图集');
+const spriteOK = new Set();
+{
+  const dir = path.join(root, 'assets', 'sprites');
+  const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
+  let META = null;
+  try {
+    global.RW = {};
+    require(path.join(root, 'js', 'sprites.js'));
+    META = global.RW.SPR.META;
+  } catch (e) { bad('js/sprites.js 在 Node 里加载失败：' + e.message); }
+  const names = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => fs.statSync(path.join(dir, n)).isDirectory()) : [];
+  for (const n of names) {
+    const png = path.join(dir, n, n + '.png'), json = path.join(dir, n, n + '.json');
+    if (!fs.existsSync(png) || !fs.existsSync(json)) { bad(`assets/sprites/${n}/ 缺 ${n}.png 或 ${n}.json`); continue; }
+    if (!artDoc.includes(`assets/sprites/${n}/${n}.png`)) { bad(`docs/ART.md 没有记录 assets/sprites/${n}/${n}.png 的来源与提示词`); continue; }
+    const j = JSON.parse(fs.readFileSync(json, 'utf8'));
+    if (META && JSON.stringify(sortKeys(j)) !== JSON.stringify(sortKeys(META[n] || null))) { bad(`js/sprites.js 里 SPR.META.${n} 与 assets/sprites/${n}/${n}.json 不一致`); continue; }
+    if (j.image !== n + '.png' || j.cols !== 4 || !j.rows || j.rows.attack !== 5) { bad(`assets/sprites/${n}/${n}.json 格式不对（4 列 6 行、attack 行 = 5）`); continue; }
+    spriteOK.add(path.relative(root, png));
+  }
+  const extra = META ? Object.keys(META).filter(n => !names.includes(n)) : [];
+  if (extra.length) bad('js/sprites.js 的 SPR.META 里有图集没有对应文件：' + extra.join(', '));
+  const others = fs.existsSync(dir) ? walk(dir, '').filter(f => !/\.(png|json)$/.test(f)) : [];
+  if (others.length) bad('assets/sprites/ 下只能放图集 png 和 json：' + others.map(f => path.relative(root, f)).join(', '));
+  if (spriteOK.size) ok(`${spriteOK.size} 套图集（${[...spriteOK].map(f => path.basename(f, '.png')).join('、')}）都有元数据、有 ART.md 记录、与 SPR.META 一致`);
+}
+function sortKeys(v) {
+  if (Array.isArray(v)) return v.map(sortKeys);
+  if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v).sort()) o[k] = sortKeys(v[k]); return o; }
+  return v;
+}
 
 // 字体：游戏里用到的每个字都要在子集里，否则会退回系统字体（改了文案后跑 npm run fonts）
 console.log('字体与素材');
@@ -78,9 +113,9 @@ console.log('字体与素材');
   if (files.some(f => /^docs|^shots|^tools/.test(f))) bad('安装包白名单里不能有 docs/、shots/、tools/：' + files.join(', '));
   const media = [];
   for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
-    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f)) media.push(path.relative(root, f));
-  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1）：' + media.join(', '));
-  else ok('安装包白名单：' + files.join('、') + '；除字体外没有外部素材');
+    for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(path.relative(root, f))) media.push(path.relative(root, f));
+  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集除外）：' + media.join(', '));
+  else ok('安装包白名单：' + files.join('、') + '；除字体和批准过的精灵图集外没有外部素材');
 }
 
 if (failed) { console.log(`\n${failed} 项失败`); process.exit(1); }
