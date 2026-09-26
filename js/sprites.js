@@ -56,7 +56,7 @@
       S.atkTotal = 0;
       for (var i = 0; i < M.fps.attack.length; i++) S.atkTotal += M.fps.attack[i];
       S.tex = GL.spriteTexture(SPR.base + name + '/' + M.image, function (t) { S.ok = !!t; }, SPR.nearest);
-      S.mat = GL.spriteMaterial(S.tex);
+      S.mat = GL.spriteMaterial(S.tex, name === 'grunt' || name === 'elite' || name === 'boss');
       var im = new THREE.InstancedMesh(geo, S.mat, CAP);
       im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(CAP * 3), 3);

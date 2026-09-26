@@ -370,8 +370,31 @@
     rain: { cd: 2.2, dmgMul: 3, blast: 70, skyCd: 1.2 },   // 流星：伤害 = 火舌伤害 × dmgMul；天火时更频繁
     judge: { burn: 0.6, taken: 0.2 },                      // 9 级：灼烧每秒 = 火舌伤害 × burn；受到伤害 +20%
     skyRange: 99999,
-    dim: 0.32                                              // 圣域外的土地压暗多少（还没被圣火照亮）
+    dim: 0.32
   };
+  // C1「光即是色」。冷暖只调这一处，着色器在 js/gl3d.js。不改玩法、镜头、视野。
+  // 圣火是主光：饱和的橙金，按距离做指数衰减，没有光锥硬边。高光往橙金收，不漂成白。
+  // 圈外比上一档暗一截，仍是能看清村屋的蓝灰。cool 的红低于绿、蓝最高。
+  // band：固有色从「圈内更深的绿褐、饱和」收到「圈外低饱和冷蓝」。inner/outer 是圣域半径的倍数，smoothstep，很宽。
+  // greenKill：圈内把过亮的绿草收到褐绿。fog 在圈外才加浓，近火是暖雾，远处是淡蓝灰。
+  // enemy：圈外的敌人立牌再压暗、去饱和。bloom 阈值抬高，绿萤火不过阈值。
+  // veil：旧的圣域黑盘，关掉。ring：圣域金圈的透明度，只留一条很淡的软边。
+  RW.C1_LIGHT = {
+    // gain 仍是 [1.63, 2.40]。颜色从浅黄收回到橙金，避免广场漂成米色。
+    flame: { color: [1.0, 0.62, 0.22], fall: 1.35, gain: [1.63, 2.4] },
+    band: { inner: 0.2, outer: 1.7 },
+    // 圈外大约比上一档暗 35%。目标：白天远处 (40,52,86)，夜晚 (24,32,62)。
+    albedo: { inSat: 1.25, outSat: 0.14, inGain: 0.96, outGain: [0.72, 0.62], greenKill: [0.7, 0.18] },
+    cool: [0.42, 0.56, 0.88],
+    fog: { warm: [1.0, 0.62, 0.22], start: 0.95, thick: 1.5, amount: [0.30, 0.34] },
+    grade: { shadow: 0.36, high: 0.24, shad: [0.18, 0.26, 0.46], highCol: [1.0, 0.64, 0.24] },
+    enemy: { gain: 0.66 },
+    bloom: { thr: 0.92, radius: 0.5, add: 0.06 },
+    exposure: 1.02,
+    veil: 0,
+    ring: 0.06
+  };
+  RW.SANCTUARY.dim = RW.C1_LIGHT.veil;
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
   RW.FRONTS = [null];
 
