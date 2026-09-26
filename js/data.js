@@ -409,12 +409,12 @@
       water: '#6e9894', bed: '#4e6e6c',
       wall: '#e3d4c2', wallWood: '#8d735c', roofRed: '#a86a58', roofBlue: '#6d7d96'
     },
-    grade: { outDesat: 0.32, inWarm: 0.42, inRich: 1.12, warm: [1.14, 0.97, 0.74] },
-    light: { sun: '#ffe0b0', sky: '#f3e6d0', sunMix: 0.22, skyMix: 0.08 },
+    grade: { outDesat: 0.26, inWarm: 0.42, inRich: 1.12, warm: [1.14, 0.97, 0.74] },
+    light: { sun: '#ffe0b0', sky: '#f3e6d0', sunMix: 0.10, skyMix: 0.04 },
     kuwahara: { radius: 1.35, strength: 0.32, edge0: 0.02, edge1: 0.10, step: 2 },
-    rays: { dir: [0.38, 0.92], sigma: 0.10, alpha: 0.06, color: [1.0, 0.84, 0.58], drift: 0.12 },
+    rays: { dir: [0.38, 0.92], sigma: 0.08, alpha: 0.09, color: [1.0, 0.84, 0.58], drift: 0.12 },
     frame: { aspect: [1.12, 0.86], inner: 0.52, outer: 1.12, strength: 0.70, color: [0.36, 0.42, 0.32], foliage: 0.55 },
-    motes: { count: 16, radius: 340, height: 16, bob: 0.4, bobAmp: 7, speed: 0.06, twinkle: 0.55, size: 6, alpha: 0.15, color: '#d5e7a4' }
+    motes: { count: 16, radius: 340, height: 16, bob: 0.4, bobAmp: 7, speed: 0.06, twinkle: 0.55, size: 7.5, alpha: 0.22, color: '#d5e7a4' }
   };
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
   RW.FRONTS = [null];

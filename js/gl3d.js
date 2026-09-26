@@ -211,7 +211,7 @@
     '  }',
     '  if (uPaint.x > 0.5) {',
     '    float pL = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
-    '    vec3 pOut = mix(diffuseColor.rgb, vec3(pL), uPaint.y * fgT);',
+    '    vec3 pOut = mix(vec3(pL), diffuseColor.rgb, mix(1.0, 1.0 - uPaint.y, fgT));',
     '    vec3 pIn = pOut * mix(vec3(1.0), uPaintWarm, (1.0 - fgT) * uPaint.z);',
     '    float pLi = dot(pIn, vec3(0.2126, 0.7152, 0.0722));',
     '    diffuseColor.rgb = mix(vec3(pLi), pIn, mix(1.0, uPaint.w, 1.0 - fgT));',
