@@ -1,0 +1,52 @@
+key,data_js_field,起步值,调平值,单位,可调范围,依据
+night.len,NEW_FIELD RW.NIGHT.len,180,180,s,150-210,§5.1 夜长；超休闲覆盖为 45
+hero.hp,RW.CLASSES.mage.hp,26,26,HP,22-34,data.js mage.hp=26；§5.1 英雄=提灯法杖法师
+hero.speed,RW.TUNE.player.speed,165,165,px/s,150-190,data.js；圣火(580,900)→桥南口(580,560) 340px≈2.1s ≤4s（§11 关卡验收）
+hero.iframes,RW.TUNE.player.iframes,0.55,0.55,s,0.4-0.8,data.js；接触伤害每秒上限=dmg/0.55
+hero.respawn.base,NEW_FIELD RW.NIGHT.respawn.base（PR#3 RW.RESPAWN.base=5；main 无）,5,4,s,3-6,ASSUMPTION：M0 英雄倒下不判负，在圣火旁复活
+hero.respawn.coreCost,NEW_FIELD RW.NIGHT.respawn.coreCost（PR#3 RW.RESPAWN.coreCost=0.2）,0.2,0.08,圣火最大生命比例,0.05-0.2,ASSUMPTION：0.2=200HP=10 次摸火，惩罚过重
+slash.dmg,NEW_FIELD RW.NIGHT.slash.dmg,24,24,伤害,20-30,§5.1
+slash.cd,NEW_FIELD RW.NIGHT.slash.cd,0.45,0.45,s,0.35-0.55,§5.1；战意 rate 加成除这个间隔（沿用 sim.js momRate）
+slash.arc,NEW_FIELD RW.NIGHT.slash.arc,120,120,度,90-150,§5.1
+slash.radius,NEW_FIELD RW.NIGHT.slash.radius,70,72,px,60-90,§5.1；+2px 抵消小鬼 r=8 贴边漏判
+slash.heavyEvery,NEW_FIELD RW.NIGHT.slash.heavyEvery,3,3,次,3-4,§5.1 第 3 下重击
+slash.heavyMul,NEW_FIELD RW.NIGHT.slash.heavyMul,1.8,1.8,倍,1.5-2.2,§5.1
+slash.heavyKnockMul,NEW_FIELD RW.NIGHT.slash.heavyKnockMul,2,2,倍,1.5-2.5,§5.1
+slash.heavyReset,NEW_FIELD RW.NIGHT.slash.heavyReset,—,1.0,s,0.6-1.5,ASSUMPTION：1 秒没挥砍则三连计数归零
+slash.near.r0,RW.CLASSES.mage.near.r0（M0 覆盖到 NEW_FIELD RW.NIGHT.slash.near.r0）,60,25,px,15-40,起步沿用 mage.near(60/200/0.4) 时挥砍半径 70 内几乎恒 +37~40%，小鬼 30HP 一刀死，与「两刀」矛盾
+slash.near.r1,RW.CLASSES.mage.near.r1（→ RW.NIGHT.slash.near.r1）,200,72,px,=slash.radius,同上：近焰只在挥砍半径内生效
+slash.near.bonus,RW.CLASSES.mage.near.bonus,0.4,0.4,比例,0.25-0.5,data.js
+slash.knock,NEW_FIELD RW.NIGHT.slash.knock,368,368,冲量 px/s,300-450,位移≈knock×knockRes×0.1086（sim.js KNOCK_DECAY=exp(-10·DT) 求和）；368×1→小鬼 40px
+hero.crit,RW.TUNE.player.crit / critMul,0.05 / 2,0.05 / 2,比例/倍,0-0.1,data.js
+momentum,RW.TUNE.momentum,"near160 tiers15/40/80 rate.15/.3/.45 dmg0/.1/.2","原样",—,—,§5.1「战意管属性」；沿用
+mite.hp,RW.ENEMIES.mite.hp（M0 覆盖 5→）,30,40,HP,36-48,普通刀 24–33.6 恒两刀；重击 43–60 一刀（爽点）
+mite.speed / dmg / r / knockRes / cluster,RW.ENEMIES.mite.*,66 / 2 / 8 / 1 / 4,原样,—,—,data.js
+mite.coreBias,RW.ENEMIES.mite.coreBias,0.2,0.55,概率,0.4-0.7,M0 是护火：多数怪应冲圣火；英雄 110px 内被拦截（core.interceptDist）
+dasher.hp,RW.ENEMIES.dasher.hp（11→）,60,70,HP,60-80,「快而稍肉」：3 刀（2×33.6<70）
+dasher.coreBias,RW.ENEMIES.dasher.coreBias（main 无此键）,—,0.5,概率,0.3-0.6,NEW 键值
+dasher.dash*,RW.ENEMIES.dasher.aim/dash/dashSpeed/dashRange/recover/cdMin/cdMax,0.6/0.34/420/210/0.6/2/3,原样,—,—,data.js；冲锋中免击退（sim.js）
+spitter.hp,RW.ENEMIES.spitter.hp（12→）,45,50,HP,40-55,远程两刀（近身时）
+spitter.coreBias,RW.ENEMIES.spitter.coreBias（main 无）,—,0.5,概率,0.3-0.6,NEW 键值
+spitter.keep/fireCd/boltSpeed/dmg,RW.ENEMIES.spitter.*,210 / 2.2–3.2 / 280 / 4,原样,—,—,data.js
+elite.type,RW.ENEMIES.warden,—,warden（暗影术士）,—,warden|brood,ASSUMPTION：§5.1 只写「精英」；选 WAVES 里最早出现的 warden
+elite.hp,RW.ENEMIES.warden.hp（150→）,300,320,HP,280-380,单体 DPS≈85 → 约 3.8 s
+elite.knockRes,RW.ENEMIES.warden.knockRes,0.12,0.3,倍,0.25-0.35,§5.1 精英击退 12px：368×0.3×0.1086=12
+elite.coreBias,RW.ENEMIES.warden.coreBias（main 无）,—,1,概率,1,精英必冲圣火，逼英雄回防
+core.hp,NEW_FIELD RW.NIGHT.coreHp（main core.hp=260 属旧波次）,1000,1000,HP,800-1200,§5.1
+core.hit,NEW_FIELD RW.NIGHT.coreHit,20,20,每次,15-25,§5.1 摸火 -20；暗弓手打圣火也按 20（ASSUMPTION）
+core.chewCd,sim.js 默认 d.chewCd||0.9,0.9,0.9,s,0.7-1.2,沿用 sim.js：贴着圣火每 0.9s 扣一次
+core.gunDmg,RW.TUNE.core.gunDmg,6,10,伤害,6-14,ASSUMPTION：M0 无塔，「全塔射速×2」作用于圣火火舌；6 需 7 发杀小鬼太弱
+core.gunCd / gunRange,RW.TUNE.core.gunCd / gunRange,0.5 / 170,0.5 / 170,s / px,—,data.js
+combo.window,NEW_FIELD RW.NIGHT.combo.window（sim.js streakT=1.3 硬编码）,2.0,2.5,s,2.0-3.0,小鬼成群刷，簇间隔均值≈2.2s，2.0 常断
+overload.threshold,NEW_FIELD RW.NIGHT.overload.threshold,50,40,连击,35-50,见公式：首夜 0–60s 约 69 只，50 需近乎全程不断
+overload.dur,NEW_FIELD RW.NIGHT.overload.dur,8,8,s,6-10,§5.1
+overload.cd,NEW_FIELD RW.NIGHT.overload.cd,45,40,s,35-50,每夜上限 ≈ 4 次
+overload.gunRateMul / slashRadiusMul,NEW_FIELD RW.NIGHT.overload.*,2 / 1.4,2 / 1.4,倍,—,§5.1
+overload.shock,NEW_FIELD RW.NIGHT.overload.shock,60,60,伤害,40-80,§5.1；全场（ASSUMPTION）；秒小鬼/弓手，狼骑残血
+comeback,NEW_FIELD RW.NIGHT.comeback{coreBelow,thresholdMul,dmgMul,perNight},0.3/0.5/1.5/1,0.3/0.5/1.5/1,—,—,§4.1/§5.5 翻盘爆发
+spawn.segs,RW.WAVES 段格式 {dur,r0,r1,mix,elites} → NEW_FIELD RW.NIGHTS[1].segs,4 段（见 §5.1）,18 段×10s（见 M0_NUMBERS.md 表）,只/s,±20%,§0.2#1 波→刷怪段
+spawn.total,（派生）,≈220,≈222,只,200-240,§5.1 全夜约 220
+spawn.opener,NEW_FIELD RW.NIGHT.opener,—,3 只小鬼@y=380,—,2-4,首杀 ≤5s（§8 M0#1）：桥北口 180px/66≈2.7s
+spawn.telegraph,RW.TUNE.spawn.telegraph,0.8,0.8,s,—,data.js
+maxEnemies,RW.TUNE.MAX_ENEMIES,120,120,只,—,data.js；满足 150 同屏性能测试需另开
+stars,NEW_FIELD RW.NIGHT.stars,圣火≥70% 三星,≥70%三星/≥40%二星/守住一星,比例,—,§5.1；二/一星为 ASSUMPTION

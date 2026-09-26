@@ -1,0 +1,33 @@
+key,data_js_field,默认值,可调范围,每秒上限,单位,NEEDS_VFX_CONFIRM,依据
+hitstop.hit,NEW_FIELD RW.TUNE.hitstop.hit,4,3-5,见 hitstop.budget,帧@60fps（≈67ms）,是,§5.1 普通命中 60ms；现有字段以帧计
+hitstop.kill,NEW_FIELD RW.TUNE.hitstop.kill,6,5-7,见 hitstop.budget,帧（100ms）,是,§5.1 击杀/重击 100ms
+hitstop.heavy,RW.TUNE.hitstop.heavy,6（原 3）,5-7,见 hitstop.budget,帧,是,§5.1 重击 100ms
+hitstop.eliteKill,RW.TUNE.hitstop.eliteKill,8,6-10,强制（force）不计入 budget,帧,否,data.js 原值
+hitstop.playerHurt,RW.TUNE.hitstop.playerHurt,5,3-6,计入 budget,帧,否,data.js 原值
+hitstop.gap,RW.TUNE.hitstop.gap,0.12,0.10-0.20,—,s,否,data.js：两次顿帧最小间隔
+hitstop.budget,NEW_FIELD RW.TUNE.hitstop.budget,0.2,0.15-0.25,0.2 s/滚动 1 s,s,否,§5.1/§8#3；只靠 gap 最坏 = 3 帧/0.12 s ≈ 417ms/s，超标
+knock.slash,NEW_FIELD RW.NIGHT.slash.knock,368,300-450,每只敌人被击退 ≤120 px/s,冲量,否,位移≈368×knockRes×0.1086
+knock.px.mite,RW.ENEMIES.mite.knockRes=1,40 px,30-50,同上,px,否,§5.1
+knock.px.dasher,RW.ENEMIES.dasher.knockRes=0.8,32 px（冲锋中 0）,—,同上,px,否,sim.js 冲锋免击退
+knock.px.spitter,RW.ENEMIES.spitter.knockRes=0.9,36 px,—,同上,px,否,派生
+knock.px.elite,RW.ENEMIES.warden.knockRes 0.12→0.3,12 px,8-16,同上,px,否,§5.1
+knock.px.boss,RW.ENEMIES.boss.knockRes=0.02,≈0.8 px（视为 0）,0,—,px,否,§5.1 Boss 0
+knock.heavyMul,NEW_FIELD RW.NIGHT.slash.heavyKnockMul,2,1.5-2.5,同上,倍,否,§5.1
+knock.cap,NEW_FIELD RW.TUNE.knockCapPerSec,120,80-160,120 px/s,px,否,防止小鬼被连续推出挥砍半径、打断连击
+shake.max,NEW_FIELD RW.TUNE.shake.maxPx,8,4-12,—,px@shake=1,是,ASSUMPTION：没有读 render.js 的振幅换算
+shake.decay,sim.js 硬编码 2.6/s → NEW_FIELD RW.TUNE.shake.decay,2.6,2.0-4.0,—,1/s,否,sim.js update()
+shake.hit,NEW_FIELD RW.TUNE.shake.hit,0,0-0.03,—,强度 0–1,是,普通命中不震（大群时会连成一片）
+shake.heavy,NEW_FIELD RW.TUNE.shake.heavy,0.12,0.08-0.2,计入 addPerSec,强度,是,参考 lance 0.22 / 霰火 0.08（sim.js 字面量）
+shake.eliteKill,sim.js 字面量 0.7 → NEW_FIELD,0.5,0.4-0.7,计入,强度,是,原 0.7 偏重
+shake.overload,NEW_FIELD RW.TUNE.shake.overload,0.6,0.4-0.8,不计入（每 40 s 一次）,强度,是,超载起爆
+shake.coreHit,NEW_FIELD RW.TUNE.shake.coreHit,0.2,0.1-0.3,计入,强度,是,危险提示
+shake.playerHurt,sim.js 字面量 0.55 → NEW_FIELD,0.35,0.25-0.55,计入,强度,是,降低晕动
+shake.addPerSec,NEW_FIELD RW.TUNE.shake.addPerSec,1.0,0.6-1.2,1.0/s,强度,否,shake 本身已钳在 ≤1；再乘设置里的 shake 系数（PR #3 RW.SETTINGS）
+num.maxOnScreen,sim.js nums 池=80 → NEW_FIELD RW.TUNE.nums.max,40,30-60,—,个,否,§5.1 同屏 40
+num.spawnPerSec,NEW_FIELD RW.TUNE.nums.perSec,30,20-40,30/s,个,否,超出时合并到同目标最近一个数字（累加）
+num.mergeWindow,NEW_FIELD RW.TUNE.nums.merge,0.1,0.05-0.2,—,s,是,同目标 0.1 s 内合并
+num.life,sim.js addNum 0.6/crit 0.75 → NEW_FIELD,0.7,0.5-0.9,—,s,是,§5.1 0.7 s 淡出
+num.rise,sim.js vy=-62（hurt -50）,-62,-40~-80,—,px/s,是,原样
+num.color.hit,NEW_FIELD,#FFFFFF,—,—,色,是,§5.1 白；禁红（危险）禁金（奖励）
+num.color.heavy,NEW_FIELD,暖橙 #FF9A3C（=mage.color）,—,—,色,是,§5.1 重击暖橙
+num.scale.heavy,NEW_FIELD,1.25,1.15-1.4,—,倍,是,§5.1 大一号

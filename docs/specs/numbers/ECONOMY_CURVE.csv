@@ -1,0 +1,16 @@
+key,data_js_field,起步值,调平值,单位,可调范围,依据
+round.len,NEW_FIELD RW.HC.roundLen[],45（关 1–2 为 30；后期 60）,"R1–2 30, R3–5 45, R6+ 60",s,30-60,§5.2
+kill.coin,RW.ENEMIES.*.shards×shardVal（M0 小鬼=1）→ NEW_FIELD RW.HC.killCoin,1,1,金币/只,1,§5.2
+kills.per.round,（派生）,—,"30,32,50,52,54,72,74,76,78,80",只,±15%,ASSUMPTION：M0 首夜 0–60 s 刷怪约 1.0–1.3 只/s，全部击杀
+win.bonus,NEW_FIELD RW.HC.winBonus,20,20,金币,15-25,§5.2
+summon.base,NEW_FIELD RW.HC.summon.base,10,10,金币,8-12,§5.2
+summon.growth,NEW_FIELD RW.HC.summon.growth,0.15,0.25,每次比例,0.2-0.3,黎明自动升级后圣火不再吃金币，要把 T3 压回第 3 局（0.15 时第 2 局就到 T3）
+summon.priceCap,NEW_FIELD RW.HC.summon.cap,—,120,金币,100-150,后期召唤价超过单局收入就停摆，封顶保住循环
+summon.pairPity,NEW_FIELD RW.HC.summon.pairPity,—,偶数次召唤必出场上未配对 1 阶的同种,规则,—,保证第 1 局合到 2 阶（4 种随机时要 5 抽才保底，太贵）
+summon.tierPity,NEW_FIELD RW.HC.summon.tierPity,—,若有两个不同种 2 阶，下一次召唤出其中较早那种,规则,—,保证 6 抽出 T3（最好 4 抽）
+merge,（共用合成规则，§5.9）,两同种同阶→+1 阶，最高 3,同左,—,—,§5.2/§5.9
+slots,NEW_FIELD RW.HC.slots,6,6,格,—,§5.2；按确定性序列，第 21 抽前后才会满
+double.rule,NEW_FIELD RW.HC.double,结算金币×2,只翻倍击杀金币（胜利奖励不翻）,—,—,翻倍收益 ≤ 单局收益：总额最多 1.8×（≤2× 验收）
+revive,RW.AD.REWARD_REVIVE（结构沿用）,每局 1 次，圣火回到 50%,同左,—,—,§5.2
+fire.dawnLevel,NEW_FIELD RW.HC.fireLvPerWin,—,赢一局 = 一个黎明：圣火 +1 级（生命按 PR#3 RW.CORE_LV[].hp 累加）,级,—,§0.2#2；不花金币
+steam.fireSink,PR#3 RW.CORE_LV[2..10].cost,合计 1768,删除（改为黎明自动升级）,金币/章,—,§0.2#2；Steam 版金币只剩招募守卫一个去处，章内守卫价格要另算（M1 后）
