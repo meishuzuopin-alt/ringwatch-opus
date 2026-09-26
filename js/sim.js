@@ -27,6 +27,7 @@
     DIST_CORE = new Int16Array(MC * MR); DIST_PLAYER = new Int16Array(MC * MR); BFSQ = new Int16Array(MC * MR);
     bfs(DIST_CORE, CORE_CELL);
     GC = Math.ceil(A.w / CELL); GR = Math.ceil(A.h / CELL);
+    RW.navPulse = function (x, y) { var ci = cellIdx(x, y); if (ci >= 0) bfs(DIST_PLAYER, ci); };
     // 王旗：格子坐标换算成像素
     var fr = [null];
     for (var k = 1; k < (M.fronts || []).length; k++) {
@@ -75,6 +76,9 @@
     return null;
   }
   function clearPool(pool) { for (var i = 0; i < pool.length; i++) pool[i].on = false; }
+  RW.mulberry = mulberry;
+  RW.take = take;
+  RW.clearPool = clearPool;
   function countOn(pool) { var c = 0; for (var i = 0; i < pool.length; i++) if (pool[i].on) c++; return c; }
   function clampX(x, m) { return Math.min(AX1 - m, Math.max(AX0 + m, x)); }
   function clampY(y, m) { return Math.min(AY1 - m, Math.max(AY0 + m, y)); }
@@ -369,6 +373,7 @@
   // opts：{ danger 危险等级, mutators 变异器 id 数组, seed 随机种子, daily 每日挑战日期 }
   G.startRun = function (classId, opts) {
     opts = opts || {};
+    this.nightOn = false; this.nightGod = false; this.nightBench = false;
     this.mapId = RW.MAPS[opts.map] ? opts.map : 'village';
     RW.loadMap(this.mapId);
     if (this.gridHead.length !== GC * GR) { this.gridHead = new Int16Array(GC * GR); this.gridHead.fill(-1); }
@@ -510,6 +515,7 @@
 
   // ================= 主步进（固定 1/60） =================
   G.update = function (inp) {
+    if (this.nightOn) return this.updateNight(inp);
     this.clock += DT;
     var m = this.mode;
     if (m !== 'battle' && m !== 'clear' && m !== 'down') { this.updateFx(); return; }
@@ -772,7 +778,12 @@
       if (this.mode !== 'battle') { mk.on = false; continue; }
       mk.t -= DT;
       if (mk.t <= 0) {
-        if (this.enemyCount < T.MAX_ENEMIES || mk.type === 'boss') { this.spawnEnemy(mk.type, mk.x, mk.y, mk.goal); mk.on = false; }
+        if (this.enemyCount < T.MAX_ENEMIES || mk.type === 'boss') {
+          if (this.nightOn && this.nightSpawn) {
+            if (this.nightSpawn(mk.type, mk.x, mk.y, mk.goal, true)) mk.on = false;
+            else mk.t = 0.2;
+          } else { this.spawnEnemy(mk.type, mk.x, mk.y, mk.goal); mk.on = false; }
+        }
         else mk.t = 0.2;
       }
     }
@@ -1676,7 +1687,7 @@
         tw.ang = a;
         this.fireBullet(tw.x + Math.cos(a) * 12, tw.y + Math.sin(a) * 12, a, d.speed, range / d.speed + 0.05, d.dmg * RW.TOWER_TIER.dmg[ti] * this.st.towerDmg * RW.SHEET.def(this.wave), d.knock, 3, st, 0, d.color);
         this.muzzle(tw.x + Math.cos(a) * 14, tw.y + Math.sin(a) * 14, a, d.color, 0.5);
-        tw.cd = d.cd;
+        tw.cd = d.cd / (this.nightRate || 1);
         this.emit('shot', 'tower');
       } else if (d.kind === 'pylon') {
         if (tw.cd > 0) continue;
@@ -1926,6 +1937,7 @@
   };
 
   G.hitEnemy = function (e, dmg, kx, ky, knock, source, heavy) {
+    if (this.nightOn) return this.nightReceiveHit(e, dmg, kx, ky, knock, source, heavy);
     if (!e.on) return;
     var crit = false, critCh = this.st.crit;
     if (source && source.crit && this.cls) {
@@ -2010,6 +2022,7 @@
   };
 
   G.canEat = function (e) {
+    if (this.nightOn) return false;
     return !e.elite && e.r <= RW.EVO[this.player.stage].eatR;
   };
   G.eatEnemy = function (e) {
@@ -2084,7 +2097,7 @@
       if (!e.on) continue;
       if (e.spawnT > 0) { e.spawnT -= DT; continue; }
       var d = e.d;
-      if (e.flash > 0) e.flash -= DT;
+      if (e.flash > 0) e.flash -= this.nightOn ? DT * 12 : DT;
       if (e.bhit > 0) e.bhit -= DT;
       if (e.slowT > 0) e.slowT -= DT;
       if (e.chewT > 0) e.chewT -= DT;
@@ -2160,7 +2173,8 @@
               var b = take(this.ebullets);
               if (b) {
                 b.x = e.x + bx / bl * e.r; b.y = e.y + by / bl * e.r; b.vx = bx / bl * d.boltSpeed; b.vy = by / bl * d.boltSpeed;
-                b.life = 2.5; b.dmg = e.dmg; b.r = 4; b.kind = 'bolt'; b.src = d.name;
+                // 夜战：箭飞到瞄准点再多出一截就散掉。站在桥口躲开时，箭不会顺着整条桥钻进圣火；贴着圣火才挡不住。
+                b.life = this.nightOn ? (bl / d.boltSpeed + 0.36) : 2.5; b.dmg = e.dmg; b.r = 4; b.kind = 'bolt'; b.src = d.name;
               }
               e.state = 0; e.cd = this.RR(d.fireCdMin, d.fireCdMax);
               this.emit('spit');
@@ -2252,7 +2266,10 @@
         if (sdx * sdx + sdy * sdy < srr * srr) { e.chewT = 0.7; this.hurtSoldier(e.tref, e.dmg); }
       } else if (e.tk === 3 && e.chewT <= 0) {
         var co = this.core, kdx = co.x - e.x, kdy = co.y - e.y, krr = co.r + e.r + 4;
-        if (kdx * kdx + kdy * kdy < krr * krr) { e.chewT = d.chewCd || 0.9; this.hurtCore(e.dmg, d.name); }
+        if (kdx * kdx + kdy * kdy < krr * krr) {
+          if (this.nightOn) this.nightTouch(e);
+          else { e.chewT = d.chewCd || 0.9; this.hurtCore(e.dmg, d.name); }
+        }
       }
       // 撞玩家：能吞就吞，吞不下就挨打；冲刺中撞到的怪吃一下冲刺伤害
       var cr = e.r + p.r - 2;
@@ -2270,6 +2287,7 @@
 
   // ---------- 核心舱 ----------
   G.hurtCore = function (dmg, who) {
+    if (this.nightOn) return this.nightHurtCore(dmg, who);
     var co = this.core;
     if (this.mode !== 'battle' || co.hp <= 0) return;
     co.hp -= dmg; co.flash = 0.12;
@@ -2464,9 +2482,18 @@
       b.x += b.vx * DT; b.y += b.vy * DT; b.life -= DT;
       if (b.life <= 0 || b.x < AX0 || b.x > AX1 || b.y < AY0 || b.y > AY1) { b.on = false; continue; }
       var dx = b.x - p.x, dy = b.y - p.y, rr = b.r + p.r - 2;
-      if (p.inv <= 0 && dx * dx + dy * dy < rr * rr) { b.on = false; this.hurtPlayer(b.dmg, b.src, b.x - b.vx, b.y - b.vy); continue; }
+      if (dx * dx + dy * dy < rr * rr && !p.dead && (p.inv <= 0 || this.nightOn)) {
+        b.on = false;
+        if (p.inv <= 0) this.hurtPlayer(b.dmg, b.src, b.x - b.vx, b.y - b.vy);
+        continue;
+      }
       var co = this.core, kx = b.x - co.x, ky = b.y - co.y, kr = b.r + co.r;
-      if (kx * kx + ky * ky < kr * kr) { b.on = false; this.hurtCore(b.dmg, b.src); continue; }
+      if (kx * kx + ky * ky < kr * kr) {
+        b.on = false;
+        var cdmg = (this.nightOn && RW.NIGHT) ? RW.NIGHT.flame.touchDmg : b.dmg;
+        this.hurtCore(cdmg, b.src);
+        continue;
+      }
       for (var t = 0; t < this.towers.length; t++) {
         var tw = this.towers[t];
         if (!tw.on) continue;
@@ -2477,6 +2504,7 @@
   };
 
   G.hurtPlayer = function (dmg, source, fx, fy) {
+    if (this.nightGod) return;
     if (this.player.dead) return;
     var p = this.player;
     if (p.inv > 0 || this.mode !== 'battle') return;
@@ -2506,8 +2534,9 @@
     p.pvx += ax / al * P.hurtPush; p.pvy += ay / al * P.hurtPush;
     this.addNum(p.x, p.y - 16, d, 'hurt');
     this.burst(p.x, p.y, 10, '#ff4d6d', 170, 2.5, false);
-    this.shake = Math.min(1, this.shake + 0.55);
-    this.stop(T.hitstop.playerHurt, true);
+    this.shake = Math.min(1, this.shake + (this.nightOn && RW.NIGHT ? RW.NIGHT.shake.playerHurt : 0.55));
+    if (this.nightOn && this.nightStop) this.nightStop(RW.NIGHT.hitstop.playerHurt, false);
+    else this.stop(T.hitstop.playerHurt, true);
     this.lastHits.push({ src: source, dmg: d, wave: this.wave });
     if (this.lastHits.length > 3) this.lastHits.shift();
     this.emit('hurt');
@@ -2516,6 +2545,10 @@
 
   // 英雄倒下：圣火还亮着就不结束，倒计时后在圣火旁复活；只有圣火熄灭才进复活 / 结算
   G.die = function () {
+    if (this.nightOn) {
+      if (this.deathCause === 'core' || this.core.hp <= 0) { if (this.nightLose) this.nightLose(); return; }
+      if (this.nightDown) { this.nightDown(); return; }
+    }
     var p = this.player;
     this.burst(p.x, p.y, 34, RW.EVO[p.stage].color, 260, 3, true);
     if (this.deathCause !== 'core' && this.core.hp > 0) {
@@ -2538,15 +2571,16 @@
   // 倒下期间：英雄藏在圣火旁（敌人会压向圣火），倒计时结束原地复活并短暂无敌
   G.updateRespawn = function () {
     var p = this.player, co = this.core;
-    p.x = co.x; p.y = co.y + co.r + 30; p.vx = p.vy = p.pvx = p.pvy = 0;
+    p.x = co.x; p.y = co.y + (this.nightOn ? -(co.r + 30) : (co.r + 30)); p.vx = p.vy = p.pvx = p.pvy = 0;
     p.respawnT -= DT;
     if (p.respawnT <= 1e-6) this.respawn();
   };
   G.respawn = function () {
     var p = this.player, co = this.core;
     if (!p.dead) return;
-    p.dead = false; p.hp = Math.ceil(p.maxHp * RW.RESPAWN.hp); p.inv = RW.RESPAWN.inv; p.respawnT = 0;
-    p.x = co.x; p.y = co.y + co.r + 30;
+    var RS = (this.nightOn && RW.NIGHT && RW.NIGHT.respawn) ? RW.NIGHT.respawn : RW.RESPAWN;
+    p.dead = false; p.hp = Math.ceil(p.maxHp * (RS.hp != null ? RS.hp : RW.RESPAWN.hp)); p.inv = RS.inv != null ? RS.inv : RW.RESPAWN.inv; p.respawnT = 0;
+    p.x = co.x; p.y = co.y + (this.nightOn ? -(co.r + 30) : (co.r + 30));
     this.ringFx(p.x, p.y, 10, 140, 0.5, RW.EVO[p.stage].color, 5);
     this.emit('revive');
   };

@@ -15,7 +15,7 @@
     WORLD: { w: 2240, h: 2240 },                 // 地图总尺寸（由 js/map.js 决定，sim 启动时会校正）
     ARENA: { x: 0, y: 0, w: 2240, h: 2240 },
     VIEW: { x: 0, y: 0, w: 960, h: 540 },        // 战场视口：铺满全屏，HUD 悬浮在四角
-    MAX_ENEMIES: 120,
+    MAX_ENEMIES: 150,   // M0 同屏验收要 150；波次模式共用这个池
     // 字体：导入的 OFL 字体子集（fonts/，由 tools/fonts.js 生成），系统中文字体兜底
     FONT: '"FG Sans", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
     FONT_TITLE: '"FG Serif", "FG Sans", "Songti SC", "SimSun", serif',   // 标题：粗体且字号不小于 FONT_TITLE_MIN 时用衬线体
@@ -30,7 +30,7 @@
     dash: { speed: 560, time: 0.16, iframes: 0.26, cd: 2.2, dmg: 6, knock: 180 },
     camera: { lead: 0.28, follow: 7 },
     barracksCmd: { recallNear: 60 },   // 站在兵营这么近的地方按布防键 = 召回
-    hitstop: { gap: 0.12, heavy: 3, shellKill: 2, eliteCrit: 2, eliteKill: 8, playerHurt: 5, mine: 3, evolve: 8 },
+    hitstop: { gap: 0.12, heavy: 3, shellKill: 2, eliteCrit: 2, eliteKill: 8, playerHurt: 5, mine: 3, evolve: 8, budget: 0.2 },
     shard: { life: 8, blink: 2, recallRate: 0.5, magnetSpeed: 560 },
     spawn: { telegraph: 0.8, safeDist: 170, ringMin: 260, ringMax: 470, anywhere: 0.05, idleR: 420, idleKick: 1.5 },   // idle*：身边 idleR 内没怪超过 idleKick 秒，下一群直接刷在身边（心流不断档）
     biomass: { count: 40, respawn: 14, mass: 1, near: 0.45, nearMin: 110, nearMax: 620 },   // near：刷在战线附近的比例（地图可用 orbNear 覆盖）
@@ -917,4 +917,74 @@
     { id: 'maps4', name: '走遍四方', desc: '在四张地图上都撑到第 10 波', check: function (pr) { var n = 0; for (var k in (pr.mapBest || {})) if (pr.mapBest[k] >= 10) n++; return n >= 4; } }
   ];
   RW.countKeys = function (o) { var n = 0; for (var k in (o || {})) n++; return n; };
+
+  // ---------- M0 夜战（3 分钟守北桥）----------
+  // 字段名按 docs/specs/M0_NIGHT_BATTLE.md；数值取调平稿（阈值 40、连击窗 2.5s、小鬼 40 血）。
+  // 改这里即生效。slots 有内容时按 18×10s 时间轴刷；清空 slots 才回落到 spawn / bursts 起步曲线。
+  RW.NIGHT = {
+    map: 'm0bridge',
+    introSec: 1.0,
+    duration: 180,
+    endSec: 0.8,
+    rekindle: 0,
+    gate: 'north',
+    heroStart: 'bridgeSouth',
+    spawnFromGates: true,   // 开：只从入口刷；关：退回英雄周围环刷（旧波次那套）
+    allowFly: false,        // M0 不刷飞行敌人（蝠母 / 蝙蝠）
+    spawnCutoff: 174,
+    respawn: { base: 4, perWave: 0, max: 12, hp: 0.6, inv: 2.5, coreCost: 0.08 },
+    slash: {
+      dmg: 24, interval: 0.45, arc: 120, radius: 72, hitDelay: 0.05,
+      heavyEvery: 3, heavyMul: 1.8, heavyKnockMul: 2, chainReset: 1.0, crit: false,
+      knock: 368,
+      near: { r0: 25, r1: 72, bonus: 0.4 }
+    },
+    hitstop: { hit: 0.06, heavy: 0.10, kill: 0.10, capPerSec: 0.20, playerHurt: 5 / 60, overload: 0.10 },
+    knock: { normal: 40, elite: 12, boss: 0, capPerSec: 120 },
+    shake: { hit: 0, heavy: 0.12, killElite: 0.5, overload: 0.6, coreHit: 0.2, playerHurt: 0.35, addPerSec: 1.0, decay: 2.6 },
+    dmgText: { max: 40, perSec: 30, merge: 0.1, life: 0.7, color: '#ffffff', heavyColor: '#ffa24a', heavyScale: 1.25, rise: -62 },
+    shatter: { shards: [6, 10], embers: [1, 3], life: 0.6 },
+    enemies: {
+      mite: { hp: 40, coreBias: 0.55 },
+      dasher: { hp: 70, coreBias: 0.5 },
+      spitter: { hp: 50, coreBias: 0.5 },
+      warden: { hp: 320, knockRes: 0.3, coreBias: 1 }
+    },
+    // 起步曲线（M0_NIGHT_BATTLE §4）。slots 非空时不走这条。
+    spawn: [
+      [0, 60, { mite: 1.2 }],
+      [60, 120, { mite: 0.5, dasher: 0.2, spitter: 0.15 }],
+      [120, 160, { mite: 0.5, dasher: 0.1 }],
+      [160, 180, { mite: 1.5, dasher: 0.25, spitter: 0.25 }]
+    ],
+    bursts: [[0.5, 'mite', 3], [125, 'warden', 1], [145, 'warden', 1], [150, 'mite', 12], [160, 'mite', 20]],
+    // 18×10s，只数来自 M1 时间轴表（小鬼 / 狼骑 / 暗弓手 / 暗影术士）。开场 3 只改放到桥北口，保证首杀。
+    opener: { n: 3, post: 'approach', telegraph: 0 },
+    slots: [
+      { t0: 0, t1: 10, gates: ['S3'], mite: 8 },
+      { t0: 10, t1: 20, gates: ['S3', 'S2'], mite: 10 },
+      { t0: 20, t1: 30, gates: ['S1', 'S2'], mite: 12 },
+      { t0: 30, t1: 40, gates: ['S1', 'S2', 'S3'], mite: 18 },
+      { t0: 40, t1: 50, gates: ['S1', 'S2'], mite: 10 },
+      { t0: 50, t1: 60, gates: ['S2'], mite: 8 },
+      { t0: 60, t1: 70, gates: ['S1', 'S2'], mite: 8, dasher: 4 },
+      { t0: 70, t1: 80, gates: ['S3'], mite: 8, spitter: 3 },
+      { t0: 80, t1: 90, gates: ['S1', 'S2', 'S3'], mite: 6, dasher: 2, spitter: 2 },
+      { t0: 90, t1: 100, gates: ['S1', 'S2', 'S3'], mite: 12, dasher: 4, spitter: 3 },
+      { t0: 100, t1: 110, gates: ['S1', 'S2'], mite: 6, dasher: 2, spitter: 2 },
+      { t0: 110, t1: 120, gates: ['S3'], mite: 4 },
+      { t0: 120, t1: 130, gates: ['S3'], mite: 4 },
+      { t0: 130, t1: 140, gates: ['S3', 'S1'], mite: 6, dasher: 2, warden: 1, at: { warden: [130] } },
+      { t0: 140, t1: 150, gates: ['S1', 'S2', 'S3'], mite: 12, dasher: 3, spitter: 3, warden: 1, at: { warden: [142] } },
+      { t0: 150, t1: 160, gates: ['S1', 'S2'], mite: 8, dasher: 2, spitter: 2 },
+      { t0: 160, t1: 170, gates: ['S1', 'S2', 'S3'], mite: 18, dasher: 4, spitter: 3 },
+      { t0: 170, t1: 180, gates: ['S1', 'S2', 'S3'], mite: 16, dasher: 4, spitter: 3 }
+    ],
+    flame: { hp: 1000, touchDmg: 20, eliteTouchMul: 5, chewCd: 0.9, gunDmg: 10 },
+    combo: { window: 2.5, countTowers: false },
+    overload: { threshold: 40, duration: 8, cooldown: 40, towerRateMul: 2, slashRadiusMul: 1.4, shockDmg: 60 },
+    comeback: { flameBelow: 0.3, thresholdMul: 0.5, dmgMul: 1.5, perNight: 1 },
+    towers: [{ kind: 'sentry', tier: 1 }, { kind: 'sentry', tier: 1 }],
+    result: { stars: [0.7, 0.4], showDelay: 0.8, restartLock: 0.3 }
+  };
 })(typeof GameGlobal !== 'undefined' ? GameGlobal : (typeof window !== 'undefined' ? window : globalThis));

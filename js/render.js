@@ -982,6 +982,10 @@
           c.globalAlpha = 1 - k; c.strokeStyle = f.color; c.lineWidth = 2.5;
           c.beginPath(); c.arc(f.x, f.y, 8, f.r - 1, f.r + 1); c.stroke();
           break;
+        case 'nightArc':
+          c.globalAlpha = 1 - k; c.strokeStyle = f.color; c.lineWidth = 4;
+          c.beginPath(); c.arc(f.x, f.y, Math.max(8, f.r2 * 0.72), f.r - f.w / 2, f.r + f.w / 2); c.stroke();
+          break;
       }
     }
     D.norm();
@@ -1104,7 +1108,10 @@
       else if (n.kind === 'hurt') { size = 16; color = '#ff4d6d'; }
       else if (n.kind === 'heal') { size = 15; color = '#7dff9b'; }
       else if (n.kind === 'armor') { size = 11; color = '#93a7b8'; }
+      else if (n.kind === 'heavy') { size = 16; color = '#ffa24a'; }
       else { size = 13; color = '#ffffff'; }
+      if (n.color) color = n.color;
+      if (n.scale) size *= n.scale;
       c.globalAlpha = n.life < 0.2 ? n.life / 0.2 : 1;
       c.font = 'bold ' + Math.round(size * pop) + 'px ' + F;
       c.lineWidth = 3; c.strokeStyle = 'rgba(2,4,10,0.95)'; c.strokeText(n.text, sp.x, sp.y);
@@ -1153,7 +1160,7 @@
   };
 
   // 设置：伤害数字 0 关 / 1 只看暴击、受伤、回血 / 2 全部
-  D.numShown = function (n) { var m = RW.opt.nums; return m >= 2 || (m === 1 && (n.kind === 'crit' || n.kind === 'hurt' || n.kind === 'heal')); };
+  D.numShown = function (n) { var m = RW.opt.nums; return m >= 2 || (m === 1 && (n.kind === 'crit' || n.kind === 'hurt' || n.kind === 'heal' || n.kind === 'heavy')); };
   D.nums = function (g) {
     var c = D.ctx;
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
@@ -1166,7 +1173,10 @@
       if (n.kind === 'crit') { size = 17; color = C.gold; }
       else if (n.kind === 'hurt') { size = 16; color = '#ff4d6d'; }
       else if (n.kind === 'armor') { size = 11; color = '#93a7b8'; }
+      else if (n.kind === 'heavy') { size = 16; color = '#ffa24a'; }
       else { size = 13; color = '#ffffff'; }
+      if (n.color) color = n.color;
+      if (n.scale) size *= n.scale;
       c.globalAlpha = n.life < 0.2 ? n.life / 0.2 : 1;
       c.font = 'bold ' + Math.round(size * pop) + 'px ' + F;
       c.lineWidth = 3; c.strokeStyle = 'rgba(2,4,10,0.95)';
@@ -1357,9 +1367,18 @@
       x += 38;
     }
     // ---- 常驻层 · 右上：波次 / 倒计时 / 金币 ----
-    var left = Math.max(0, Math.ceil(g.dur - g.wt)), duel = g.final && !g.won && left <= 0, urgent = g.mode === 'battle' && left <= 10 && !duel;
+    // 夜战不走波次计时（没有 g.wt）。倒计时用 nightT，这里给一个不触发「再守 N 秒」的占位。
+    var left = (g.nightOn || g.wt == null) ? 999 : Math.max(0, Math.ceil(g.dur - g.wt)), duel = g.final && !g.won && left <= 0, urgent = g.mode === 'battle' && left <= 10 && !duel;
     var px = W - 242;
     D.hudPanel(px, 10, 188, 66);
+    if (g.nightOn) {
+      var nleft = Math.max(0, Math.ceil((g.nightDur || 0) - (g.nightT || 0)));
+      D.text(g.nightPhase === 'intro' ? '守桥一夜' : '守桥', px + 12, 26, 13, C.text, 'left', true);
+      D.text(g.nightPhase === 'intro' ? '即将' : (nleft + ' 秒'), px + 176, 28, 16, nleft <= 10 ? U.parch : C.text, 'right', true);
+      var ov = g.ovLeft > 0 ? ('超载 ' + g.ovLeft.toFixed(1)) : (g.ovCd > 0 ? ('冷却 ' + Math.ceil(g.ovCd)) : '连击 ' + (g.nCombo || 0));
+      D.text(ov, px + 12, 48, 11, g.ovLeft > 0 ? '#ffa24a' : C.dim, 'left', true);
+      D.text('击杀 ' + g.kills, px + 176, 58, 10, C.dim, 'right');
+    } else {
     D.text(g.endless ? '无尽 · 第 ' + g.wave + ' 波' : '第 ' + g.wave + ' 波', px + 12, 25, 13, C.text, 'left', true);
     D.text(g.endless ? '' : '/ ' + RW.RUN.waves + (g.danger ? ' · 危险 ' + g.danger : ''), px + 12, 41, 9, g.danger >= 4 ? '#ffb3c1' : C.dim, 'left');
     D.text(g.mode === 'clear' ? (g.won ? '守住了' : '清场') : (duel ? '决战' : left + ' 秒'), px + 176, 32, duel ? 18 : 20, duel ? '#ff9a7a' : (urgent ? U.parch : C.text), 'right', true);
@@ -1367,6 +1386,7 @@
     D.shardIcon(px + 18, 62, 6);
     D.text('金币 ' + g.shardCount, px + 28, 62, 11, C.shard, 'left', true);
     D.text('击杀 ' + g.kills + ' · 建筑 ' + g.towerCount() + '/' + T.build.max, px + 176, 64, 8, C.dim, 'right');
+    }
     ui.button('pause', W - 46, 10, 36, 36, '', { draw: function (bx2, by2, bw2, bh2) {
       D.woodFrame(bx2, by2, bw2, bh2, { style: 'hud' });
       c.fillStyle = C.text; c.fillRect(bx2 + 12, by2 + 10, 4, 14); c.fillRect(bx2 + 20, by2 + 10, 4, 14);
@@ -1380,6 +1400,12 @@
       c.fillStyle = gr; c.fillRect(0, 0, W, H);
     }
     D.battleButtons(g, ui, menu);
+    if (g.nightOn && g.ovLeft > 0) {
+      c.save();
+      c.strokeStyle = 'rgba(232,112,42,0.30)'; c.lineWidth = 12;
+      c.strokeRect(6, 6, W - 12, H - 12);
+      c.restore();
+    }
     // ---- 情境层：信息卡 ----
     D.infoCard(g);
     // ---- 提示层 ----
@@ -1398,10 +1424,13 @@
     else if (g.mode === 'battle' && co.hp / co.maxHp < 0.3) t = { title: '火光将熄', sub: '回到圣火旁清掉围攻的敌人', col: '#ff9a7a' };
     else if (g.mode === 'clear') t = { title: g.won ? '圣火长明' : '天色稍缓，可以整备', sub: '收成 +' + (g.haul || 0) + (g.yieldGold ? ' · 圣域收成 +' + g.yieldGold : '') + ' · 地上的金币按 50% 回收', col: D.UIC.parch };
     else if (g.banner > 0 && g.mode === 'battle') {
-      var sub = g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒');
-      if (g.final && !g.bannerText) sub = '终局 · 坚守 ' + g.dur + ' 秒并击败灭火者';
-      if (g.eliteQ.length) sub += ' · 精英 ×' + g.eliteQ.length;
-      t = { title: g.bannerText || ('第 ' + g.wave + ' 波 · 黑影逼近'), sub: sub, col: D.UIC.parch, a: Math.min(1, g.banner / 1.6 * 3) };
+      if (g.nightOn) t = { title: g.bannerText || '守桥一夜', col: D.UIC.parch, a: Math.min(1, g.banner / 1.6 * 3) };
+      else {
+        var sub = g.bannerText ? ('第 ' + g.wave + ' 波 · 坚守 ' + g.dur + ' 秒') : ('坚守 ' + g.dur + ' 秒');
+        if (g.final && !g.bannerText) sub = '终局 · 坚守 ' + g.dur + ' 秒并击败灭火者';
+        if (g.eliteQ && g.eliteQ.length) sub += ' · 精英 ×' + g.eliteQ.length;
+        t = { title: g.bannerText || ('第 ' + g.wave + ' 波 · 黑影逼近'), sub: sub, col: D.UIC.parch, a: Math.min(1, g.banner / 1.6 * 3) };
+      }
     }
     else if (g.evolveT > 0) {
       var ev = RW.EVO[p.stage], bits = [];
@@ -1425,7 +1454,8 @@
   };
   // 右侧教程卷轴：第一波，按时间依次讲四件事（不进画面中央）
   D.tutorialScroll = function (g) {
-    if (g.wave !== 1 || g.mode !== 'battle' || g.wt > 30) return;
+    // 夜战 wave 仍是 1，但没有波次计时 g.wt。不拦的话 floor(undefined/6) 是 NaN，steps[NaN] 读 [0] 会把整帧画崩。
+    if (g.nightOn || g.wt == null || g.wave !== 1 || g.mode !== 'battle' || g.wt > 30) return;
     var K = RW.keyLabel, steps = [
       ['自动迎敌', '武器会攻击近处的敌人。'],
       ['闪身避险', '按 ' + K('dash') + ' 冲刺，可短暂避开伤害。'],
@@ -1515,10 +1545,10 @@
         round('skill:' + i, b, s.d.name, s.d.color, k, s.cd > 0 ? s.cd.toFixed(1) : (s.d.mp || 18) + '');
       })(slots[si], si);
     }
-    round('build', B.build, menu ? '收起' : '造塔', C.gold, 0, menu ? '' : g.towerCount() + '/' + T.build.max);
+    if (!g.nightOn) round('build', B.build, menu ? '收起' : '造塔', C.gold, 0, menu ? '' : g.towerCount() + '/' + T.build.max);
     // 快速造塔：造塔键旁边一直显示四个快捷键（点一下也能造），手柄时显示 LB + 十字键
     var PADK = ['←', '↑', '→', '↓'];
-    if (!menu && !(g.mut && g.mut.nobuild)) {
+    if (!g.nightOn && !menu && !(g.mut && g.mut.nobuild)) {
       var qx = W / 2 - 152, qy = H - 40;   // 底部中间：建造栏
       D.woodFrame(qx - 8, qy - 22, 4 * 67 + 13, 58, { style: 'hud' });
       D.text('建造', qx, qy - 11, 10, D.UIC.parch, 'left', true);

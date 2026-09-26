@@ -36,10 +36,15 @@ console.log('入口一致性');
 const wx = [...fs.readFileSync(path.join(root, 'game.js'), 'utf8').matchAll(/require\('\.\/(js\/[^']+)'\)/g)].map(m => m[1]);
 // 允许浏览器缓存参数（如 js/audio.js?v=2），比较时去掉 ? 之后的部分
 const web = [...fs.readFileSync(path.join(root, 'preview.html'), 'utf8').matchAll(/<script src="(js\/[^"?]+)(?:\?[^"]*)?"/g)].map(m => m[1]);
-if (wx.join() === web.join()) ok(`game.js 与 preview.html 都按同一顺序加载 ${wx.length} 个脚本`);
-else bad(`加载清单不一致\n    game.js:      ${wx.join(' ')}\n    preview.html: ${web.join(' ')}`);
+const isAds = f => f === 'js/ads.js' || /^js\/ads-/.test(f);
+const wxGame = wx.filter(f => !isAds(f));
+const webGame = web.filter(f => !isAds(f));
+if (web.some(isAds)) bad('preview.html 不能加载广告脚本（桌面版入口）');
+if (!wx.includes('js/ads.js')) bad('game.js 要加载 js/ads.js');
+if (wxGame.join() === webGame.join()) ok(`game.js 与 preview.html 除广告脚本外按同一顺序加载 ${wxGame.length} 个脚本`);
+else bad(`加载清单不一致\n    game.js:      ${wxGame.join(' ')}\n    preview.html: ${webGame.join(' ')}`);
 const onDisk = fs.readdirSync(path.join(root, 'js')).filter(f => f.endsWith('.js')).map(f => 'js/' + f);
-const orphan = onDisk.filter(f => !wx.includes(f));
+const orphan = onDisk.filter(f => !wx.includes(f) && !web.includes(f) && !isAds(f));
 if (orphan.length) bad('js/ 下有文件没被入口加载：' + orphan.join(' '));
 
 console.log('模拟冒烟');
@@ -116,6 +121,60 @@ console.log('字体与素材');
     for (const f of walk(path.join(root, d), '')) if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(path.relative(root, f))) media.push(path.relative(root, f));
   if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集除外）：' + media.join(', '));
   else ok('安装包白名单：' + files.join('、') + '；除字体和批准过的精灵图集外没有外部素材');
+}
+
+console.log('夜战');
+try {
+  const out = execFileSync(process.execPath, [path.join(__dirname, 'nighttest.js'), '--runs', '1', '--policy', 'god', '--seed', '1'], { encoding: 'utf8' });
+  if (!/won=1/.test(out) || !/hold=100/.test(out)) bad('无敌夜没有守满 180 秒\n' + out);
+  else ok(out.trim().split('\n').pop());
+} catch (e) { bad('夜战无头模拟失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
+
+console.log('广告');
+{
+  const sdk = /createRewardedVideoAd|adUnitId|RewardedVideoAd/;
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const skip = new Set(['js/ads.js']);
+  const packaged = [];
+  for (const f of walk(path.join(root, 'js'), '.js')) {
+    const rel = path.relative(root, f).replace(/\\/g, '/');
+    if (skip.has(rel) || /^js\/ads-/.test(rel)) continue;
+    packaged.push(rel);
+  }
+  packaged.push('preview.html');
+  for (const f of walk(path.join(root, 'desktop'), '.js')) packaged.push(path.relative(root, f).replace(/\\/g, '/'));
+  const hits = [];
+  for (const rel of packaged) {
+    const text = fs.readFileSync(path.join(root, rel), 'utf8');
+    if (sdk.test(text)) hits.push(rel);
+  }
+  if (hits.length) bad('桌面版会打进包的文件里出现广告 SDK 字符串：' + hits.join(' '));
+  else ok('广告 SDK 字符串只在 js/ads.js（package.json 已排除 ' + (pkg.build.files.filter(f => f.startsWith('!js/ads')).join(' ') || '未排除') + '）');
+  const probe = `
+    const root = ${JSON.stringify(root)};
+    require(root + '/js/data.js');
+    require(root + '/js/ads.js');
+    const RW = globalThis.RW;
+    const closed = [];
+    globalThis.wx = { createRewardedVideoAd() {
+      const ad = { onClose(fn){ ad._c = fn; }, onError(){}, show(){ return Promise.resolve(); }, load(){ return Promise.resolve(); } };
+      closed.push(ad); return ad;
+    } };
+    function trial(res) {
+      let g = 0, f = 0;
+      RW.Ads.show('revive', 'unit-test', () => { g++; }, () => { f++; });
+      closed[closed.length - 1]._c(res);
+      return g + ':' + f;
+    }
+    const a = trial(undefined), b = trial({ isEnded: false }), c = trial({ isEnded: true });
+    if (a !== '0:1' || b !== '0:1' || c !== '1:0') { console.error('grant ' + [a, b, c].join(' ')); process.exit(1); }
+    console.log('ok');
+  `;
+  try {
+    const out = execFileSync(process.execPath, ['-e', probe], { encoding: 'utf8' });
+    if (!/ok/.test(out)) bad('广告完成判定异常\n' + out);
+    else ok('未结束 / 看完一半不发奖，isEnded 为真才发');
+  } catch (e) { bad('广告完成判定失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 }
 
 if (failed) { console.log(`\n${failed} 项失败`); process.exit(1); }

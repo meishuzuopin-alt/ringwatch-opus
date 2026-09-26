@@ -156,37 +156,17 @@
   };
 
   // ---------- 激励视频 ----------
-  // 广告位常量留空时：不播放任何东西，直接「预览发放」，按钮文案也会写明「预览发放」。
-  var adCache = {};
+  // 广告位留空：不播放，直接预览发放。桌面版没有广告模块，复活直接可用。
+  // 真正的播放和「看完才发」在 js/ads.js，微信入口才加载，桌面包不进去。
   Plat.adUnit = function (kind) { return kind === 'revive' ? RW.AD.REWARD_REVIVE : RW.AD.REWARD_REROLL; };
-  // Steam / 桌面版没有广告：hasAds 为假时，界面不显示任何广告入口，复活直接可用（每局一次）
   Plat.hasAds = isWx;
   Plat.adLabel = function (kind) { return Plat.adUnit(kind) ? '看广告' : '预览发放'; };
   Plat.showReward = function (kind, onGrant, onFail) {
     if (!Plat.hasAds) { onGrant({ free: true }); return; }
     var unit = Plat.adUnit(kind);
     if (!unit) { onGrant({ preview: true }); return; }
-    if (!isWx || !wx.createRewardedVideoAd) { onFail('当前环境无法播放广告'); return; }
-    var slot = adCache[unit];
-    if (!slot) {
-      slot = adCache[unit] = { ad: wx.createRewardedVideoAd({ adUnitId: unit }), pending: null };
-      slot.ad.onClose(function (res) {
-        var cb = slot.pending; slot.pending = null;
-        if (!cb) return;
-        if (!res || res.isEnded) cb.ok({ preview: false }); else cb.fail('广告未看完，奖励未发放');
-      });
-      slot.ad.onError(function () {
-        var cb = slot.pending; slot.pending = null;
-        if (cb) cb.fail('广告暂时不可用');
-      });
-    }
-    slot.pending = { ok: onGrant, fail: onFail };
-    slot.ad.show().catch(function () {
-      slot.ad.load().then(function () { return slot.ad.show(); }).catch(function () {
-        var cb = slot.pending; slot.pending = null;
-        if (cb) cb.fail('广告暂时不可用');
-      });
-    });
+    if (!RW.Ads || !RW.Ads.show) { onFail('当前环境无法播放广告'); return; }
+    RW.Ads.show(kind, unit, onGrant, onFail);
   };
 
   RW.Plat = Plat;

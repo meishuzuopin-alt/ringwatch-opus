@@ -527,6 +527,15 @@
       case 'reviveOffer': if (this.ok('roffer', 1)) { this.swell(70, 140, 1, 0.12); this.bell(147, 1.2, 0.07, 0.3); } break;
       case 'result': if (this.ok('result', 2)) { this.impact(0.6); var dn = [392, 330, 262, 196]; for (var rz = 0; rz < dn.length; rz++) this.bell(dn[rz], 0.9, 0.06, rz * 0.2); } break;
       case 'revive': if (this.ok('rev')) { this.bell(392, 0.16, 0.06); this.bell(523, 0.2, 0.06, 0.12); this.bell(784, 0.55, 0.07, 0.26); } break;
+      case 'slash': if (this.ok('slash', 0.05)) { this.whoosh(0.09, 0.1, 1800, 420); this.noise(0.03, 0.06, 'highpass', 2400, 800, 0, this.sfxBus); } break;
+      case 'slashHeavy': if (this.ok('sheavy', 0.06)) { this.impact(0.62); this.whoosh(0.12, 0.12, 900, 220); } break;
+      case 'shatter': if (this.ok('shatter', 0.04)) { this.noise(0.08, 0.1, 'bandpass', 1800, 900, 0, this.sfxBus); this.impact(0.28); } break;
+      case 'comboUp': if (this.ok('combo', 0.05)) { var semi = [0, 2, 4, 7, 9][((a || 1) - 1) % 5]; this.bell(587.33 * Math.pow(2, semi / 12), 0.12, 0.05); } break;
+      case 'comboBreak': if (this.ok('cbreak', 0.2)) this.tone(392, 196, 0.18, 'sine', 0.06, 0, this.sfxBus); break;
+      case 'overloadStart': if (this.ok('ov', 0.4)) { this.impact(0.8); this.bell(294, 0.4, 0.07); this.bell(440, 0.55, 0.06, 0.08); this.whoosh(0.3, 0.1, 200, 80); } break;
+      case 'overloadEnd': if (this.ok('ovend', 0.3)) this.tone(330, 180, 0.22, 'sine', 0.05, 0, this.sfxBus); break;
+      case 'nightWin': if (this.ok('nwin', 1)) { this.bell(523, 0.4, 0.07); this.bell(659, 0.5, 0.06, 0.12); this.bell(784, 0.7, 0.06, 0.24); } break;
+      case 'nightLose': if (this.ok('nlose', 1)) { this.impact(0.7); this.bell(196, 0.8, 0.06, 0.05); this.bell(147, 1, 0.05, 0.2); } break;
     }
   };
 
