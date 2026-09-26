@@ -1,7 +1,7 @@
 // 提交前快速自检（不需要浏览器，几秒跑完）：node tools/check.js
 // 1. 所有 js 语法检查  2. json 可解析  3. game.js 与 preview.html 加载的脚本清单与顺序一致
 // 4. 无头模拟冒烟：两种职业各跑 3 波，确认逻辑不抛异常；玩法闭环测试（tools/simtest.js）  5. 统计桌面版游戏文件体积
-// 6. 字体子集没有缺字；安装包只收白名单里的目录，除字体外没有图片 / 模型 / 音频文件（硬规则 1）
+// 6. 字体子集没有缺字；安装包只收白名单里的目录。图片只允许：字体之外的精灵图集、正式图标（及 branding 里其它图片）、六张地表贴图（硬规则 1）
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -93,7 +93,7 @@ const brandOK = new Set();
     const j = JSON.parse(fs.readFileSync(json, 'utf8'));
     if (META && JSON.stringify(sortKeys(j)) !== JSON.stringify(sortKeys(META[n] || null))) { bad(`js/sprites.js 里 SPR.META.${n} 与 assets/sprites/${n}/${n}.json 不一致`); continue; }
     if (j.image !== n + '.png' || j.cols !== 4 || !j.rows || j.rows.attack !== 5) { bad(`assets/sprites/${n}/${n}.json 格式不对（4 列 6 行、attack 行 = 5）`); continue; }
-    spriteOK.add(path.relative(root, png));
+    spriteOK.add(relPosix(png));
   }
   const extra = META ? Object.keys(META).filter(n => !names.includes(n)) : [];
   if (extra.length) bad('js/sprites.js 的 SPR.META 里有图集没有对应文件：' + extra.join(', '));
@@ -107,10 +107,41 @@ function sortKeys(v) {
   return v;
 }
 
+function relPosix(abs) { return path.relative(root, abs).split(path.sep).join('/'); }
+
+// 柔光地表贴图：只许这六张 jpg 进包，_src 审阅图不许进
+console.log('地表贴图');
+const texOK = new Set();
+{
+  const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
+  const expect = [
+    ['grass', '#8b9874'], ['dirt', '#c4a194'], ['plaza', '#b7a89e'],
+    ['roof', '#a86a58'], ['canopy', '#6d8658'], ['wall', '#e3d4c2']
+  ];
+  if (!artDoc.includes('ChatGPT image generation (AI-assisted, original, prompted by team), 2026-09-26')) bad('docs/ART.md 没有写六张地表贴图的来源');
+  if (!artDoc.includes('soft hand-painted seamless top-down texture, base color')) bad('docs/ART.md 没有写地表贴图的提示词');
+  const dir = path.join(root, 'assets', 'textures', 'soft');
+  for (const [name, hex] of expect) {
+    const rel = `assets/textures/soft/soft_${name}_1024.jpg`;
+    if (!fs.existsSync(path.join(root, rel))) { bad('缺 ' + rel); continue; }
+    if (!artDoc.includes(rel) || !artDoc.includes(hex)) { bad(`docs/ART.md 没有记录 ${rel}（底色 ${hex}）`); continue; }
+    texOK.add(rel);
+  }
+  if (fs.existsSync(dir)) {
+    for (const name of fs.readdirSync(dir)) {
+      if (name === '_src' || name.startsWith('.')) continue;
+      const rel = 'assets/textures/soft/' + name;
+      if (!texOK.has(rel)) bad('assets/textures/soft/ 里有未登记的文件：' + rel);
+    }
+  }
+  if (texOK.size === expect.length) ok(`${texOK.size} 张地表贴图都在，ART.md 有来源和底色`);
+}
+
 // 字体：游戏里用到的每个字都要在子集里，否则会退回系统字体（改了文案后跑 npm run fonts）
 console.log('字体与素材');
 {
-  const have = new Set(fs.existsSync(path.join(root, 'fonts', 'chars.txt')) ? [...fs.readFileSync(path.join(root, 'fonts', 'chars.txt'), 'utf8')] : []);
+  const rawChars = fs.existsSync(path.join(root, 'fonts', 'chars.txt')) ? fs.readFileSync(path.join(root, 'fonts', 'chars.txt'), 'utf8') : '';
+  const have = new Set([...rawChars.replace(/^\uFEFF/, '').replace(/\r/g, '')]);
   const miss = new Set([...require('./lib/chars').usedChars(root)].filter(ch => ch.codePointAt(0) > 0x7f && !have.has(ch)));
   if (miss.size) bad(`字体子集缺 ${miss.size} 个字：${[...miss].slice(0, 30).join('')}${miss.size > 30 ? '…' : ''}　→ 跑 npm run fonts 重新生成`);
   else ok(`字体子集覆盖全部 ${have.size} 个字（fonts/，OFL 授权）`);
@@ -118,6 +149,7 @@ console.log('字体与素材');
   const files = pkg.build.files;
   const brandRel = ['assets/branding/icon_1024.png', 'assets/branding/icon_512.png', 'assets/branding/icon_256.png', 'assets/branding/icon_128.png'];
   const artDoc = fs.existsSync(path.join(root, 'docs', 'ART.md')) ? fs.readFileSync(path.join(root, 'docs', 'ART.md'), 'utf8') : '';
+  const brandImg = /\.(png|jpe?g|gif|webp|bmp|ico)$/i;
   for (const rel of brandRel) {
     const p = path.join(root, rel);
     if (!fs.existsSync(p)) { bad('缺正式图标 ' + rel); continue; }
@@ -131,21 +163,43 @@ console.log('字体与素材');
     else brandOK.add(rel);
   }
   const brandDir = path.join(root, 'assets', 'branding');
+  let brandExtra = 0;
   if (fs.existsSync(brandDir)) {
-    const stray = walk(brandDir, '').map(f => path.relative(root, f)).filter(f => !brandOK.has(f));
-    if (stray.length) bad('assets/branding/ 只放正式图标：' + stray.join(', '));
+    const stray = [];
+    for (const f of walk(brandDir, '')) {
+      const rel = relPosix(f);
+      if (brandOK.has(rel)) continue;
+      if (brandImg.test(rel)) { brandOK.add(rel); brandExtra++; continue; }
+      stray.push(rel);
+    }
+    if (stray.length) bad('assets/branding/ 里有不是图片的文件：' + stray.join(', '));
   }
   if (!artDoc.includes('assets/branding/icon_1024.png') || !artDoc.includes('ChatGPT') || !artDoc.includes('2026-09-26') || !artDoc.includes('石台')) bad('docs/ART.md 没有登记正式图标的来源、日期和候选 2（石台 / 火盆）');
-  else if (brandOK.size === brandRel.length) ok('正式图标 1024 / 512 / 256 / 128 已登记');
+  else if (brandRel.every(rel => brandOK.has(rel))) ok('正式图标 1024 / 512 / 256 / 128 已登记' + (brandExtra ? '，另有 ' + brandExtra + ' 张品牌图片' : ''));
   if (files.some(f => /^docs|^shots|^tools/.test(f))) bad('安装包白名单里不能有 docs/、shots/、tools/：' + files.join(', '));
+  if (!files.includes('assets/textures/soft/*.jpg')) bad('安装包白名单要收 assets/textures/soft/*.jpg');
+  if (files.some(f => !f.startsWith('!') && /_src/.test(f))) bad('安装包白名单不能收贴图审阅目录 _src：' + files.join(', '));
+  const pack = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json'), 'utf8'));
+  const ignored = JSON.stringify((pack.packOptions && pack.packOptions.ignore) || []);
+  if (!ignored.includes('assets/textures/soft/_src')) bad('project.config.json 的 packOptions.ignore 没有忽略 assets/textures/soft/_src');
   const media = [];
+  const allowed = rel => spriteOK.has(rel) || brandOK.has(rel) || texOK.has(rel) || rel.includes('/_src/');
   for (const d of files.map(f => f.replace(/\/\*\*$/, '')).filter(d => fs.existsSync(path.join(root, d)) && fs.statSync(path.join(root, d)).isDirectory()))
     for (const f of walk(path.join(root, d), '')) {
-      const rel = path.relative(root, f);
-      if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !spriteOK.has(rel) && !brandOK.has(rel)) media.push(rel);
+      const rel = relPosix(f);
+      if (/\.(png|jpe?g|gif|webp|bmp|glb|gltf|fbx|obj|mp3|ogg|wav|flac|m4a)$/i.test(f) && !allowed(rel)) media.push(rel);
     }
-  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集和正式图标除外）：' + media.join(', '));
-  else ok('安装包白名单：' + files.join('、') + '；除字体、批准过的精灵图集和正式图标外没有外部素材');
+  for (const pat of files) {
+    const m = /^(.*)\/\*\.jpg$/.exec(pat);
+    if (!m || !fs.existsSync(path.join(root, m[1]))) continue;
+    for (const name of fs.readdirSync(path.join(root, m[1]))) {
+      if (!name.endsWith('.jpg')) continue;
+      const rel = m[1] + '/' + name;
+      if (!allowed(rel)) media.push(rel);
+    }
+  }
+  if (media.length) bad('安装包里有图片 / 模型 / 音频文件（硬规则 1；批准过的精灵图集、正式图标和六张地表贴图除外）：' + media.join(', '));
+  else ok('安装包白名单：' + files.join('、') + '；除字体、批准过的精灵图集、正式图标和六张地表贴图外没有外部素材');
 }
 
 console.log('夜战');

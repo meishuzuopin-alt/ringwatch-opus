@@ -204,8 +204,28 @@ The 4 variations:
 | 白天 / 黄昏 / 夜晚 / Boss 的太阳、天光、雾、暗部保留 | `js/world3d.js` `envPreset` |
 | 圣火衰减、圈外冷暖、雾的浓淡、阴影的蓝紫、笔触强度 | `js/data.js` `RW.C1_LIGHT` |
 | 草地、石板、木屋、水面的固有色 | `js/world3d.js` `PAL` |
+| 地表贴图开关、每格世界尺寸 | `js/data.js` 的 `RW.TEXTURES`。`enabled: false` 或地址 `?tex=0` 回到顶点色 |
+
+### 手绘地表贴图（2026-09-26）
+
+六张无缝顶视贴图，从 `grok/scene-textures` 的 `assets/textures/soft/` 接过来（不含 `_src/` 审阅图）。
+
+来源（六张相同）：ChatGPT image generation (AI-assisted, original, prompted by team), 2026-09-26。
+
+提示词：soft hand-painted seamless top-down texture, base color。原创，AI 辅助，不是临摹别的游戏。
+
+| 文件 | 用在 | 底色 |
+|---|---|---|
+| `assets/textures/soft/soft_grass_1024.jpg` | 空地（草地） | `#8b9874` |
+| `assets/textures/soft/soft_dirt_1024.jpg` | 土路 | `#c4a194` |
+| `assets/textures/soft/soft_plaza_1024.jpg` | 中央祭坛广场（石板） | `#b7a89e` |
+| `assets/textures/soft/soft_roof_1024.jpg` | 屋顶（含箭塔锥顶、兵营） | `#a86a58` |
+| `assets/textures/soft/soft_canopy_1024.jpg` | 树冠 | `#6d8658` |
+| `assets/textures/soft/soft_wall_1024.jpg` | 墙（房屋、箭塔塔身、兵营） | `#e3d4c2` |
+
+采样：世界空间三向投影，`RepeatWrapping`，`SRGBColorSpace`，mipmap（`LinearMipmapLinearFilter` / `LinearFilter`），各向异性取显卡最大值。平铺尺寸在 `RW.TEXTURES.scale`（世界单位 / 一格：草 320、土 260、广场 280、屋顶 220、树冠 200、墙 220），按玩法镜头看起来既不会碎成噪点，也不会糊成一块。`enabled: true`。水面、树干、角色仍用顶点色。
 
 ## 红线
 
-- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体、「AI 素材」一节登记过的精灵图集，以及上面登记过的正式图标 `assets/branding/icon_*.png`（`tools/check.js` 会拦下没登记的）。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
+- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体、「AI 素材」一节登记过的精灵图集、上面登记过的正式图标 `assets/branding/icon_*.png`，以及这一节登记过的六张地表贴图（`tools/check.js` 会拦下没登记的）。`assets/branding/` 里若还有同源的图标尺寸或候选图，留在目录里，检查只要求四张正式图标在、并且是图片。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
 - 不做影响读图的全屏效果（大面积暗角、强烈镜头光晕、全屏抖动）。

@@ -58,7 +58,7 @@
 
   // ---------- 几何构建器 ----------
   // 顶点格式：位置 3 + 法线 3 + 颜色 4（第 4 位 = 自发光强度），共 10 个 float
-  function GB() { this.v = []; this.tx = 0; this.ty = 0; this.tz = 0; this.rc = 1; this.rs = 0; this.sc = 1; }
+  function GB() { this.v = []; this.slots = []; this.tex = 0; this.tx = 0; this.ty = 0; this.tz = 0; this.rc = 1; this.rs = 0; this.sc = 1; }
   GB.prototype.setXf = function (x, y, z, rot, scale) {
     this.tx = x || 0; this.ty = y || 0; this.tz = z || 0; this.rc = Math.cos(rot || 0); this.rs = Math.sin(rot || 0); this.sc = scale || 1;
     return this;
@@ -72,10 +72,11 @@
     var ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
     var nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
     nx /= l; ny /= l; nz /= l;
-    var e = em || 0, V = this.v;
+    var e = em || 0, V = this.v, slot = this.tex || 0;
     V.push(a[0], a[1], a[2], nx, ny, nz, col[0], col[1], col[2], e);
     V.push(b[0], b[1], b[2], nx, ny, nz, col[0], col[1], col[2], e);
     V.push(c[0], c[1], c[2], nx, ny, nz, col[0], col[1], col[2], e);
+    this.slots.push(slot, slot, slot);
   };
   // 四边形 a b c d 逆时针（从外面看）
   GB.prototype.quad = function (a, b, c, d, col, em) { this.tri(a, b, c, col, em); this.tri(a, c, d, col, em); };
@@ -189,14 +190,44 @@
     uCool: { value: new THREE.Vector3(0.46, 0.40, 1.06) }, uGreen: { value: new THREE.Vector2(0.78, 0.25) },
     uWarmAdd: { value: 1.25 }, uFall: { value: 1.4 }, uChill: { value: 0 }, uCoolK: { value: 0.08 },
     uFogWarm: { value: new THREE.Vector3(1.0, 0.45, 0.12) }, uFogK: { value: new THREE.Vector3(0.78, 1.05, 0.42) },
-    uEnemyGain: { value: 0.42 }
+    uEnemyGain: { value: 0.42 },
+    // 地表贴图（RW.TEXTURES）。只挂在带贴图的那套材质上。
+    uTexGrass: { value: null }, uTexDirt: { value: null }, uTexPlaza: { value: null },
+    uTexRoof: { value: null }, uTexCanopy: { value: null }, uTexWall: { value: null },
+    uTexScale: { value: new THREE.Vector4(320, 260, 280, 220) }, uTexScale2: { value: new THREE.Vector2(200, 220) },
+    uTexSlot: { value: new THREE.Vector4(1, 2, 3, 4) }, uTexSlot2: { value: new THREE.Vector2(5, 6) }
   };
-  // 固有色随距离收向去饱和冷蓝。圈内只压暗并杀掉亮柠绿，留下更深的绿褐，饱和不降。宽 smoothstep。
+  var SURF_DECL = [
+    'varying float vSlot;',
+    'uniform sampler2D uTexGrass; uniform sampler2D uTexDirt; uniform sampler2D uTexPlaza;',
+    'uniform sampler2D uTexRoof; uniform sampler2D uTexCanopy; uniform sampler2D uTexWall;',
+    'uniform vec4 uTexScale; uniform vec2 uTexScale2; uniform vec4 uTexSlot; uniform vec2 uTexSlot2;'
+  ].join('\n');
+  function surfTap(tex, sc) {
+    return 'vec3 p = vWp / max(' + sc + ', 1.0); fgA = texture2D(' + tex + ', p.zy).rgb * fgNw.x + texture2D(' + tex + ', p.xz).rgb * fgNw.y + texture2D(' + tex + ', p.xy).rgb * fgNw.z;';
+  }
+  // 三向投影。权重在分支外算好。槽位 0 仍用顶点色。
+  var SURF_SAMPLE = [
+    'vec3 fgNw = abs(normalize(cross(dFdx(vWp), dFdy(vWp))));',
+    'fgNw *= fgNw; fgNw *= fgNw; fgNw /= max(fgNw.x + fgNw.y + fgNw.z, 1e-4);',
+    'if (vSlot > 0.5) {',
+    '  vec3 fgA = diffuseColor.rgb;',
+    '  if (abs(vSlot - uTexSlot.x) < 0.5) { ' + surfTap('uTexGrass', 'uTexScale.x') + ' }',
+    '  else if (abs(vSlot - uTexSlot.y) < 0.5) { ' + surfTap('uTexDirt', 'uTexScale.y') + ' }',
+    '  else if (abs(vSlot - uTexSlot.z) < 0.5) { ' + surfTap('uTexPlaza', 'uTexScale.z') + ' }',
+    '  else if (abs(vSlot - uTexSlot.w) < 0.5) { ' + surfTap('uTexRoof', 'uTexScale.w') + ' }',
+    '  else if (abs(vSlot - uTexSlot2.x) < 0.5) { ' + surfTap('uTexCanopy', 'uTexScale2.x') + ' }',
+    '  else if (abs(vSlot - uTexSlot2.y) < 0.5) { ' + surfTap('uTexWall', 'uTexScale2.y') + ' }',
+    '  diffuseColor.rgb = fgA;',
+    '}'
+  ].join('\n');
+  // 固有色随距离收到冷色。用指数，不在某个半径上形成一圈明暗脊线。
   var C1_ALBEDO = [
     '{',
     '  float fgCd = length(vWp.xz - uCore.xy);',
     '  float fgR = max(uCore.z, 1.0);',
-    '  float fgT = uCore.z < 2.0 ? mix(0.2, 0.85, uChill) : smoothstep(fgR * uBand.x, fgR * uBand.y, fgCd);',
+    '  float fgSpan = max(fgR * mix(uBand.x, uBand.y, 0.72), 1.0);',
+    '  float fgT = uCore.z < 2.0 ? mix(0.2, 0.85, uChill) : (1.0 - exp(-fgCd / fgSpan));',
     '  float fgCool = fgT * uCoolK;',
     '  float fgL = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
     '  vec3 fgB = diffuseColor.rgb;',
@@ -204,7 +235,7 @@
     '  vec3 fgIn = mix(vec3(fgL), fgB, mix(uBand.z, uBand.w, fgT));',
     '  diffuseColor.rgb = mix(fgIn, fgL * uCool, fgCool) * mix(uGain.x, uGain.y, fgT);',
     '  if (uEnemy > 0.5) {',
-    '    float fgS = smoothstep(fgR * 0.45, fgR * 1.55, fgCd) * uCoolK;',
+    '    float fgS = (1.0 - exp(-fgCd / max(fgR * 1.1, 1.0))) * uCoolK;',
     '    float fgLe = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
     '    diffuseColor.rgb = mix(diffuseColor.rgb, fgLe * uCool * uEnemyGain, fgS);',
     '  }',
@@ -233,12 +264,14 @@
   // 把本项目的光照扩展注进 Three 的材质着色器：自发光 / 闪白 / 顶点渐变 / 斑驳 / 圣火暖光圈 / 边缘光 / 低雾。
   // sprite = true 是贴图立牌（精灵图）：没有顶点色和 aEm，颜色来自图集贴图；每实例 iFrame 选图集里的一格
   //   （iFrame = [u0, v0, u 宽（负数 = 水平镜像）, v 高]）；不加斑驳和顶点渐变，画好的画面不再叠笔触
-  function fgInject(sh, water, sprite) {
-    ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uCool', 'uGreen', 'uWarmAdd', 'uFall', 'uChill', 'uCoolK', 'uFogWarm', 'uFogK', 'uEnemyGain'].forEach(function (k) { sh.uniforms[k] = U[k]; });
+  function fgInject(sh, water, sprite, surf) {
+    var keys = ['uTime', 'uEmBoost', 'uRim', 'uNoise', 'uCore', 'uCoreCol', 'uFogLow', 'uEmHDR', 'uGradK', 'uFogPierce', 'uBand', 'uGain', 'uCool', 'uGreen', 'uWarmAdd', 'uFall', 'uChill', 'uCoolK', 'uFogWarm', 'uFogK', 'uEnemyGain'];
+    if (surf) keys = keys.concat(['uTexGrass', 'uTexDirt', 'uTexPlaza', 'uTexRoof', 'uTexCanopy', 'uTexWall', 'uTexScale', 'uTexScale2', 'uTexSlot', 'uTexSlot2']);
+    keys.forEach(function (k) { sh.uniforms[k] = U[k]; });
     sh.uniforms.uEnemy = { value: sprite === 'enemy' ? 1.0 : 0.0 };
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + (sprite ? 'attribute vec4 iFrame;\n' : 'attribute float aEm;\n') + 'varying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (sprite ? 'vEm = 0.0;\nvGrad = 1.0;\n' : 'vEm = aEm;\n' +
+      .replace('#include <common>', '#include <common>\n' + (sprite ? 'attribute vec4 iFrame;\n' : 'attribute float aEm;\n') + (surf ? 'attribute float aSlot;\nvarying float vSlot;\n' : '') + 'varying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uGradK;\n#ifdef USE_INSTANCING\nattribute float iFlash;\n#endif')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (surf ? 'vSlot = aSlot;\n' : '') + (sprite ? 'vEm = 0.0;\nvGrad = 1.0;\n' : 'vEm = aEm;\n' +
         // 顶点色渐变：模型底部偏暗、顶部偏亮（贴地的平地面不压暗）
         'vGrad = mix(1.0, (normal.y > 0.9 && position.y < 2.0) ? 1.0 : mix(0.74, 1.06, smoothstep(0.0, 42.0, position.y)), uGradK);\n') +
         '#ifdef USE_INSTANCING\nvFlash = iFlash;\n#else\nvFlash = 0.0;\n#endif' +
@@ -246,7 +279,7 @@
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvec4 fgW = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfgW = instanceMatrix * fgW;\n#endif\nvWp = (modelMatrix * fgW).xyz;');
     if (sprite) sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv = vec2(iFrame.x + uv.x * iFrame.z, iFrame.y + uv.y * iFrame.w);\n#endif');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uCool;\nuniform vec2 uGreen;\nuniform float uWarmAdd;\nuniform float uFall;\nuniform float uChill;\nuniform float uCoolK;\nuniform vec3 uFogWarm;\nuniform vec3 uFogK;\nuniform float uEnemy;\nuniform float uEnemyGain;\n' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\n' + (surf ? SURF_DECL + '\n' : '') + 'varying float vEm;\nvarying float vFlash;\nvarying vec3 vWp;\nvarying float vGrad;\nuniform float uTime;\nuniform float uEmBoost;\nuniform vec4 uRim;\nuniform float uNoise;\nuniform vec4 uCore;\nuniform vec3 uCoreCol;\nuniform vec4 uFogLow;\nuniform float uEmHDR;\nuniform float uFogPierce;\nuniform vec4 uBand;\nuniform vec2 uGain;\nuniform vec3 uCool;\nuniform vec2 uGreen;\nuniform float uWarmAdd;\nuniform float uFall;\nuniform float uChill;\nuniform float uCoolK;\nuniform vec3 uFogWarm;\nuniform vec3 uFogK;\nuniform float uEnemy;\nuniform float uEnemyGain;\n' + NOISE_GLSL)
       .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' +
         // 圣火暖光（仅 ART.coreLight）：指数衰减，不在半径上切一圈硬边
         '{ float cd = length(vWp.xz - uCore.xy);\n  float cm = uCore.w * exp(-1.15 * cd / max(uCore.z, 1.0));\n  reflectedLight.directDiffuse += diffuseColor.rgb * uCoreCol * cm; }\n' +
@@ -258,9 +291,11 @@
       .replace('#include <fog_fragment>', [
         '#ifdef USE_FOG',
         '  float fgF = smoothstep(fogNear, fogFar, vFogDepth);',
-        '  float fgLow = uFogLow.x * (1.0 - smoothstep(0.0, uFogLow.y, vWp.y)) * smoothstep(uFogLow.z, uFogLow.w, length(vWp.xz - uCore.xy));',
+        '  float fgLowD = length(vWp.xz - uCore.xy);',
+        '  float fgLow = uFogLow.x * (1.0 - smoothstep(0.0, max(uFogLow.y, 1.0), vWp.y)) * (1.0 - exp(-fgLowD / max(uFogLow.w, 1.0)));',
         '  float fgRd = max(uCore.z, 1.0);',
-        '  float fgOut = uCore.z < 2.0 ? uChill : smoothstep(fgRd * uFogK.x, fgRd * (uFogK.x + uFogK.y), length(vWp.xz - uCore.xy));',
+        '  float fgFogSpan = max(fgRd * (uFogK.x + uFogK.y * 0.55), 1.0);',
+        '  float fgOut = uCore.z < 2.0 ? uChill : (1.0 - exp(-fgLowD / fgFogSpan));',
         '  vec3 fgFog = mix(uFogWarm, fogColor, fgOut);',
         '  fgF = clamp(fgF * mix(0.28, 1.0, fgOut) + fgLow + fgOut * uFogK.z, 0.0, 0.9) * (1.0 - uFogPierce * clamp(vEm * 1.6, 0.0, 0.92));',
         '  gl_FragColor.rgb = mix(gl_FragColor.rgb, fgFog, fgF);',
@@ -273,16 +308,16 @@
     }
     sh.fragmentShader = sh.fragmentShader
       // 斑驳：两层世界坐标噪声，石头、木头、茅草、草地都带一点笔触感。C1 色温接在斑驳之后。
-      .replace('#include <color_fragment>', '#include <color_fragment>\nfloat fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);\ndiffuseColor.rgb = max(diffuseColor.rgb + (fgN - 0.5) * uNoise * vec3(0.55, 0.18, -0.35), vec3(0.0));\n' + C1_ALBEDO)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + (surf ? SURF_SAMPLE + '\n' : '') + 'float fgN = fgNoise(vWp.xz * 0.045 + vWp.y * 0.03) * 0.65 + fgNoise(vWp.xz * 0.19 - vWp.y * 0.11) * 0.35;\ndiffuseColor.rgb *= vGrad * (1.0 - uNoise + 2.0 * uNoise * fgN);\ndiffuseColor.rgb = max(diffuseColor.rgb + (fgN - 0.5) * uNoise * vec3(0.55, 0.18, -0.35), vec3(0.0));\n' + C1_ALBEDO)
       // 自发光进 HDR（乘 uEmHDR），只有它和法术光效能过泛光阈值
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vColor.rgb * vEm * uEmBoost * uEmHDR * mix(1.0, 0.4, smoothstep(0.02, 0.18, vColor.g - max(vColor.r, vColor.b)));' +
         (water ? '\nfloat s1 = sin(vWp.x*0.09 + uTime*1.7) * cos(vWp.z*0.07 - uTime*1.3);\ndiffuseColor.rgb *= 0.85 + 0.25*s1;\ntotalEmissiveRadiance += vec3(0.35,0.6,0.9) * smoothstep(0.82, 0.98, s1) * 0.8;' : ''));
   }
   // toon = true 用三段色阶，false 用原版的 MeshStandardMaterial（平直着色、粗糙 0.92）
-  function meshMaterial(water, toon) {
+  function meshMaterial(water, toon, surf) {
     var m = toon ? new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GL.ramp })
       : new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: water ? 0.42 : 0.74, metalness: 0 });
-    m.onBeforeCompile = function (sh) { fgInject(sh, water, false); };
+    m.onBeforeCompile = function (sh) { fgInject(sh, water, false, surf); };
     return m;
   }
   // 精灵图立牌材质：Lambert 受光（半球光 + 太阳 + 阴影 + 雾都照常作用在画好的角色上），alphaTest 抠像，写深度
@@ -327,7 +362,7 @@
     };
     return m;
   }
-  // 特效四边形：中心 + 两个半轴；kind: 0 柔光圆 1 圆环 2 实心圆（阴影/填充） 3 光条
+  // 特效四边形：中心 + 两个半轴；kind: 0 柔光圆 1 软衰减圆（不再画描边圆环） 2 实心圆（阴影/填充） 3 光条
   var FX_VS = [
     'attribute vec4 iC; attribute vec4 iU; attribute vec4 iV; attribute vec4 iCol;',
     'varying vec2 vUv; varying vec4 vCol; varying float vKind; varying float vParam;',
@@ -343,7 +378,7 @@
     'void main(){',
     '  float r = length(vUv); float a = 0.0;',
     '  if (vKind < 0.5) { a = pow(max(0.0, 1.0 - r), 1.6); }',
-    '  else if (vKind < 1.5) { float t = max(vParam, 0.02); a = smoothstep(1.0, 1.0 - 0.15*t, r) * smoothstep(1.0 - t - 0.08, 1.0 - t, r); }',
+    '  else if (vKind < 1.5) { float k = 1.6 + clamp(vParam, 0.0, 1.0); a = pow(max(0.0, 1.0 - r * r), k); }',
     '  else if (vKind < 2.5) { a = smoothstep(1.0, 0.9 - vParam*0.5, r); }',
     '  else { float y = abs(vUv.y); float x = abs(vUv.x); a = pow(max(0.0, 1.0 - y), 1.5) * smoothstep(1.0, 0.7, x); }',
     '  if (a < 0.004) discard;',
@@ -453,9 +488,20 @@
     U.uRim.value = new THREE.Vector4(0.37, 0.66, 0.78, 0.2);
     U.uCore.value = new THREE.Vector4(0, 0, 0, 0); U.uCoreCol.value = new THREE.Color(1, 0.5, 0.16);   // 圣火金偏余烬橙（线性空间）
     U.uFogLow.value = new THREE.Vector4(0, 40, 900, 1400);
-    GL.mats = { std: [meshMaterial(false, false), meshMaterial(false, true)], water: [meshMaterial(true, false), meshMaterial(true, true)] };
+    var blank = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+    blank.colorSpace = THREE.SRGBColorSpace; blank.needsUpdate = true;
+    ['uTexGrass', 'uTexDirt', 'uTexPlaza', 'uTexRoof', 'uTexCanopy', 'uTexWall'].forEach(function (k) { U[k].value = blank; });
+    syncTextureParams();
+    GL.mats = {
+      std: [meshMaterial(false, false), meshMaterial(false, true)],
+      water: [meshMaterial(true, false), meshMaterial(true, true)],
+      surf: [meshMaterial(false, false, true), meshMaterial(false, true, true)]
+    };
     GL.matStd = GL.mats.std[0];
     GL.matWater = GL.mats.water[0];
+    GL.texReady = false;
+    try { if (typeof location !== 'undefined' && /[?&]tex=0\b/.test(location.search) && RW.TEXTURES) RW.TEXTURES.enabled = false; } catch (eTex) { /* 小游戏里没有 location */ }
+    loadSurfaceTextures();
     GL.matLine = lineMaterial(U.uLineW);     // 角色、敌人、道具
     GL.matLineB = lineMaterial(U.uLineWB);   // 建筑、塔、地形上的房屋和树
     GL.fxAdd = new Batch(3000, 16);
@@ -545,6 +591,9 @@
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     geo.setAttribute('aEm', new THREE.BufferAttribute(em, 1));
     geo.setAttribute('aSmooth', new THREE.BufferAttribute(smo, 3));
+    var slotSrc = gb.slots || [], slotA = new Float32Array(n);
+    for (i = 0; i < n; i++) slotA[i] = slotSrc[i] || 0;
+    geo.setAttribute('aSlot', new THREE.BufferAttribute(slotA, 1));
     var mesh = { geo: geo, n: n, outline: true, shadow: true, count: 0 };
     if (opts.static) {
       mesh.obj = new THREE.Mesh(geo, opts.water ? GL.matWater : GL.matStd);
@@ -575,15 +624,59 @@
     return mesh;
   };
 
+  function syncTextureParams() {
+    var T = RW.TEXTURES;
+    if (!T) return;
+    var sc = T.scale || {}, sl = T.slots || {};
+    U.uTexScale.value.set(sc.grass || 320, sc.dirt || 260, sc.plaza || 280, sc.roof || 220);
+    U.uTexScale2.value.set(sc.canopy || 200, sc.wall || 220);
+    U.uTexSlot.value.set(sl.grass || 1, sl.dirt || 2, sl.plaza || 3, sl.roof || 4);
+    U.uTexSlot2.value.set(sl.canopy || 5, sl.wall || 6);
+  }
+  function prepSurfaceTexture(tex) {
+    var maxA = 1;
+    try { maxA = GL.renderer.capabilities.getMaxAnisotropy(); } catch (eA) { maxA = 1; }
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = maxA;
+    tex.needsUpdate = true;
+    return tex;
+  }
+  var TEX_UNIFORM = { grass: 'uTexGrass', dirt: 'uTexDirt', plaza: 'uTexPlaza', roof: 'uTexRoof', canopy: 'uTexCanopy', wall: 'uTexWall' };
+  function loadSurfaceTextures() {
+    var T = RW.TEXTURES;
+    if (!T || !T.files || T.enabled === false) return;
+    var names = Object.keys(TEX_UNIFORM), left = names.length, failed = false, loader = new THREE.TextureLoader();
+    names.forEach(function (name) {
+      loader.load(T.files[name], function (tex) {
+        prepSurfaceTexture(tex);
+        U[TEX_UNIFORM[name]].value = tex;
+        if (--left === 0 && !failed) { GL.texReady = true; GL.applyTextures(); }
+      }, undefined, function () {
+        failed = true; console.warn('贴图失败', T.files[name]);
+        left--;
+      });
+    });
+  }
+  GL.applyTextures = function () {
+    if (!GL.mats) return;
+    syncTextureParams();
+    var t = GL.ART && GL.ART.toon ? 1 : 0;
+    var on = !!(RW.TEXTURES && RW.TEXTURES.enabled && GL.texReady);
+    GL.matStd = on ? GL.mats.surf[t] : GL.mats.std[t];
+    GL.meshes.forEach(function (m) { m.obj.material = GL.matStd; });
+    GL.statics.forEach(function (m) { if (m.obj) m.obj.material = m.water ? GL.matWater : GL.matStd; });
+  };
   // 切换风格化光照开关：色阶要换材质，其余只改 uniform / 通道
   GL.setArt = function (flags) {
     var A = GL.ART, k;
     for (k in flags) if (k in A) A[k] = !!flags[k];
     if (!GL.renderer) return A;
-    var t = A.toon ? 1 : 0;
-    GL.matStd = GL.mats.std[t]; GL.matWater = GL.mats.water[t];
-    GL.meshes.forEach(function (m) { m.obj.material = GL.matStd; });
-    GL.statics.forEach(function (m) { m.obj.material = m.water ? GL.matWater : GL.matStd; });
+    GL.matWater = GL.mats.water[A.toon ? 1 : 0];
+    GL.applyTextures();
     GL.renderer.toneMapping = A.aces ? THREE.ACESFilmicToneMapping : THREE.NeutralToneMapping;
     U.uNoise.value = A.noise ? 0.12 : 0;
     U.uGradK.value = A.grad ? 1 : 0;
@@ -645,7 +738,7 @@
     B.n++;
   }
   GL.fxPush = fxPush;
-  // 贴地圆（kind 0 柔光 / 1 圆环 / 2 实心）
+  // 贴地圆（kind 0 柔光 / 1 软衰减，没有描边 / 2 实心）
   GL.ground = function (add, x, y, z, rad, kind, param, col, a) {
     fxPush(add ? GL.fxAdd : GL.fxAlpha, x, y, z, kind, rad, 0, 0, param || 0, 0, 0, rad, col[0], col[1], col[2], a);
   };
@@ -730,6 +823,7 @@
     if (cl) U.uCore.value.set(cl.x, cl.z, cl.r, A.coreLight ? cl.k : 0); else U.uCore.value.w = 0;
     // C1：圣火指数主光、圈外冷蓝、近暖远靛的雾。参数只写在 RW.C1_LIGHT。chill 0 白天 … 1 夜晚。
     var C1 = RW.C1_LIGHT, ck = env.chill || 0;
+    syncTextureParams();
     if (C1) {
       var al = C1.albedo, fl = C1.flame, fg = C1.fog, gr = C1.grade;
       function c1l(a) { return a[0] + (a[1] - a[0]) * ck; }

@@ -346,14 +346,7 @@
       var d = tw.d, ti = g.tech[tw.id] - 1;
       var range = (d.range || 0) * RW.TOWER_TIER.range[ti];
       if (d.kind === 'barracks') range = d.leash;
-      if (range) {
-        c.strokeStyle = d.color; c.globalAlpha = 0.14; c.lineWidth = 1;
-        if (c.setLineDash) c.setLineDash([4, 6]);
-        D.circle(tw.x, tw.y, range); c.stroke();
-        if (c.setLineDash) c.setLineDash([]);
-        c.globalAlpha = 1;
-      }
-      if (d.kind === 'pylon' && tw.pulse > 0) {
+      if (d.kind === 'pylon' && tw.pulse > 0 && range) {
         D.add(); c.fillStyle = d.color; c.globalAlpha = tw.pulse * 0.3;
         D.circle(tw.x, tw.y, range); c.fill(); D.norm();
       }
@@ -407,10 +400,6 @@
     D.circle(co.x, co.y, co.r + 18); c.fill();
     if (co.alert > 0) { c.fillStyle = 'rgba(255,50,80,' + (0.12 * (0.5 + 0.5 * Math.sin(t * 14))).toFixed(3) + ')'; D.circle(co.x, co.y, co.r + 26); c.fill(); }
     D.norm();
-    c.strokeStyle = 'rgba(94,242,255,0.18)'; c.lineWidth = 1;
-    if (c.setLineDash) c.setLineDash([3, 6]);
-    D.circle(co.x, co.y, T.core.gunRange); c.stroke();
-    if (c.setLineDash) c.setLineDash([]);
     c.fillStyle = '#0b1a2c'; c.strokeStyle = hurt ? '#ffffff' : '#9fe8ff'; c.lineWidth = 3;
     c.beginPath();
     for (var i = 0; i < 6; i++) { var a = i * TAU / 6; var x = co.x + Math.cos(a) * co.r, y = co.y + Math.sin(a) * co.r; if (i) c.lineTo(x, y); else c.moveTo(x, y); }

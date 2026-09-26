@@ -384,7 +384,7 @@
   // 混合光照（白天暖日照 / 夜里圣火暖核淡出到靛蓝）。冷暖只调这一处，着色器在 js/gl3d.js。不改玩法、镜头、视野。
   // 白天：太阳是主光，草保持饱和的绿；圣火只是一团软暖光，不把村子染成黄昏。
   // 夜里：圣火指数衰减，没有半径上的硬边；圈外收到蓝紫，暗部抬起来，村屋还看得见。
-  // band：inner/outer 是圣域半径的倍数，smoothstep 拉得很宽。coolMix / outSat / outGain 写成 [白天, 夜晚]，随 chill 混合。
+  // band：inner/outer 是圣域半径的倍数，着色器按指数混合，不在半径上切一圈。coolMix / outSat / outGain 写成 [白天, 夜晚]，随 chill 混合。
   // greenKill 压得很低，避免把日照下的草地收到褐灰。paint：世界坐标值噪声的笔触强度（程序纹理，无图片）。
   // veil：旧的圣域黑盘，关掉。ring：圣域金圈透明度，0 = 不画描边圆环。
   RW.C1_LIGHT = {
@@ -405,6 +405,21 @@
     ring: 0
   };
   RW.SANCTUARY.dim = RW.C1_LIGHT.veil;
+  // 手绘无缝地表。scale = 世界单位 / 一格（玩法镜头下大约铺几格，不要碎也不要糊）。
+  // slot 0 仍是顶点色。?tex=0 关掉。
+  RW.TEXTURES = {
+    enabled: true,
+    scale: { grass: 320, dirt: 260, plaza: 280, roof: 220, canopy: 200, wall: 220 },
+    slots: { grass: 1, dirt: 2, plaza: 3, roof: 4, canopy: 5, wall: 6 },
+    files: {
+      grass: 'assets/textures/soft/soft_grass_1024.jpg',
+      dirt: 'assets/textures/soft/soft_dirt_1024.jpg',
+      plaza: 'assets/textures/soft/soft_plaza_1024.jpg',
+      roof: 'assets/textures/soft/soft_roof_1024.jpg',
+      canopy: 'assets/textures/soft/soft_canopy_1024.jpg',
+      wall: 'assets/textures/soft/soft_wall_1024.jpg'
+    }
+  };
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
   RW.FRONTS = [null];
 

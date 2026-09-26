@@ -61,6 +61,10 @@
       {
         "type": "folder",
         "value": "node_modules"
+      },
+      {
+        "type": "folder",
+        "value": "assets/textures/soft/_src"
       }
     ]
   },
