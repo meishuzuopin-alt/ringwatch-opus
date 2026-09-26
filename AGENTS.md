@@ -58,7 +58,8 @@
 
 1. **模型、音乐、音效全部由代码生成**：不引入图片、模型文件、音频文件。第三方库只有 Three.js 与 Electron；新增库或素材需先征得项目负责人同意，并在 `docs/ART.md` 记录。
    **例外一（负责人 2026-09-25 批准，FG-ART-002 A+ 路线）**：一款 SIL OFL 1.1 授权的中文字体（Noto Serif SC / Noto Sans SC，即思源宋体 / 思源黑体），只以子集形式放在 `fonts/`，许可证 `fonts/OFL.txt` 同目录。改了文案后跑 `npm run fonts` 重新子集化，`npm run check` 会拦下缺字。`docs/` 里的概念图、参考图只是文档，不进安装包（打包白名单不含 `docs/`，check 会拦）。
- **例外二（负责人 2026-09-26 批准）**：项目自己用 AI 生成的角色精灵图集，放在 `assets/sprites/<名>/<名>.png` + 同名 json，必须在 `docs/ART.md`「AI 素材」登记来源与提示词，并与 `js/sprites.js` 的 `SPR.META` 一致（check 会核对）。其他图片仍不许进包。
+ **例外二（负责人 2026-09-26 批准）**：项目自己用 AI 生成的角色精灵图集，放在 `assets/sprites/<名>/<名>.png` + 同名 json，必须在 `docs/ART.md`「AI 素材」登记来源与提示词，并与 `js/sprites.js` 的 `SPR.META` 一致（check 会核对）。
+ **例外三（负责人 2026-09-26 批准）**：六张 AI 生成的柔光无缝地表贴图，`assets/textures/soft/soft_{grass,dirt,plaza,roof,canopy,wall}_1024.jpg`。必须在 `docs/ART.md` 登记来源与提示词。`assets/textures/soft/_src/` 只是审阅拼图，不进安装包（`package.json` 的 `build.files` 只收那六张 jpg，`project.config.json` 忽略 `_src`）。其他图片仍不许进包。
 2. **Three.js 只通过 `node tools/vendor-three.js` 重新打包**（版本锁在 `package.json`），不要手改 `vendor/three.min.js`。
 3. **新增 `js/` 文件**时，`preview.html` 和 `game.js` 两处都要加，顺序一致（check 会拦）。
 4. **`sim.js` 不许碰画面 API**，否则无头数值测试跑不了。

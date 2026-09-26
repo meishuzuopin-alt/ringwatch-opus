@@ -54,6 +54,13 @@
     for (k in B) PAL[k] = typeof B[k] === 'string' ? hex(B[k]) : B[k];
     applyPainterlyPalette(B);
   }
+  // 给接下来画的面记一张贴图（RW.TEXTURES.slots）。0 仍然只用顶点色。几何本身不变。
+  function withTex(gb, name, fn) {
+    var T = RW.TEXTURES, prev = gb.tex || 0;
+    gb.tex = (T && T.slots && T.slots[name]) || 0;
+    fn();
+    gb.tex = prev;
+  }
 
   // ================= 地形 =================
   function buildTerrain() {
@@ -85,26 +92,28 @@
         }
         continue;
       }
-      // 地面格子
-      var top;
-      if (k === ',' || k === 'S') top = h < 0.5 ? PAL.dirt : PAL.dirt2;
-      else if (k === '_' || k === 'C') top = h < 0.5 ? PAL.stone : PAL.stone2;
+      // 地面格子。草 = 空地，土 = 路，石板 = 中央祭坛广场
+      var top, surf = '';
+      if (k === ',' || k === 'S') { top = h < 0.5 ? PAL.dirt : PAL.dirt2; surf = 'dirt'; }
+      else if (k === '_' || k === 'C') { top = h < 0.5 ? PAL.stone : PAL.stone2; surf = 'plaza'; }
       else if (k === '#' || k === '^') top = PAL.moss;
-      else top = h < 0.33 ? PAL.grass : (h < 0.66 ? PAL.grass2 : PAL.grassDark);
+      else { top = h < 0.33 ? PAL.grass : (h < 0.66 ? PAL.grass2 : PAL.grassDark); surf = 'grass'; }
       var gy = 0;
       if (k === '#' || k === '^') {
         // 岩壁：一到两层石块，顶上长草
         var ht = k === '^' ? 70 + h * 50 : 34 + h * 22;
         gb.box(cx, 0, cz, C, ht, C, shade(PAL.rock, 0.9 + h * 0.2), 0, shade(PAL.moss, 0.9 + h * 0.2), true);
         if (h > 0.55) gb.box(cx + (h - 0.5) * 12, ht, cz - (h - 0.5) * 10, C * 0.55, 8 + h * 10, C * 0.5, PAL.rock2, 0, PAL.moss, true);
-        if (h < 0.3 && k === '#') gb.blob(cx + 8, ht + 6, cz + 6, 10, 9, 10, PAL.leaf2, 0, c * 31 + r, 0.25);
+        if (h < 0.3 && k === '#') withTex(gb, 'canopy', function () { gb.blob(cx + 8, ht + 6, cz + 6, 10, 9, 10, PAL.leaf2, 0, c * 31 + r, 0.25); });
         continue;
       }
-      gb.quad([x0, gy, z1], [x1, gy, z1], [x1, gy, z0], [x0, gy, z0], top);
-      if (k === '_' || k === 'C') {
-        // 石板：内缩一圈的浅色板
-        gb.quad([x0 + 3, 0.6, z1 - 3], [x1 - 3, 0.6, z1 - 3], [x1 - 3, 0.6, z0 + 3], [x0 + 3, 0.6, z0 + 3], shade(top, 1.06));
-      }
+      withTex(gb, surf, function () {
+        gb.quad([x0, gy, z1], [x1, gy, z1], [x1, gy, z0], [x0, gy, z0], top);
+        if (k === '_' || k === 'C') {
+          // 石板：内缩一圈的浅色板
+          gb.quad([x0 + 3, 0.6, z1 - 3], [x1 - 3, 0.6, z1 - 3], [x1 - 3, 0.6, z0 + 3], [x0 + 3, 0.6, z0 + 3], shade(top, 1.06));
+        }
+      });
       // 靠河的一侧：竖直岸壁 + 木栅栏
       var nb = [[0, 1], [0, -1], [1, 0], [-1, 0]];
       for (var q = 0; q < 4; q++) {
@@ -186,7 +195,7 @@
     gb.cyl(x, 0, z, 3.6 * s, 2.4 * s, 20 * s, 6, PAL.trunk);
     for (var i = 0; i < 3; i++) {
       var y = (16 + i * 17) * s, r = (22 - i * 6) * s;
-      gb.cyl(x, y, z, r, 0.8, 24 * s, 7, shade(lc, 0.95 + R() * 0.1));
+      withTex(gb, 'canopy', function () { gb.cyl(x, y, z, r, 0.8, 24 * s, 7, shade(lc, 0.95 + R() * 0.1)); });
       gb.cyl(x, y + 12 * s, z, r * 0.52, 0.6, 12 * s, 7, snowC);
     }
   }
@@ -196,9 +205,11 @@
     var trunk = 52 * s;
     gb.cyl(x, 0, z, 4.4 * s, 2.6 * s, trunk, 6, PAL.trunk);
     var lc = [PAL.leaf, PAL.leaf2, PAL.leaf3][seed % 3];
-    gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
-    gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
-    if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    withTex(gb, 'canopy', function () {
+      gb.blob(x, trunk * 0.95, z, 22 * s, 18 * s, 22 * s, lc, 0, seed, 0.22);
+      gb.blob(x + (R() - 0.5) * 8 * s, trunk * 1.22, z + (R() - 0.5) * 8 * s, 15 * s, 13 * s, 15 * s, shade(lc, 1.1), 0, seed + 5, 0.22);
+      if (R() < 0.45) gb.blob(x + 7 * s, trunk * 0.72, z + 5 * s, 11 * s, 10 * s, 11 * s, shade(lc, 0.9), 0, seed + 9, 0.25);
+    });
   }
   function tufts(gb, x, z, c, r) {
     var R = rnd(c * 977 + r * 131 + 5);
@@ -209,7 +220,7 @@
       gb.tri(a, b, t, col); gb.tri(b, a, t, col);
     }
   }
-  function bush(gb, x, z, seed) { gb.blob(x, 9, z, 16, 14, 16, PAL.leaf2, 0, seed, 0.3); }
+  function bush(gb, x, z, seed) { withTex(gb, 'canopy', function () { gb.blob(x, 9, z, 16, 14, 16, PAL.leaf2, 0, seed, 0.3); }); }
   function flowers(gb, x, z, c, r) {
     var R = rnd(c * 131 + r * 7);
     for (var i = 0; i < 4; i++) {
@@ -261,10 +272,10 @@
     var roofH = Math.max(28, Math.min(50, span * 0.4));
     var doorH = 36;
     gb.box(cx, 0, cz, w - 8, 4, d - 6, PAL.stone2);
-    gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall);
+    withTex(gb, 'wall', function () { gb.box(cx, 4, cz, w - 12, wallH, d - 12, wall); });
     gb.box(x0 + 7, 4, cz, 3, wallH, d - 10, PAL.wood); gb.box(x0 + w - 7, 4, cz, 3, wallH, d - 10, PAL.wood);
     gb.box(cx, wallH, cz, w - 10, 4, d - 10, PAL.wood);
-    gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof);
+    withTex(gb, 'roof', function () { gb.roof(cx, wallH + 4, cz, w - 2, roofH, d + 2, roof); });
     gb.box(cx - w * 0.2, wallH + roofH * 0.45, cz - 4, 7, 20, 7, PAL.rockDark);
     gb.box(cx, 4, z0 + d - 5.5, 12, doorH, 1.4, PAL.wood);
     var winY = 4 + doorH * 0.45;
@@ -448,9 +459,9 @@
     // ---- 建筑 / 士兵 / 圣火 / 金币 ----
     M.sentry = model(function (g) {
       g.box(0, 0, 0, 22, 26, 22, PAL.rock2, 0, PAL.stone);
-      g.box(0, 26, 0, 16, 62, 16, PAL.wallWood);
+      withTex(g, 'wall', function () { g.box(0, 26, 0, 16, 62, 16, PAL.wallWood); });
       g.box(0, 58, 8.2, 7, 8, 0.8, hex('#1a120c'));
-      g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed);
+      withTex(g, 'roof', function () { g.cyl(0, 88, 0, 16, 0, 26, 4, PAL.roofRed); });
       g.box(0, 40, 8.4, 8, 28, 0.8, PAL.banner); g.box(0, 52, 8.9, 4, 6, 0.4, PAL.gold, 0.6);
     });
     M.pylon = model(function (g) {
@@ -467,8 +478,8 @@
     });
     M.barracks = model(function (g) {
       g.box(0, 0, 0, 32, 4, 28, PAL.stone2);
-      g.box(0, 4, 0, 28, 48, 24, PAL.wallWood);
-      g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed);
+      withTex(g, 'wall', function () { g.box(0, 4, 0, 28, 48, 24, PAL.wallWood); });
+      withTex(g, 'roof', function () { g.roof(0, 52, 0, 34, 28, 30, PAL.roofRed); });
       g.box(0, 4, 12.2, 10, 28, 0.8, hex('#1a120c'));
       banner(g, -15, 13, 72);
     });
@@ -607,6 +618,7 @@
       if (typeof location !== 'undefined') {
         if (/[?&]lowfx\b/.test(location.search)) GL.fx.shadow = GL.fx.outline = GL.fx.bloom = GL.fx.ao = false;
         if (/[?&]hifx\b/.test(location.search)) perf.locked = W3.hifx = true;
+        if (/[?&]tex=0\b/.test(location.search) && RW.TEXTURES) RW.TEXTURES.enabled = false;
         var am = /[?&]art=([\w,]+)/.exec(location.search);   // 风格化光照开关：?art=all 或 ?art=toon,ao
         if (am) { var af = {}; am[1].split(',').forEach(function (k) { if (k === 'all') { for (var q in GL.ART) af[q] = true; } else af[k] = true; }); GL.setArt(af); }
       }

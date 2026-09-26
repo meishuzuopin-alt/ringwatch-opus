@@ -416,6 +416,24 @@
     frame: { aspect: [1.12, 0.86], inner: 0.52, outer: 1.12, strength: 0.70, color: [0.36, 0.42, 0.32], foliage: 0.55 },
     motes: { count: 16, radius: 340, height: 16, bob: 0.4, bobAmp: 7, speed: 0.06, twinkle: 0.55, size: 7.5, alpha: 0.22, color: '#d5e7a4' }
   };
+  // 柔光地表贴图。全部开关和尺寸只写在这里；enabled 关掉就回到现在的顶点色，几何不改。
+  // scale = 一格贴图的世界尺寸（越大越疏）。游玩镜头约 860 远、30° 视野、地面大约 0.85 世界单位一像素：
+  // 320 横跨画面两次出头，1024 的笔触还在，不会缩成噪点，也不会拉糊。
+  // 采样：RepeatWrapping、sRGB、mipmap、显卡最大各向异性。槽位写进顶点，0 = 仍用顶点色。
+  // 冷暖不在这里：贴上之后仍走 C1 和 RW.PAINTERLY，圈内暖、圈外冷靛蓝。
+  RW.TEXTURES = {
+    enabled: true,
+    scale: { grass: 320, dirt: 260, plaza: 280, roof: 220, canopy: 200, wall: 220 },
+    slots: { grass: 1, dirt: 2, plaza: 3, roof: 4, canopy: 5, wall: 6 },
+    files: {
+      grass: 'assets/textures/soft/soft_grass_1024.jpg',
+      dirt: 'assets/textures/soft/soft_dirt_1024.jpg',
+      plaza: 'assets/textures/soft/soft_plaza_1024.jpg',
+      roof: 'assets/textures/soft/soft_roof_1024.jpg',
+      canopy: 'assets/textures/soft/soft_canopy_1024.jpg',
+      wall: 'assets/textures/soft/soft_wall_1024.jpg'
+    }
+  };
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
   RW.FRONTS = [null];
 

@@ -57,6 +57,7 @@
       "vendor/**",
       "fonts/**",
       "assets/sprites/**",
+      "assets/textures/soft/*.jpg",
       "package.json"
     ],
     "asar": true,

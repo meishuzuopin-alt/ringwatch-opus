@@ -34,6 +34,7 @@
 | 想改什么 | 位置 |
 |---|---|
 | 地形、植被、房屋、水、灯笼等场景颜色 | `js/world3d.js` 顶部 `PAL`；手绘柔光试验开着时由 `RW.PAINTERLY.palette` 覆盖 |
+| 地表贴图开关、每格世界尺寸 | `js/data.js` 的 `RW.TEXTURES`。`enabled: false` 回到顶点色 |
 | 白天 / 黄昏 / 夜晚 / Boss 的光照、天空、雾、自发光强度 | `js/world3d.js` 「昼夜」一节的 `envPreset` |
 | 角色、敌人、建筑的低模造型 | `js/world3d.js` 「模型」一节的 `buildModels` |
 | 职业形态、武器颜色 | `js/data.js`（各条目的 `color`） |
@@ -66,6 +67,35 @@
 - 光柱和滤镜是按这个试验写的，没有从外部仓库抄着色器，所以没有额外的许可证声明。
 
 截图：`docs/art-upgrade/scene-painterly/day_after.png`、`night_after.png`（960×540，机位与 `scene-c1-light` 相同）。
+
+### AI 素材：六张柔光无缝贴图（2026-09-26，负责人批准，`grok/scene-textures`）
+
+几何仍全部由代码生成，只在指定表面上叠一张平铺贴图。六张都是 1024×1024 JPEG，运行时用 `assets/textures/soft/*.jpg`；`assets/textures/soft/_src/` 是审阅拼图，不进游戏。
+
+来源（六张相同）：ChatGPT image generation (AI-assisted, original, prompted by team), 2026-09-26。
+
+提示词都是「soft hand-painted seamless top-down texture, base color <hex>」，底色如下。
+
+| 文件 | 用在 | 底色 |
+|---|---|---|
+| `assets/textures/soft/soft_grass_1024.jpg` | 空地（草地） | `#8b9874` |
+| `assets/textures/soft/soft_dirt_1024.jpg` | 土路 | `#c4a194` |
+| `assets/textures/soft/soft_plaza_1024.jpg` | 中央祭坛广场（石板） | `#b7a89e` |
+| `assets/textures/soft/soft_roof_1024.jpg` | 屋顶（含箭塔锥顶、兵营） | `#a86a58`（压暗） |
+| `assets/textures/soft/soft_canopy_1024.jpg` | 树冠 | `#6d8658` |
+| `assets/textures/soft/soft_wall_1024.jpg` | 墙（房屋、箭塔塔身、兵营） | `#e3d4c2` |
+
+| 项 | 做法 |
+|---|---|
+| 开关 | 全部参数在 `RW.TEXTURES`（`js/data.js`）。`enabled: false` 换回原来的顶点色材质，画面与贴图接入前一致。地址加 `?tex=0` 同样关掉 |
+| 平铺 | `RepeatWrapping`，世界坐标三向投影。`scale` 是一格贴图的世界尺寸（草 320、土 260、广场 280、屋顶 220、树冠 200、墙 220）。游玩镜头下大约横跨画面两三次，笔触还在，不会缩成噪点 |
+| 采样 | `SRGBColorSpace`，mipmap（`LinearMipmapLinearFilter`），各向异性取显卡上限 |
+| 冷暖 | 贴图只替换固有色，之后仍走 C1 和 `RW.PAINTERLY`：圣火圈内暖，圈外冷靛蓝、偏暗 |
+| 不上贴图的 | 水、岩壁、树干、木梁、门窗、角色、敌人、特效。槽位 0 继续用顶点色 |
+
+上架 Steam 时必须做 **AI 内容披露**（Steamworks 内容问卷里的 AI Content Disclosure）。这六张和上面的五套精灵图都要算进去，见 `docs/STEAM.md`。
+
+截图：`docs/art-upgrade/scene-textures/day_before.png`、`day_after.png`、`night_before.png`、`night_after.png`（960×540，机位与 `scene-painterly` 相同；before 是 `RW.TEXTURES.enabled = false`）。
 
 ### AI 素材：五套手绘精灵图（2026-09-25/26，负责人批准，`grok/sprite-integration`）
 
@@ -176,5 +206,5 @@
 
 ## 红线
 
-- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体和「AI 素材」一节登记过的精灵图集（见 `AGENTS.md` 硬规则 1 的例外；`tools/check.js` 会拦下没登记的）。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
+- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体，以及「AI 素材」里登记过的精灵图集和六张柔光地表贴图（见 `AGENTS.md` 硬规则 1 的例外；`tools/check.js` 会拦下没登记的）。审阅拼图 `assets/textures/soft/_src/` 只留在仓库里，不进安装包。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
 - 不做影响读图的全屏效果（大面积暗角、强烈镜头光晕、全屏抖动）。
