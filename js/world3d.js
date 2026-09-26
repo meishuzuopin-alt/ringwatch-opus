@@ -550,6 +550,7 @@
       rim: e.rim.slice(), fogLow: e.fogLow.slice(), vig: e.vig, amb: e.amb, chill: e.chill || 0 };
   }
   W3.envFor = function (g) {
+    if (g.nightOn) return 'night';
     if (g.mode === 'title' || g.mode === 'pick') return 'dusk';
     if (g.wave > 0 && g.wave % RW.BOSS_WAVES.every === 0 && g.mode !== 'shop') return 'boss';
     if (g.mut && g.mut.night) return 'night';   // 变异器「夜行」
@@ -724,7 +725,7 @@
     GL.frame(env, { cx: cx, cz: cz, r: r });
   };
 
-  function flashOf(e) { return e.flash > 0 ? 0.85 : 0; }
+  function flashOf(e) { return e.flash >= 1 ? 1 : (e.flash > 0 ? 0.85 : 0); }
   function tintOf(e) {
     if (e.shieldT > 0) return [0.75, 0.85, 1.2];
     if (e.slowT > 0) return [0.8, 0.95, 1.25];
@@ -1259,6 +1260,13 @@
           break;
         case 'slash':
           GL.glow(f.x, 10, f.y, 8, fc, 1 - k);
+          break;
+        case 'nightArc':
+          var a0 = f.r - f.w / 2, a1 = f.r + f.w / 2, steps = 8, s;
+          for (s = 0; s < steps; s++) {
+            var u0 = a0 + (a1 - a0) * s / steps, u1 = a0 + (a1 - a0) * (s + 1) / steps, rad = Math.max(8, f.r2 * 0.72);
+            GL.streak(true, f.x + Math.cos(u0) * rad, 8, f.y + Math.sin(u0) * rad, f.x + Math.cos(u1) * rad, f.y + Math.sin(u1) * rad, 6, fc, 1 - k);
+          }
           break;
       }
     }

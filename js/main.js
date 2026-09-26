@@ -56,6 +56,11 @@
     musicOff = !!save.musicOff; S.setMusicOff(musicOff); UI.musicOff = musicOff;
     UI.runInfo = runInfoOf(P.load(RUN_KEY, null));
     RW.game = g;
+    if (RW.QA) {
+      var search = (typeof location !== 'undefined' && location.search) ? location.search : '';
+      RW.QA.boot(search);
+      if (RW.QA.wantNight) g.startNight({ seed: RW.QA.seed, bench: RW.QA.bench, god: RW.QA.bench });
+    }
     P.onPointer(onPointer);
     P.onKey = onKey;
     P.onHide(function () { if (inBattle()) { paused = true; resetStick(); } });
@@ -67,6 +72,7 @@
 
   // ---------- 战斗按钮：按下即生效（战斗里要快） ----------
   function battleButton(id) {
+    if (g.nightOn && (id === 'build' || id.indexOf('bt:') === 0 || id.indexOf('skill') === 0 || id.indexOf('cmd:') === 0)) return;
     if (id === 'pause') { paused = true; resetStick(); buildMenu = false; S.play({ type: 'ui' }); return; }
     if (id === 'dash') { inputBuf.dash = true; return; }
     if (id.indexOf('skill') === 0) {
@@ -162,7 +168,7 @@
       return;
     }
     if (inBattle() && !paused) {
-      if (/^Digit[1-4]$/.test(code)) { battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
+      if (/^Digit[1-4]$/.test(code)) { if (!g.nightOn) battleButton('bt:' + RW.TOWER_ORDER[+code.slice(5) - 1]); return; }
       if (ka === 'dash' || ka === 'build' || (ka && ka.indexOf('cmd:') === 0)) { battleButton(ka); return; }
       if (ka && ka.indexOf('skill') === 0) { battleButton('skill:' + ka.slice(5)); return; }
     }
@@ -296,6 +302,10 @@
     S.play({ type: 'ui' });
     switch (cmd) {
       case 'start': case 'again': g.rollStartOffers(); RW.loadMap(UI.runMap); break;
+      case 'night':
+        paused = false; resetStick(); buildMenu = false;
+        g.startNight({ seed: RW.QA && RW.QA.seed != null ? RW.QA.seed : undefined });
+        break;
       case 'map':
         if (!RW.mapOpen(arg, g.prog)) break;
         UI.runMap = arg; RW.loadMap(arg); persist();
@@ -311,7 +321,9 @@
       case 'howtoClose': showHow = false; break;
       case 'mute': muted = !muted; S.setMuted(muted); persist(); break;
       case 'music': musicOff = !musicOff; UI.musicOff = musicOff; S.setMusicOff(musicOff); persist(); break;
-      case 'back': case 'home': g.mode = 'title'; break;
+      case 'back': case 'home':
+        if (g.nightOn) { g.nightOn = false; RW.loadMap(UI.runMap || 'village'); }
+        g.mode = 'title'; break;
       case 'hero': UI.heroSel = arg; break;
       case 'pick':
         if (!RW.isUnlocked(arg, g.prog)) { UI.toast('还没解锁：' + RW.CLASSES[arg].unlock.text); S.play({ type: 'deny' }); break; }
@@ -325,6 +337,13 @@
         break;
       case 'retry':   // 结算页 / 暂停页：同设置立刻再来
         var last = g.result || {}, hero = last.hero || g.clsId, dly = last.daily || g.daily || '';
+        if (last.night) {
+          if (g.nightLock > 0) break;
+          if (RW.QA) RW.QA.hit(g, 'restartClick');
+          paused = false; resetStick();
+          g.startNight({ seed: RW.QA && RW.QA.seed != null ? RW.QA.seed : undefined });
+          break;
+        }
         if (g.mode !== 'result') { paused = false; g.finishRun(); }
         startWith(hero, dly);
         break;
@@ -431,6 +450,7 @@
     var now = P.now(), dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     UI.frame(dt);
+    if (RW.QA) RW.QA.frame(dt, g.enemyCount);
     if (buildMenu && !paused) { buildMenuT -= dt; if (buildMenuT <= 0) buildMenu = false; }
     pollPad(dt);
     if (!paused && !showHow && !overlay) {

@@ -107,6 +107,7 @@
       UI.button('start', mx, y + 58, mw, 38, '新的守护', { size: 13, sub: '将放弃上局' });
       y += 102;
     } else { UI.button('start', mx, y, mw, 56, '开始守护', { style: 'primary', size: 21 }); y += 62; }
+    UI.button('night', W - 250, 220, 200, 52, '守桥一夜', { style: 'primary', size: 18, sub: '北桥 · 三分' });
     var dk = UI.dayKey(), ds = RW.dailySetup(dk), db = pr.daily && pr.daily[dk];
     UI.button('daily', mx, y, mw, 42, '每日挑战', { size: 14, style: 'ad', sub: RW.CLASSES[ds.hero].name + (db ? ' · 今日 ' + db + ' 分' : ' · 今日未挑战') });
     UI.button('records', mx, y + 48, mw, 42, '火光纪录', { size: 14, sub: RW.countKeys(pr.ach) + ' / ' + RW.ACHIEVEMENTS.length + ' 个成就' });
@@ -770,7 +771,32 @@
   };
 
   // ================= 结算 =================
+  UI.nightResult = function (g) {
+    var r = g.result, i;
+    D.drawBg(true);
+    UI.dim(0.62);
+    D.glowText(r.won ? '守住' : '熄灭', W / 2, 72, 40, r.won ? C.gold : '#ff6b81', 'center', 16);
+    var rows = [
+      ['结果', r.won ? '守住' : '熄灭'],
+      ['用时', Math.max(0, Math.round(r.time)) + ' 秒'],
+      ['击杀数', String(r.kills)],
+      ['最高连击', String(r.bestCombo || 0)],
+      ['超载次数', String(r.overloads || 0)],
+      ['圣火剩余', (r.flame || 0) + ' / ' + (r.flameMax || 0)],
+      ['星级', String(r.stars || 0)]
+    ];
+    UI.panel(W / 2 - 200, 100, 400, 268);
+    for (i = 0; i < rows.length; i++) {
+      var yy = 128 + i * 34;
+      D.text(rows[i][0], W / 2 - 176, yy, 15, C.dim, 'left', true);
+      D.text(rows[i][1], W / 2 + 176, yy, 16, i === 0 ? (r.won ? C.gold : '#ff6b81') : C.text, 'right', true);
+    }
+    var lock = g.nightLock > 0;
+    UI.button('retry', W / 2 - 200, 388, 400, 52, '再来一夜', { style: 'primary', size: 18, disabled: lock, why: lock ? '请稍等' : '' });
+    UI.button('home', W / 2 - 200, 450, 400, 40, '返回标题', { size: 14 });
+  };
   UI.result = function (g) {
+    if (g.result && g.result.night) { UI.nightResult(g); return; }
     var r = g.result, c = D.ctx, i;
     D.drawBg(true);
     UI.dim(0.6);
