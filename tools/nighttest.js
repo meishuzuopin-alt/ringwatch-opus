@@ -116,6 +116,31 @@ for (var n = 0; n < runs; n++) {
 }
 var hold = wins / runs;
 var w = wilson(wins, runs);
+// 无头画一帧夜战 HUD。真机上 D.tutorialScroll 在 g.wt 为空时会抛，rAF 就此停掉。
+function assertNightHud() {
+  require('../js/render.js');
+  require('../js/ui.js');
+  var ctx = new Proxy({}, {
+    get: function (_t, p) {
+      if (p === 'measureText') return function () { return { width: 8 }; };
+      if (p === 'createLinearGradient' || p === 'createRadialGradient') return function () { return { addColorStop: function () {} }; };
+      if (p === 'canvas') return { width: 960, height: 540 };
+      if (typeof p === 'symbol') return undefined;
+      return function () { return ctx; };
+    },
+    set: function () { return true; }
+  });
+  RW.Draw.ctx = ctx;
+  var g = new RW.Game({ seed: 1 });
+  g.startNight({ seed: 1 });
+  g.update({ mx: 0, my: 0 });
+  if (g.wt != null) throw new Error('night set g.wt');
+  RW.UI.btns = [];
+  RW.Draw.hud(g, RW.UI, false);
+  RW.Draw.tutorialScroll(g);
+}
+try { assertNightHud(); }
+catch (err) { console.error('night hud frame threw: ' + (err && err.stack || err)); process.exit(1); }
 var line = 'policy=' + policy + ' runs=' + runs + ' hold=' + (hold * 100).toFixed(1) + '% wilson=[' + (w[0] * 100).toFixed(1) + ',' + (w[1] * 100).toFixed(1) + '] overloads/night=' + (ovSum / runs).toFixed(2) + ' withOverload=' + (ovNights / runs * 100).toFixed(0) + '% meanT=' + (tSum / runs).toFixed(1) + ' won=' + wins + (bad ? ' unfinished=' + bad : '');
 console.log(line);
 if (policy === 'god' && (wins !== runs || bad || tSum / runs < RW.NIGHT.duration - 1)) {

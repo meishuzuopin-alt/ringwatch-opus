@@ -757,7 +757,8 @@
     UI.panel(cx - 220, 100, 440, 340, C.red);
     D.glowText('圣火熄灭', cx, 146, 34, C.red, 'center', 14);
     D.text(g.revivesLeft > 0 ? '余烬还暖，仍可再点一次。' : '余烬已冷', cx, 180, 13, C.text, 'center');
-    D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', cx, 198, 10, C.dim, 'center');
+    var waveLeft = g.wt == null ? null : Math.max(0, Math.ceil(g.dur - g.wt));
+    D.text('第 ' + g.wave + ' 波 · 还剩 ' + (waveLeft == null ? '—' : waveLeft) + ' 秒', cx, 198, 10, C.dim, 'center');
     var h = g.lastHits[g.lastHits.length - 1];
     if (h) D.text('最后一击：' + h.src, cx, 214, 12, '#ffb3c1', 'center', true);
     var left = g.revivesLeft, all = RW.REKINDLE.times;

@@ -1367,7 +1367,8 @@
       x += 38;
     }
     // ---- 常驻层 · 右上：波次 / 倒计时 / 金币 ----
-    var left = Math.max(0, Math.ceil(g.dur - g.wt)), duel = g.final && !g.won && left <= 0, urgent = g.mode === 'battle' && left <= 10 && !duel;
+    // 夜战不走波次计时（没有 g.wt）。倒计时用 nightT，这里给一个不触发「再守 N 秒」的占位。
+    var left = (g.nightOn || g.wt == null) ? 999 : Math.max(0, Math.ceil(g.dur - g.wt)), duel = g.final && !g.won && left <= 0, urgent = g.mode === 'battle' && left <= 10 && !duel;
     var px = W - 242;
     D.hudPanel(px, 10, 188, 66);
     if (g.nightOn) {
@@ -1453,7 +1454,8 @@
   };
   // 右侧教程卷轴：第一波，按时间依次讲四件事（不进画面中央）
   D.tutorialScroll = function (g) {
-    if (g.wave !== 1 || g.mode !== 'battle' || g.wt > 30) return;
+    // 夜战 wave 仍是 1，但没有波次计时 g.wt。不拦的话 floor(undefined/6) 是 NaN，steps[NaN] 读 [0] 会把整帧画崩。
+    if (g.nightOn || g.wt == null || g.wave !== 1 || g.mode !== 'battle' || g.wt > 30) return;
     var K = RW.keyLabel, steps = [
       ['自动迎敌', '武器会攻击近处的敌人。'],
       ['闪身避险', '按 ' + K('dash') + ' 冲刺，可短暂避开伤害。'],
