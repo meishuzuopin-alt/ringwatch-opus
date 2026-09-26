@@ -754,6 +754,54 @@
     };
   };
 
+  // ================= 夜战三选一（本局暂停） =================
+  UI.nightPick = function (g) {
+    var offers = g.nightOffers || [], n = offers.length, cw = 280, gap = 16;
+    var total = n * cw + Math.max(0, n - 1) * gap, x0 = (W - total) / 2, i;
+    UI.dim(0.58);
+    D.glowText('择火', W / 2, 40, 30, C.gold, 'center', 14);
+    D.text('三选一 · 本局一直有效', W / 2, 68, 13, C.dim, 'center');
+    for (i = 0; i < n; i++) UI.button('npick:' + i, x0 + i * (cw + gap), 88, cw, 292, '', { draw: UI.nightCard(offers[i], i) });
+    var free = g.nightFreeLeft > 0;
+    var adOk = g.nightAdReady && g.nightAdReady();
+    var adSub = adOk ? '看完才重抽' : ((RW.Plat && RW.Plat.adProvider === 'crazygames' && RW.AdsCrazy && RW.AdsCrazy.allow && !RW.AdsCrazy.allow('reroll')) ? '本局已用' : '没有广告');
+    UI.button('nfree', W / 2 - 214, 396, 200, 48, '免费重抽', { size: 16, disabled: !free, why: '本局免费重抽已用完', sub: free ? '本局 1 次' : '已经用过' });
+    UI.button('nad', W / 2 + 14, 396, 200, 48, '看广告重抽', { style: 'ad', size: 16, disabled: !adOk, why: g.nightAdWhy ? g.nightAdWhy() : '此版本不播放广告', sub: adSub });
+    var owned = UI.nightOwned(g);
+    if (owned) D.text(owned, W / 2, 462, 12, '#c9ffd6', 'center');
+    D.text('点一张，或按 1 2 3', W / 2, 492, 12, C.faint, 'center');
+  };
+  UI.nightOwned = function (g) {
+    var pk = g.pk, list = (RW.NIGHT.picks && RW.NIGHT.picks.cards) || [], bits = [], i;
+    for (i = 0; i < list.length; i++) {
+      var lv = pk && pk[list[i].id];
+      if (lv) bits.push(list[i].name + ' ' + lv);
+    }
+    return bits.length ? ('已选：' + bits.join(' · ')) : '';
+  };
+  UI.nightCard = function (id, i) {
+    return function (x, y, w, h, pressed) {
+      var c = D.ctx, card = RW.game && RW.game.nightCard ? RW.game.nightCard(id) : null;
+      if (!card && RW.NIGHT.picks) {
+        var list = RW.NIGHT.picks.cards, k;
+        for (k = 0; k < list.length; k++) if (list[k].id === id) card = list[k];
+      }
+      if (!card) return;
+      var R = RW.NIGHT.picks.rarity[card.rarity] || { name: '', color: '#d9c7a6' };
+      var lv = (RW.game && RW.game.pk && RW.game.pk[id]) || 0;
+      c.fillStyle = pressed ? 'rgba(60,46,30,0.98)' : 'rgba(22,16,14,0.96)';
+      D.chamfer(x, y, w, h, 12); c.fill();
+      c.fillStyle = R.color; D.chamfer(x, y, w, 8, 4); c.fill();
+      c.strokeStyle = R.color; c.lineWidth = 2; D.chamfer(x + 1, y + 1, w - 2, h - 2, 12); c.stroke();
+      D.text(R.name, x + w / 2, y + 28, 12, R.color, 'center', true);
+      D.text(card.name, x + w / 2, y + 58, 22, '#fff6e4', 'center', true);
+      var lines = D.wrap(card.desc, w - 36, 14), li;
+      for (li = 0; li < lines.length && li < 4; li++) D.text(lines[li], x + w / 2, y + 96 + li * 20, 14, '#d7ecff', 'center');
+      D.text(lv > 0 ? ('现 ' + lv + '/' + card.max) : ('可叠 ' + card.max + ' 层'), x + w / 2, y + h - 48, 13, lv > 0 ? '#c9ffd6' : C.dim, 'center', true);
+      D.text('按 ' + (i + 1), x + w / 2, y + h - 22, 12, C.faint, 'center');
+    };
+  };
+
   // ================= 复活 =================
   UI.revive = function (g, adLabel) {
     var cx = W / 2;

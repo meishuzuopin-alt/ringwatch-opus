@@ -167,6 +167,7 @@
       placeTower(this, towers[ti].kind, post.x + off * 48, post.y - 36);
     }
     if (RW.navPulse) RW.navPulse(p.x, p.y);
+    if (this.nightPickReset) this.nightPickReset();
     qa(this, 'start', { seed: opts.seed != null ? opts.seed : null, bench: !!opts.bench, dur: this.nightDur });
   };
 
@@ -180,6 +181,7 @@
       this.updateFx();
       return;
     }
+    if (this.mode === 'npick') return;
     if (this.freeze > 0) {
       this.freeze--;
       if (this.freeze <= 0) this.nightFlushShatter();
@@ -240,11 +242,13 @@
       this.updateEnemies();
       this.updateBullets();
       this.updateEBullets();
+      if (this.nightPhase === 'battle' && this.nightPickTick) this.nightPickTick();
     }
     this.updateFx();
     if (this.nightPhase === 'lose' || this.nightPhase === 'win' || this.mode === 'result') return;
     if (this.core.hp <= 0) { this.nightLose(); return; }
-    if (this.nightPhase === 'battle' && this.nightT >= this.nightDur) this.nightWin();
+    if (this.nightPhase === 'battle' && this.nightT >= this.nightDur) { this.nightWin(); return; }
+    if (this._pickDue && this.nightOpenPick && this.nightPhase === 'battle') this.nightOpenPick();
   };
 
   G.nightBreakCombo = function () {
@@ -298,6 +302,7 @@
     if (spec.hp) e.hp = e.maxHp = spec.hp;
     if (spec.knockRes != null) e.knockRes = spec.knockRes;
     e.armor = 0;
+    e.burn = 0; e.burnDps = 0; e.embT = 0;
     if (instant) e.spawnT = 0;
     return e;
   };
@@ -361,7 +366,7 @@
       var dead = this.nightReceiveHit(en, dmg, dx2 / dist2, dy2 / dist2, kn, this.slashSrc, heavy);
       any = true; if (dead) killed = true;
     }
-    this.slashCd = S.interval;
+    this.slashCd = this.nightSlashInterval ? this.nightSlashInterval() : S.interval;
     if (!any) return;
     var stop = heavy ? N.hitstop.heavy : N.hitstop.hit;
     if (killed) stop = Math.max(stop, N.hitstop.kill);
@@ -376,10 +381,13 @@
     e.flash = 1;
     e.hp -= dmg;
     if (source) source.dmg = (source.dmg || 0) + dmg;
-    var fromHero = source === this.slashSrc || (source && source.nightShock);
-    if (fromHero || (N.combo.countTowers && source)) this.nightNum(e, dmg, !!heavy);
-    else if (!source || source === this.slashSrc) this.nightNum(e, dmg, !!heavy);
-    else this.nightNum(e, dmg, false);
+    if (this.nightOnHit) this.nightOnHit(e, dmg, source);
+    if (!(source && source.silent)) {
+      var fromHero = source === this.slashSrc || (source && source.nightShock);
+      if (fromHero || (N.combo.countTowers && source)) this.nightNum(e, dmg, !!heavy);
+      else if (!source || source === this.slashSrc) this.nightNum(e, dmg, !!heavy);
+      else this.nightNum(e, dmg, false);
+    }
     if (!(e.type === 'dasher' && e.state === 2) && e.knockRes > 0 && knock > 0) {
       e.kvx += kx * knock * e.knockRes;
       e.kvy += ky * knock * e.knockRes;
@@ -401,6 +409,7 @@
     this.kills++;
     if (this.firstKillT < 0) this.firstKillT = this.nightT;
     if (source) source.kills = (source.kills || 0) + 1;
+    if (this.nightGainXp) this.nightGainXp(e);
     var pl = this.player, kdx = e.x - pl.x, kdy = e.y - pl.y;
     if (fromCombo && kdx * kdx + kdy * kdy < T.momentum.near * T.momentum.near) this.addMomentum(e.elite ? 6 : 1);
     if (fromCombo) {
