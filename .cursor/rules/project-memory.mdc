@@ -1,0 +1,55 @@
+---
+description: 圣火守护者项目记忆。每轮都要遵守的协作、画风、路径和当前优先。
+alwaysApply: true
+---
+
+# 项目记忆
+
+硬规矩和关键事实。名单、工具登录、已合并 PR 和未完成项见 `docs/MEMORY.md`。进度以 `docs/HANDOFF.md` 为准。
+
+## 跟用户说话
+
+- 用户只看图。技术决定自己拍板，不要拿技术问题问用户。
+- 汇报用短回执加对比图，图多字少。
+- 审美选择：摆出对比图，等用户挑。其余事情：决定后直接做。
+- 省额度：每个需求先只出一组，方向确认后再加量。
+- 概念图、过程稿、未合并分支都不是运行时。没有真截图或测试通过，不要说功能已经做好。
+
+## 仓库和电脑
+
+- 真源：GitHub `meishuzuopin-alt/ringwatch-opus`。
+- 主副本 `D:\开源游戏\_try_opus\ringwatch-opus` 有用户未提交改动，禁止读写，也不要描述那些改动。
+- 干活只在工作副本 `D:\开源游戏\_try_opus\ringwatch-opus-worker`。试玩 `ringwatch-play`。模型试验 `ringwatch-models`，分支 `grok/models-trial`。
+- 这台电脑是 DESKTOP-A6JV5CO：Cursor 写代码，有显卡就在这台拍游戏截图。
+- 总调度云电脑负责 gh、浏览器登录和连接器。浏览器登录不在这台机器上。
+
+## 谁来做
+
+- Codex：模型 GPT-6 Luna。强度永远用「高」，不用「极高」。出图、写代码，也能 `blender -b --python`。Blender 5.2.1 在 `D:\blendr\blender.exe`。
+- 本机 Cursor 做高频实现和清扫。云端代理用 `grok-4.7`，推理 high，fast 关闭。不要 Auto。
+- Claude 只在额度允许时啃难工程。
+- Antigravity（`C:\Users\x\AppData\Local\agy\bin\agy.exe`）只出建议，不改代码。
+- 本机稀缺的是本地 Godot、显卡截图、网页调研、里程碑验收。不要拿它们做日常改动。
+
+## 画风和当前优先
+
+- 画风已锁定：风格化写实。白天参考融白1，夜晚参考融夜1。角色在画面里必须够大、够清楚。
+- 当前第一优先：拉近镜头，或放大角色。main 上已有五套精灵（hero、grunt、elite、boss、guard）。早上近景看不清，是镜头太远，不是精灵被删了。
+- 兜帽发光眼英雄和露脸英雄还没选定。不要替用户定。
+- 草稿 PR #31（`grok/art-assets-full`，交接文档登记 217 个文件）还没接进游戏。
+- 村子道具先用画好的立牌。Blender 的树和小屋（草稿 PR #32，`grok/models-trial`）只是占位。
+- 每个 AI 资产登记 `docs/ART.md`。
+- 门面图（图标、商店封面、主视觉）必须由用户亲手精修，并保留 PSD 和过程稿。不许伪造过程文件，不许让 AI 直接出最终门面图。
+- 玩法可以借鉴。代码和美术不能抄。不要搬 Kingdom Rush、星露谷、饥荒、Brotato、Diablo 的名字、数值表、像素 UI、素材。
+
+## 玩法和变现
+
+- 玩法宪法：白天种因，黄昏锁定出装，夜晚兑现。
+- 不要开工「守梦空间」。王者庭院（`D:\WangzheCourtyard`，还不是 git 仓库）是设计积压 / #66 原型，不是当前冲刺。
+- 变现顺序：先 CrazyGames 网页广告，再 Steam 愿望单页，再找移动端发行商测试，最后 Steam 买断上线。
+- 国内小游戏要软著。2026 年 3 月版权中心曾要求手写「未用 AI」承诺。不要让用户签。先打 010-61090099。
+
+## 改完要记下来
+
+- 提交前跑 `node tools/check.js`，必须通过。
+- 每完成一项重要工作或做出新决定，同步更新本文件和 `docs/MEMORY.md`。
