@@ -2,7 +2,7 @@
 
 完整版。硬规矩的短版在 `.cursor/rules/project-memory.mdc`（`alwaysApply: true`）。两份都要保持真。每完成一项重要工作或做出新决定，同步更新本文件和那条规则。
 
-进度细节以 `docs/HANDOFF.md` 为准。本文件写于 2026-09-27，事实来自当时的 `origin/main`、`docs/HANDOFF.md`、`docs/ART.md`、`README.md` 和 GitHub PR 状态。没有打开主副本，所以不描述主副本里未提交的内容。
+进度细节以 `docs/HANDOFF.md` 为准。本文件写于 2026-09-27，事实来自当时的 `origin/main`、`docs/HANDOFF.md`、`docs/ART.md`、`README.md` 和 GitHub PR 状态。没有打开主副本，所以不描述主副本里未提交的内容。账号、套餐及总调度电脑的登录状态来自用户交接说明；本机可用性以现场复核为准。
 
 ## 跟用户说话
 
@@ -24,7 +24,7 @@
 - 浏览器登录：Midjourney、Claude（claude.ai/code，圣火守护者会话；小任务用 Sonnet 5 省额度）、Gemini Pro（laiou suo）、ChatGPT / Codex、Grok、Trae。
 - 连接器：GitHub、Google Drive、Slack、Excalidraw。
 
-写本文件时，本机 `gh auth status` 也显示已登录 meishuzuopin-alt。这不改变分工：浏览器登录不在这台机器上，gh 的主责仍是云电脑。
+2026-09-27 本机复核：`gh auth status` 返回本机令牌失效；Codex 的 GitHub 连接器仍已登录 `meishuzuopin-alt`，可读取远端仓库。总调度云电脑的 `gh` 登录状态由用户提供，本轮没有远程验证。两台电脑的登录态不能互相推定。
 
 往带中文的路径拷文件会失败。先拷到纯英文路径，再移过去。
 
@@ -45,11 +45,11 @@
 
 1. Codex 桌面（ChatGPT 应用，项目「圣火守护者 Flame Guardian」）：已登录。模型 GPT-6 Luna。强度永远「高」，不用「极高」。出图标、卡牌和美术，能写代码，能用 `blender -b --python` 驱动 Blender。Cloud 版不能调推理强度，分支名会自动生成。
 2. Antigravity（Gemini）：已登录。命令行 `C:\Users\x\AppData\Local\agy\bin\agy.exe`（agy 1.2.11），用桌面登录。用法：先 cd 到目标，再 `agy -p "任务" --add-dir <目录> --output-format json --print-timeout 30m`。`--effort high`。续聊用 `-c <id>`。角色只出建议（审图、设计意见），不改代码。不要加 `--dangerously-skip-permissions`。
-3. Cursor CLI（`cursor-agent`）：已登录 meishuzuopin@gmail.com。Pro+（$60/月，按需计费关闭，额度于 10 月 26 日重置，交接时如此）。云端代理默认 `grok-4.7`，推理 high，fast 关闭。不要 Auto，Auto 会花 Other Models 额度。
+3. Cursor CLI（`cursor-agent`）：用户交接时称已登录 meishuzuopin@gmail.com、Pro+（$60/月，按需计费关闭，额度于 10 月 26 日重置）。本轮命令搜索路径未找到 `cursor-agent`，CLI 的实际位置与当前登录尚未复核。云端代理默认 `grok-4.7`，推理 high，fast 关闭。不要 Auto，Auto 会花 Other Models 额度。
 4. Blender 5.2.1：`D:\blendr\blender.exe`。无界面 Python 可跑（`blender -b --factory-startup --python ...`，启动大约 70 秒）。Unity 和虚幻也装在这台，路径未记在交接里，不要猜。
 5. 自检：`node tools/check.js`，必须退出码 0。需要 Node 18+。
 
-执行分工：Cursor 做高频实现和清扫。Codex 出图，并在 `grok/*` 或 gpt-6-luna 上写代码。Claude 额度允许时啃难工程，派活要用户批准。本机稀缺、不要拿来做日常改动的：本地 Godot、显卡截图、网页调研、里程碑验收。
+执行分工：Cursor 统一写入当前 Ringwatch 运行代码。Codex 出图、审查，也具备写代码能力；Claude 在额度允许且用户同意派活时处理难工程。Antigravity 只给建议。本机显卡用于 Ringwatch 截图和里程碑验收；王者庭院的 Godot 工作属于另一工程。
 
 ## 画风（已锁定）
 
@@ -57,7 +57,7 @@
 
 C1「光即色彩」：圣火光圈内暖、饱和；圈外褪成冷靛蓝；暗处不能压成纯黑；不要硬边光圈。
 
-角色在画面里必须够大、够清楚。当前第一优先：拉近镜头，或放大角色，让角色接近早上那张近景的比例，同时夜战和手机竖屏还要留够视野。拍同机位对比图给用户看。
+角色在画面里必须够大、够清楚。原定第一优先是拉近镜头、放大角色，让角色接近早上那张近景的比例，同时给夜战和手机竖屏留视野。用户后来反馈当前试玩版人物比例过大、人物不动。先确认实际运行的副本与游戏阶段，恢复移动，再调镜头和人物到参考近景比例；拍同机位对比图与移动短录屏，不盲目继续放大。
 
 main 上已有五套手绘精灵立牌，登记在 `docs/ART.md`：`assets/sprites/` 的 hero、grunt、elite、boss、guard（PR #17）。早上对比图里几乎看不见，是镜头太远，不是被删了。
 
@@ -73,7 +73,7 @@ UI 三个方案给用户看过：U1 融进场景、U2 手绘卷轴、U3 极简�
 - 卡牌稀有度：`js/data.js` 当时只有 3 档，要扩成 6 档（普通/优秀/稀有/史诗/传说/神话）。卡框约 200×365，偏糊，要更清晰再让 Codex 出一版。三选一界面还没装上这 12 张插画和 6 档卡框。
 - 草稿 PR #32，分支 `grok/models-trial`，2026-09-27 仍是 OPEN 草稿。树（594 面，25KB）和小屋（2594 面，203KB），外加 `.blend` 和 `tools/blender/` 脚本。比例和配色大致对，造型粗糙，只是占位。村子道具先用 Codex 画好的 2D 立牌（和早上的角色精灵同一做法）。Blender 留给需要真立体的桥和地形；要继续用，先贴手绘贴图再加细节。
 
-门面图（图标、商店胶囊/封面、主视觉）必须用户亲手精修，保留分层 PSD 和过程截图，并逐步登记。不许伪造过程文件，不许让 AI 直接出最终门面图。
+门面图（图标、商店胶囊/封面、主视觉）必须用户亲手精修，保留分层 PSD 和过程截图，并逐步登记。不许伪造过程文件，不许让 AI 直接出最终门面图。`docs/ART.md` 已把 AI 辅助图标标作“正式图标”且它已进包；这只证明当前使用状态，不能代替用户精修与 PSD、过程稿验收。
 
 玩法可以借鉴。代码和美术不能抄。不要搬 Kingdom Rush、星露谷、饥荒、Brotato、Diablo 的名字、数值表、像素 UI、素材。
 
@@ -90,6 +90,7 @@ UI 三个方案给用户看过：U1 融进场景、U2 手绘卷轴、U3 极简�
 | #28 | Warm daylight and soft indigo night on the bridge | `grok/art-hybrid-cursor` |
 | #29 | Playable first-launch opening: carry ember to altar, ignite, title fade | `codex/add-inside-style-opening-to-game` |
 | #30 | Night battle 3-pick-1 upgrades | `grok/gameplay-pick3` |
+| #33 | Persist project memory for Cursor chats | `cursor/project-memory` |
 
 #27（Antigravity 画风 bake-off，`grok/art-hybrid-agy`）已关闭，未合并。交接写明：合并 #28 和 #30 时 GitHub 检查是 UNSTABLE。本文件没有复查当前 CI。
 
@@ -97,7 +98,7 @@ main 上因此已有：夜战（北桥 M0、三选一）、开局钩子、五套
 
 ## 还没做完（交接顺序）
 
-1. 第一优先：拉近镜头或放大角色，并出对比图。
+1. 第一优先：核对当前试玩副本，修复人物不动和比例失衡；达成可读近景后出同机位对比图与移动短录屏。
 2. 把 PR #31 的立牌接进场景前，先过白名单；兜帽英雄等用户选。
 3. 场景填充，逼近融白1 / 融夜1。主力用 2D 立牌，不把 PR #32 的占位模型当成品。
 4. 白天经营循环：火光圈里采集、搬运、堆放，村民排队，建房，扩大火光圈。11 月网页测试前要做完。目标人均时长 10 分钟以上、次日留存 10% 以上。借鉴机制，不抄美术。

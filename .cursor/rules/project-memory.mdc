@@ -21,7 +21,7 @@ alwaysApply: true
 - 主副本 `D:\开源游戏\_try_opus\ringwatch-opus` 有用户未提交改动，禁止读写，也不要描述那些改动。
 - 干活只在工作副本 `D:\开源游戏\_try_opus\ringwatch-opus-worker`。试玩 `ringwatch-play`。模型试验 `ringwatch-models`，分支 `grok/models-trial`。
 - 这台电脑是 DESKTOP-A6JV5CO：Cursor 写代码，有显卡就在这台拍游戏截图。
-- 总调度云电脑负责 gh、浏览器登录和连接器。浏览器登录不在这台机器上。
+- 总调度云电脑与本机的登录态分开；不要把一台电脑的账号权限当作另一台已接通。
 
 ## 谁来做
 
@@ -29,12 +29,12 @@ alwaysApply: true
 - 本机 Cursor 做高频实现和清扫。云端代理用 `grok-4.7`，推理 high，fast 关闭。不要 Auto。
 - Claude 只在额度允许时啃难工程。
 - Antigravity（`C:\Users\x\AppData\Local\agy\bin\agy.exe`）只出建议，不改代码。
-- 本机稀缺的是本地 Godot、显卡截图、网页调研、里程碑验收。不要拿它们做日常改动。
+- 本机显卡用于 Ringwatch 游戏截图和里程碑验收；Ringwatch 是 JS + Three.js，王者庭院的 Godot 工作另算。
 
 ## 画风和当前优先
 
 - 画风已锁定：风格化写实。白天参考融白1，夜晚参考融夜1。角色在画面里必须够大、够清楚。
-- 当前第一优先：拉近镜头，或放大角色。main 上已有五套精灵（hero、grunt、elite、boss、guard）。早上近景看不清，是镜头太远，不是精灵被删了。
+- 当前第一优先：拉近镜头、放大角色到参考近景的可读比例，并保证能移动。用户随后反馈试玩人物过大且不动；先锁定运行副本、恢复移动，再校准比例，不盲目继续放大。main 已有五套精灵（hero、grunt、elite、boss、guard）。
 - 兜帽发光眼英雄和露脸英雄还没选定。不要替用户定。
 - 草稿 PR #31（`grok/art-assets-full`，交接文档登记 217 个文件）还没接进游戏。
 - 村子道具先用画好的立牌。Blender 的树和小屋（草稿 PR #32，`grok/models-trial`）只是占位。
