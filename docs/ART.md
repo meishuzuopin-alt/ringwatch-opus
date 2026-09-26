@@ -56,6 +56,337 @@
 
 ## 已实现
 
+### AI 素材：完整美术资源包（2026-09-26，`grok/art-assets-full`，待负责人评审）
+
+来源：ChatGPT 图像生成（chatgpt.com 内置，推理档「高」），AI 辅助、原创造型；每张附 H1（白天）/ H3（夜晚）风格目标图作参考。风格：stylized realism（AAA 光照体积 + 手绘笔触、柔和色板）+ C1「光即色彩」。每张图只生成一次，没有重抽 / 变体 / 放大。
+提示词原文、发送时间、后处理说明：`docs/art-upgrade/assets-full/<类别>/PROMPT.md`；总览 `docs/art-upgrade/assets-full/contact_sheet.jpg`，各类别 `docs/art-upgrade/assets-full/<类别>/contact_*.jpg`。原图不入库（留在制作机 `/workspace/assets_full/<类别>/original/`）。
+
+**尚未接入游戏**：`tools/check.js` 目前只放行 `js/sprites.js` 里 `SPR.META` 登记过的图集，下列文件接入前需要工程在 check 白名单 / SPR.META 里登记（红线一节的例外同样适用于本节登记的文件）。不做商店图（胶囊图、主视觉、CrazyGames 封面），那部分要负责人手改。
+
+#### 敌人精灵图集（4×6，与现有 5 套同版式，含 json）（10 个文件）
+
+重甲怪 brute（1.4×）、狼骑 wolfrider（横向长剪影）、暗影萨满 shaman（施法）、夜蝠 bat（飞行）、巨影 shade_boss（夜战 Boss，2.0×）。行：走下/右/左/上、待机、攻击
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/sprites/bat/bat.png` | 1096×1578 |
+| `assets/sprites/bat/bat.json` | json |
+| `assets/sprites/brute/brute.png` | 1052×1938 |
+| `assets/sprites/brute/brute.json` | json |
+| `assets/sprites/shade_boss/shade_boss.png` | 992×1704 |
+| `assets/sprites/shade_boss/shade_boss.json` | json |
+| `assets/sprites/shaman/shaman.png` | 1344×1620 |
+| `assets/sprites/shaman/shaman.json` | json |
+| `assets/sprites/wolfrider/wolfrider.png` | 1192×1548 |
+| `assets/sprites/wolfrider/wolfrider.json` | json |
+
+#### 英雄进化（3 阶 × 5 焰色）（15 个文件）
+
+hero_<ember|frost|verdant|radiant|starlight>_s<1|2|3>，正面待机单帧
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/characters/hero_evolution/hero_ember_s1.png` | 179×189 |
+| `assets/characters/hero_evolution/hero_ember_s2.png` | 198×200 |
+| `assets/characters/hero_evolution/hero_ember_s3.png` | 258×212 |
+| `assets/characters/hero_evolution/hero_frost_s1.png` | 178×188 |
+| `assets/characters/hero_evolution/hero_frost_s2.png` | 195×209 |
+| `assets/characters/hero_evolution/hero_frost_s3.png` | 252×223 |
+| `assets/characters/hero_evolution/hero_radiant_s1.png` | 185×191 |
+| `assets/characters/hero_evolution/hero_radiant_s2.png` | 212×207 |
+| `assets/characters/hero_evolution/hero_radiant_s3.png` | 259×230 |
+| `assets/characters/hero_evolution/hero_starlight_s1.png` | 179×191 |
+| `assets/characters/hero_evolution/hero_starlight_s2.png` | 204×214 |
+| `assets/characters/hero_evolution/hero_starlight_s3.png` | 263×232 |
+| `assets/characters/hero_evolution/hero_verdant_s1.png` | 185×189 |
+| `assets/characters/hero_evolution/hero_verdant_s2.png` | 203×205 |
+| `assets/characters/hero_evolution/hero_verdant_s3.png` | 256×226 |
+
+#### 守卫（枪兵 / 弓手 / 司火）（12 个文件）
+
+guard_<spearman|archer|firewarden>_<idle|windup|release|recover>，攻击朝屏幕右
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/characters/guards/guard_archer_idle.png` | 189×249 |
+| `assets/characters/guards/guard_archer_recover.png` | 193×246 |
+| `assets/characters/guards/guard_archer_release.png` | 398×261 |
+| `assets/characters/guards/guard_archer_windup.png` | 237×259 |
+| `assets/characters/guards/guard_firewarden_idle.png` | 232×308 |
+| `assets/characters/guards/guard_firewarden_recover.png` | 263×313 |
+| `assets/characters/guards/guard_firewarden_release.png` | 443×248 |
+| `assets/characters/guards/guard_firewarden_windup.png` | 317×299 |
+| `assets/characters/guards/guard_spearman_idle.png` | 182×337 |
+| `assets/characters/guards/guard_spearman_recover.png` | 290×259 |
+| `assets/characters/guards/guard_spearman_release.png` | 424×212 |
+| `assets/characters/guards/guard_spearman_windup.png` | 268×317 |
+
+#### 圣火与祭坛状态（8 个文件）
+
+fire_lv1..3、damaged、extinguished、overload；野外祭坛 altar_inactive / altar_active
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/fire/altar_active.png` | 327×395 |
+| `assets/fire/altar_inactive.png` | 325×337 |
+| `assets/fire/fire_damaged.png` | 287×419 |
+| `assets/fire/fire_extinguished.png` | 272×375 |
+| `assets/fire/fire_lv1.png` | 261×344 |
+| `assets/fire/fire_lv2.png` | 342×357 |
+| `assets/fire/fire_lv3.png` | 401×440 |
+| `assets/fire/fire_overload.png` | 338×493 |
+
+#### 村庄资源与五色焰晶图标（12 个文件）
+
+木 / 石 / 粮 / 火种碎片、五色焰晶（形状区分：火苗 / 六边形 / 梭叶 / 圆珠环 / 四角星）、金币、碎片袋、经验球
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/resources/crystal_ember.png` | 224×357 |
+| `assets/resources/crystal_frost.png` | 244×358 |
+| `assets/resources/crystal_radiant.png` | 302×320 |
+| `assets/resources/crystal_starlight.png` | 298×336 |
+| `assets/resources/crystal_verdant.png` | 255×357 |
+| `assets/resources/res_flame_shard.png` | 223×320 |
+| `assets/resources/res_food.png` | 344×315 |
+| `assets/resources/res_gold_coins.png` | 300×316 |
+| `assets/resources/res_shard_pouch.png` | 297×343 |
+| `assets/resources/res_stone.png` | 309×301 |
+| `assets/resources/res_wood.png` | 311×318 |
+| `assets/resources/xp_orb.png` | 293×324 |
+
+#### 夜战道具（16 个文件）
+
+灯笼 ×4、木箱、木桶、粮袋、栅栏 ×3、拒马、柴堆、兵器架、路牌（空白）、手推车
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/props/battle/barrel.png` | 188×242 |
+| `assets/props/battle/crate.png` | 232×262 |
+| `assets/props/battle/crate_stack.png` | 234×298 |
+| `assets/props/battle/fence_broken.png` | 263×222 |
+| `assets/props/battle/fence_corner.png` | 255×240 |
+| `assets/props/battle/fence_straight.png` | 271×226 |
+| `assets/props/battle/grain_sacks.png` | 284×217 |
+| `assets/props/battle/lantern_iron.png` | 202×297 |
+| `assets/props/battle/lantern_paper_post.png` | 215×302 |
+| `assets/props/battle/lantern_post_unlit.png` | 194×302 |
+| `assets/props/battle/lantern_stone.png` | 194×299 |
+| `assets/props/battle/logpile_unlit.png` | 265×227 |
+| `assets/props/battle/signpost_blank.png` | 186×292 |
+| `assets/props/battle/spike_barricade.png` | 271×267 |
+| `assets/props/battle/weapon_rack.png` | 267×329 |
+| `assets/props/battle/wheelbarrow.png` | 308×272 |
+
+#### 自然道具（16 个文件）
+
+阔叶树、松树、枯树、树桩、灌木、岩石、踏石、芦苇、高草、倒木、蘑菇
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/props/nature/boulder_mossy.png` | 305×238 |
+| `assets/props/nature/bush_flower.png` | 269×238 |
+| `assets/props/nature/bush_round.png` | 269×231 |
+| `assets/props/nature/grass_tall.png` | 266×252 |
+| `assets/props/nature/log_fallen.png` | 319×216 |
+| `assets/props/nature/mushrooms.png` | 219×212 |
+| `assets/props/nature/pine.png` | 272×313 |
+| `assets/props/nature/pine_tall.png` | 213×357 |
+| `assets/props/nature/reeds.png` | 286×288 |
+| `assets/props/nature/rock_medium.png` | 224×181 |
+| `assets/props/nature/rocks_small.png` | 243×196 |
+| `assets/props/nature/stepping_stones.png` | 257×214 |
+| `assets/props/nature/stump.png` | 260×225 |
+| `assets/props/nature/tree_dead.png` | 307×328 |
+| `assets/props/nature/tree_round.png` | 298×302 |
+| `assets/props/nature/tree_tall.png` | 289×363 |
+
+#### 桥梁组件（12 个文件）
+
+桥面（直 / 端 / 破损）、石墩、栏杆、挂灯柱、石阶、桥头门、桥台、木支架、绳栏、系船柱
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/props/bridge/abutment.png` | 350×297 |
+| `assets/props/bridge/deck_damaged.png` | 364×314 |
+| `assets/props/bridge/deck_end.png` | 349×296 |
+| `assets/props/bridge/deck_straight.png` | 384×345 |
+| `assets/props/bridge/gate_arch.png` | 399×351 |
+| `assets/props/bridge/mooring_post.png` | 406×208 |
+| `assets/props/bridge/pier_stone.png` | 314×336 |
+| `assets/props/bridge/railing.png` | 376×250 |
+| `assets/props/bridge/railing_post_hook.png` | 164×280 |
+| `assets/props/bridge/rope_barrier.png` | 282×190 |
+| `assets/props/bridge/stairs_stone.png` | 373×318 |
+| `assets/props/bridge/trestle.png` | 339×320 |
+
+#### 白天村庄建筑（12 个文件）
+
+民居 ×2、伐木屋、采石坊、粮仓、火种祠、兵营、弓塔、法塔、炮塔、水井、集市摊
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/village/barracks.png` | 559×489 |
+| `assets/village/cottage.png` | 445×448 |
+| `assets/village/flame_shrine.png` | 466×496 |
+| `assets/village/granary.png` | 547×452 |
+| `assets/village/house_2storey.png` | 479×454 |
+| `assets/village/market_stall.png` | 449×416 |
+| `assets/village/quarry_workshop.png` | 486×489 |
+| `assets/village/tower_archer.png` | 291×523 |
+| `assets/village/tower_cannon.png` | 465×429 |
+| `assets/village/tower_mage.png` | 368×541 |
+| `assets/village/well.png` | 366×383 |
+| `assets/village/woodcutter_hut.png` | 459×397 |
+
+#### 特效序列（每条 6 帧横排，黑底转透明，建议加色混合，含 json）（36 个文件）
+
+命中火花、火弹、火弹爆炸、火焰弧斩、余烬上浮、环绕余烬、灼烧、灼烧跳伤、霜环、冰冻、链电、雷击、墨屑碎裂、斥浪、火盾、汲火、拾取闪光、升级光柱
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/vfx/bolt_impact.png` | 1254×124 |
+| `assets/vfx/bolt_impact.json` | json |
+| `assets/vfx/burn_dot_loop.png` | 1254×195 |
+| `assets/vfx/burn_dot_loop.json` | json |
+| `assets/vfx/burn_tick.png` | 1254×195 |
+| `assets/vfx/burn_tick.json` | json |
+| `assets/vfx/chain_lightning.png` | 1254×159 |
+| `assets/vfx/chain_lightning.json` | json |
+| `assets/vfx/death_ink_shatter.png` | 1254×220 |
+| `assets/vfx/death_ink_shatter.json` | json |
+| `assets/vfx/embers_rise.png` | 1254×143 |
+| `assets/vfx/embers_rise.json` | json |
+| `assets/vfx/flame_arc_slash.png` | 1254×129 |
+| `assets/vfx/flame_arc_slash.json` | json |
+| `assets/vfx/flame_bolt.png` | 1254×94 |
+| `assets/vfx/flame_bolt.json` | json |
+| `assets/vfx/frost_ring.png` | 1254×188 |
+| `assets/vfx/frost_ring.json` | json |
+| `assets/vfx/frost_status.png` | 1254×217 |
+| `assets/vfx/frost_status.json` | json |
+| `assets/vfx/hit_spark.png` | 1254×137 |
+| `assets/vfx/hit_spark.json` | json |
+| `assets/vfx/knockback_pulse.png` | 1254×170 |
+| `assets/vfx/knockback_pulse.json` | json |
+| `assets/vfx/levelup_burst.png` | 1254×304 |
+| `assets/vfx/levelup_burst.json` | json |
+| `assets/vfx/lifesteal.png` | 1254×205 |
+| `assets/vfx/lifesteal.json` | json |
+| `assets/vfx/lightning_impact.png` | 1254×300 |
+| `assets/vfx/lightning_impact.json` | json |
+| `assets/vfx/orbit_ember.png` | 1254×111 |
+| `assets/vfx/orbit_ember.json` | json |
+| `assets/vfx/pickup_sparkle.png` | 1254×160 |
+| `assets/vfx/pickup_sparkle.json` | json |
+| `assets/vfx/shield_charge.png` | 1254×195 |
+| `assets/vfx/shield_charge.json` | json |
+
+#### 极简 UI 套件（26 个文件）
+
+主 / 次按钮四态、开关、图标按钮、关闭、复选框、血条 + 经验条、冷却环、滑条、Boss 血条、小地图框、波次计时章、提示框、大面板、横幅
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/ui/kit/banner_ribbon.png` | 511×136 |
+| `assets/ui/kit/bars_hp_xp.png` | 488×194 |
+| `assets/ui/kit/boss_hp_bar.png` | 627×131 |
+| `assets/ui/kit/btn_close.png` | 129×127 |
+| `assets/ui/kit/btn_primary_disabled.png` | 325×121 |
+| `assets/ui/kit/btn_primary_hover.png` | 297×137 |
+| `assets/ui/kit/btn_primary_normal.png` | 277×115 |
+| `assets/ui/kit/btn_primary_pressed.png` | 281×115 |
+| `assets/ui/kit/btn_secondary_disabled.png` | 325×113 |
+| `assets/ui/kit/btn_secondary_hover.png` | 277×127 |
+| `assets/ui/kit/btn_secondary_normal.png` | 262×118 |
+| `assets/ui/kit/btn_secondary_pressed.png` | 269×119 |
+| `assets/ui/kit/checkbox_off.png` | 83×87 |
+| `assets/ui/kit/checkbox_on.png` | 86×91 |
+| `assets/ui/kit/cooldown_ring.png` | 184×184 |
+| `assets/ui/kit/iconbtn_book.png` | 126×129 |
+| `assets/ui/kit/iconbtn_flame.png` | 123×136 |
+| `assets/ui/kit/iconbtn_more.png` | 123×128 |
+| `assets/ui/kit/iconbtn_settings.png` | 126×127 |
+| `assets/ui/kit/minimap_frame.png` | 288×302 |
+| `assets/ui/kit/panel_large.png` | 640×416 |
+| `assets/ui/kit/slider.png` | 385×80 |
+| `assets/ui/kit/toggle_off.png` | 133×80 |
+| `assets/ui/kit/toggle_on.png` | 134×79 |
+| `assets/ui/kit/tooltip_panel.png` | 434×187 |
+| `assets/ui/kit/wave_timer_medallion.png` | 202×216 |
+
+#### 升级卡牌插画（三选一，对应 js/data.js NIGHT.picks.cards）（12 个文件）
+
+card_<id>：hearth 圣火扩环、tempo 疾斩、pierce 贯焰、embers 环焰、scorch 灼痕、pulse 斥浪、leech 汲火、volley 双舌、stride 疾步、ward 火盾、chain 链电、frost 霜环。3:4 竖图
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/cards/art/card_chain.png` | 498×664 |
+| `assets/cards/art/card_embers.png` | 498×664 |
+| `assets/cards/art/card_frost.png` | 498×664 |
+| `assets/cards/art/card_hearth.png` | 498×664 |
+| `assets/cards/art/card_leech.png` | 499×665 |
+| `assets/cards/art/card_pierce.png` | 498×664 |
+| `assets/cards/art/card_pulse.png` | 499×665 |
+| `assets/cards/art/card_scorch.png` | 499×665 |
+| `assets/cards/art/card_stride.png` | 498×664 |
+| `assets/cards/art/card_tempo.png` | 498×664 |
+| `assets/cards/art/card_volley.png` | 499×665 |
+| `assets/cards/art/card_ward.png` | 498×664 |
+
+#### 卡牌稀有度边框（6 档）（6 个文件）
+
+t1 普通（灰白）→ t2 优秀（绿）→ t3 稀有（蓝）→ t4 史诗（紫）→ t5 传说（橙金）→ t6 神话（红，圣火光）；中间透明窗，底部空名牌。data.js 现只有 3 档：common→t1、rare（精良）→t3、epic（稀有）→t4
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/cards/frames/frame_t1_common.png` | 191×359 |
+| `assets/cards/frames/frame_t2_uncommon.png` | 195×364 |
+| `assets/cards/frames/frame_t3_rare.png` | 200×367 |
+| `assets/cards/frames/frame_t4_epic.png` | 209×369 |
+| `assets/cards/frames/frame_t5_legendary.png` | 209×369 |
+| `assets/cards/frames/frame_t6_mythic.png` | 200×372 |
+
+#### 无缝地面贴图 1024（8 个文件）
+
+水面、桥面木板、卵石路、石砌墙、雪地、沼泽泥、林地落叶、砂砾路（补 grok/scene-textures 的 soft_* 六张之外的地面）
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/textures/tiles/bridge_planks_1024.jpg` | 1024×1024 |
+| `assets/textures/tiles/cobblestone_1024.jpg` | 1024×1024 |
+| `assets/textures/tiles/forest_floor_1024.jpg` | 1024×1024 |
+| `assets/textures/tiles/gravel_path_1024.jpg` | 1024×1024 |
+| `assets/textures/tiles/marsh_mud_1024.jpg` | 1024×1024 |
+| `assets/textures/tiles/snow_1024.jpg` | 1024×1024 |
+| `assets/textures/tiles/stone_masonry_1024.jpg` | 1024×1024 |
+| `assets/textures/tiles/water_1024.jpg` | 1024×1024 |
+
+#### 地面贴花（16 个文件）
+
+草丛、苜蓿、野花 ×2、落叶、石子、水洼、泥斑、裂缝、焦痕、灰烬、苔藓、踩踏小路、碎骨、断箭、稻草
+
+| 文件 | 尺寸 |
+|---|---|
+| `assets/textures/decals/ash_circle.png` | 291×271 |
+| `assets/textures/decals/bones_small.png` | 260×254 |
+| `assets/textures/decals/broken_arrows.png` | 269×292 |
+| `assets/textures/decals/clover.png` | 272×238 |
+| `assets/textures/decals/grass_tufts.png` | 230×216 |
+| `assets/textures/decals/ground_crack.png` | 269×264 |
+| `assets/textures/decals/leaves_scatter.png` | 264×263 |
+| `assets/textures/decals/moss_patch.png` | 280×273 |
+| `assets/textures/decals/mud_patch.png` | 284×270 |
+| `assets/textures/decals/path_wear.png` | 275×293 |
+| `assets/textures/decals/pebbles.png` | 249×256 |
+| `assets/textures/decals/puddle.png` | 296×272 |
+| `assets/textures/decals/scorch_mark.png` | 265×275 |
+| `assets/textures/decals/straw_scatter.png` | 272×260 |
+| `assets/textures/decals/wildflowers_a.png` | 265×262 |
+| `assets/textures/decals/wildflowers_b.png` | 282×252 |
+
+合计 217 个运行时文件。
+
 ### AI 素材：五套手绘精灵图（2026-09-25/26，负责人批准，`grok/sprite-integration`）
 
 角色从方块低模换成**面朝镜头的贴图立牌**（脚底为轴心，`js/sprites.js` + `js/sprite_anim.js`，渲染细节见下表）。
@@ -191,41 +522,7 @@ The 4 variations:
 - 画质自适应：帧时间持续超过 30ms，会按 泛光 → 描边 → 阴影 的顺序自动关闭。
 - 浏览器调试：`?lowfx` 关掉全部效果，`?hifx` 锁定画质不降级，`?2d` 强制 2D 退路。
 
-### 混合光照（2026-09-26，`grok/art-hybrid-cursor`）
-
-白天改成暖日照、草地保持饱和的绿；夜里圣火是暖核，按距离淡出到蓝紫，暗部抬起来，村屋还看得见。阴影填光是蓝紫，不落到纯黑。桥上和英雄脚下的描边金圈去掉，只留软光。
-
-地址：`?night` 开北桥夜战；`?day` 开同一座桥，光照切到白天。
-
-程序纹理（无图片、非 AI 生成）：地形和建筑在片元里用两层世界坐标值噪声。亮度起伏大约 ±`paint`，再叠一点暖 / 冷色漂移（红往上、蓝往下）。精灵立牌不加这层，避免盖住画好的笔触。参数 `RW.C1_LIGHT.paint`（当前 0.09），着色器在 `js/gl3d.js` 的 `fgNoise`。
-
-| 想调什么 | 位置 |
-|---|---|
-| 白天 / 黄昏 / 夜晚 / Boss 的太阳、天光、雾、暗部保留 | `js/world3d.js` `envPreset` |
-| 圣火衰减、圈外冷暖、雾的浓淡、阴影的蓝紫、笔触强度 | `js/data.js` `RW.C1_LIGHT` |
-| 草地、石板、木屋、水面的固有色 | `js/world3d.js` `PAL` |
-| 地表贴图开关、每格世界尺寸 | `js/data.js` 的 `RW.TEXTURES`。`enabled: false` 或地址 `?tex=0` 回到顶点色 |
-
-### 手绘地表贴图（2026-09-26）
-
-六张无缝顶视贴图，从 `grok/scene-textures` 的 `assets/textures/soft/` 接过来（不含 `_src/` 审阅图）。
-
-来源（六张相同）：ChatGPT image generation (AI-assisted, original, prompted by team), 2026-09-26。
-
-提示词：soft hand-painted seamless top-down texture, base color。原创，AI 辅助，不是临摹别的游戏。
-
-| 文件 | 用在 | 底色 |
-|---|---|---|
-| `assets/textures/soft/soft_grass_1024.jpg` | 空地（草地） | `#8b9874` |
-| `assets/textures/soft/soft_dirt_1024.jpg` | 土路 | `#c4a194` |
-| `assets/textures/soft/soft_plaza_1024.jpg` | 中央祭坛广场（石板） | `#b7a89e` |
-| `assets/textures/soft/soft_roof_1024.jpg` | 屋顶（含箭塔锥顶、兵营） | `#a86a58` |
-| `assets/textures/soft/soft_canopy_1024.jpg` | 树冠 | `#6d8658` |
-| `assets/textures/soft/soft_wall_1024.jpg` | 墙（房屋、箭塔塔身、兵营） | `#e3d4c2` |
-
-采样：世界空间三向投影，`RepeatWrapping`，`SRGBColorSpace`，mipmap（`LinearMipmapLinearFilter` / `LinearFilter`），各向异性取显卡最大值。平铺尺寸在 `RW.TEXTURES.scale`（世界单位 / 一格：草 320、土 260、广场 280、屋顶 220、树冠 200、墙 220），按玩法镜头看起来既不会碎成噪点，也不会糊成一块。`enabled: true`。水面、树干、角色仍用顶点色。
-
 ## 红线
 
-- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体、「AI 素材」一节登记过的精灵图集、上面登记过的正式图标 `assets/branding/icon_*.png`，以及这一节登记过的六张地表贴图（`tools/check.js` 会拦下没登记的）。`assets/branding/` 里若还有同源的图标尺寸或候选图，留在目录里，检查只要求四张正式图标在、并且是图片。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
+- 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体、「AI 素材」一节登记过的精灵图集，以及上面登记过的正式图标 `assets/branding/icon_*.png`、「完整美术资源包」一节登记的文件（`tools/check.js` 会拦下没登记的）。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
 - 不做影响读图的全屏效果（大面积暗角、强烈镜头光晕、全屏抖动）。
