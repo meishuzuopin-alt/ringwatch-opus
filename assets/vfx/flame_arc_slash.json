@@ -1,0 +1,1 @@
+{"name": "flame_arc_slash", "image": "flame_arc_slash.png", "frame_w": 209, "frame_h": 129, "frames": 6, "fps": 12, "blend": "additive", "note": "straight alpha from black bg; draw additive or normal"}
