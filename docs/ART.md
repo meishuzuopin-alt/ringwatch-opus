@@ -225,6 +225,22 @@ The 4 variations:
 
 采样：世界空间三向投影，`RepeatWrapping`，`SRGBColorSpace`，mipmap（`LinearMipmapLinearFilter` / `LinearFilter`），各向异性取显卡最大值。平铺尺寸在 `RW.TEXTURES.scale`（世界单位 / 一格：草 320、土 260、广场 280、屋顶 220、树冠 200、墙 220），按玩法镜头看起来既不会碎成噪点，也不会糊成一块。`enabled: true`。水面、树干、角色仍用顶点色。
 
+### 3D 试制模型：低模风格化村落树木与木屋（2026-09-26，`grok/models-trial`）
+
+按美术参考图 `.ref/H1.png` 与 `.ref/H3.png`（中世纪奇幻村落、桥头小径与夜战氛围）使用 Blender 5.2.1 LTS 程序化生成的首批试制低模资产。
+
+- **制作方式与授权来源**：made by Antigravity/Gemini driving Blender scripts, original, 2026-09-26。纯原创程序化建模与手绘调色，无外部第三方受版权保护资产。
+- **规范标准**：真实世界尺度（1 单位 = 1 米），模型轴心（Origin）位于底部底座中心（底部 Y=0），使用顶点色（Color Attributes）与简单 PBR 材质（Principled BSDF），支持 glTF 2.0 标准导出与 Three.js 直接加载。
+- **渲染视角**：Eevee 渲染引擎，1024×1024 分辨率，3/4 俯视机位（45° 俯角，对标游戏内玩法视锥与 46° 镜头），暖色主光 + 蓝紫冷色天光环境填光。
+
+| 模型资产 | 源文件 | 预览图 | 面数 (Tris) | 文件大小 | 美术特征与造型规范 |
+|---|---|---|---|---|---|
+| `assets/models/trial/tree_01.glb` | `art_src/blender/tree_01.blend` | `docs/art-upgrade/models-trial/tree_01.png` | 594 tris (< 1500) | 24.8 KB | 阔叶落叶大树。粗壮有机且微带扭曲的树干，底部 4 根明显延伸入地的板状根系并附带青苔过渡；由 15 组蓬松低模云朵状叶球组成的层次感树冠，采用向外法线平滑处理（避免碎面刺眼硬边），顶点色覆盖阳光金绿高光、草绿中间调与深苔绿底部阴影。 |
+| `assets/models/trial/cottage_01.glb` | `art_src/blender/cottage_01.blend` | `docs/art-upgrade/models-trial/cottage_01.png` | 2594 tris (< 3000) | 202.8 KB | 中世纪木骨架村舍。底部 0.85m 高粗琢田石基座（带凸起转角石与门前石阶）；暖奶油色抹灰夹芯墙与深色老橡木立柱、地袱、檐檩、斜撑构架；5 层阶梯式重叠木瓦双坡屋顶，脊瓦配 7 组雕花卡件与两端风火博风板；正面 2 扇十字格暖色自发光窗、立拼木门配铁铰链，外置石砌烟囱、木制水桶与储料木箱。 |
+
+- **夜景效果验证**：`docs/art-upgrade/models-trial/night_combo.png`（工程文件 `art_src/blender/night_combo.blend`）。木屋与落叶树置于相连的石板路地貌两侧，中间立有木制路灯柱，验证深蓝紫午夜天空下，暖橙路灯与窗户火光倾泻在地面与树根上的对比氛围（严格对标 `.ref/H3.png`）。
+- **脚本工具**：全部保存在 `tools/blender/`（含 `build_tree.py`、`build_cottage.py`、`render_combo.py` 与一键重跑脚本 `build_all.py`）。
+
 ## 红线
 
 - 不引入图片、模型文件；例外只有「字体」一节记录的 OFL 字体、「AI 素材」一节登记过的精灵图集、上面登记过的正式图标 `assets/branding/icon_*.png`，以及这一节登记过的六张地表贴图（`tools/check.js` 会拦下没登记的）。`assets/branding/` 里若还有同源的图标尺寸或候选图，留在目录里，检查只要求四张正式图标在、并且是图片。若确实要接外部模型（如 GLB，Three.js 已能加载），先写方案、说明授权来源，征得负责人同意。
