@@ -1,4 +1,4 @@
-// 环带值守 · 数据表（v3 奇幻守村）。逻辑只读这里的表，调数值只改这个文件。
+// 圣火守护者 · 数据表（v3 奇幻守村）。逻辑只读这里的表，调数值只改这个文件。
 (function (root) {
   var RW = root.RW || (root.RW = {});
 
@@ -43,10 +43,14 @@
   // ---------- 位阶（吸收灵火 / 践踏小怪 攒魂量） ----------
   // eatR：能直接踩碎的敌人半径上限（精英永远踩不动）。位阶越高越强，体型也越大、越慢、越好被打中。
   RW.EVO = [
-    { name: '见习',   mass: 0,   r: 10,   color: '#ffc861', eatR: 0,    armor: 0, hp: 0,  dmg: 0,    speed: 1 },
-    { name: '精英',   mass: 30,  r: 11.5, color: '#9dff7a', eatR: 8.5,  armor: 1, hp: 4,  dmg: 0,    speed: 0.97 },
-    { name: '英雄',   mass: 95,  r: 13,   color: '#6fd6ff', eatR: 10.5, armor: 1, hp: 8,  dmg: 0.08, speed: 0.93 },
-    { name: '传奇',   mass: 210, r: 14.5, color: '#e2a6ff', eatR: 12.5, armor: 2, hp: 12, dmg: 0.15, speed: 0.9 }
+    { name: '见习', mass: 0,    r: 10,   color: '#ffc861', eatR: 0,    armor: 0, hp: 0,  dmg: 0,    speed: 1 },
+    { name: '学徒', mass: 80,   r: 11,   color: '#9dff7a', eatR: 7,    armor: 0, hp: 2,  dmg: 0,    speed: 0.99 },
+    { name: '精英', mass: 220,  r: 12,   color: '#7dffc3', eatR: 8,    armor: 1, hp: 3,  dmg: 0.03, speed: 0.97 },
+    { name: '英雄', mass: 480,  r: 13,   color: '#6fd6ff', eatR: 9,    armor: 1, hp: 4,  dmg: 0.05, speed: 0.95 },
+    { name: '督军', mass: 900,  r: 14,   color: '#8eb6ff', eatR: 10,   armor: 1, hp: 5,  dmg: 0.07, speed: 0.93 },
+    { name: '传奇', mass: 1500, r: 15,   color: '#e2a6ff', eatR: 11,   armor: 2, hp: 6,  dmg: 0.09, speed: 0.91 },
+    { name: '圣焰', mass: 2400, r: 16,   color: '#ffb45c', eatR: 12,   armor: 2, hp: 8,  dmg: 0.11, speed: 0.88 },
+    { name: '终火', mass: 3600, r: 17.5, color: '#ff7a6a', eatR: 13,   armor: 2, hp: 10, dmg: 0.13, speed: 0.85 }
   ];
 
   // ---------- 武器表（6） ----------
@@ -234,7 +238,7 @@
   RW.BOSS_WAVES = { every: 5, at: 0.2, rateCut: 0.35 };
 
   // 敌人成长：hp × (1 + a(w-1) + b(w-1)^2 + c9(w-8)^2)，伤害 × (1 + c(w-1))
-  RW.GROWTH = { hpA: 0.2, hpB: 0.035, hpC9: 0.35, dmgC: 0.09, spdC: 0.015, spdCap: 0.25 };
+  RW.GROWTH = { hpA: 0.24, hpB: 0.04, hpC9: 0.4, dmgC: 0.14, spdC: 0.02, spdCap: 0.28 };
 
   // ---------- 波次表 ----------
   // dur 秒；r0→r1 每秒刷怪数；mix 权重；elites = [出现时间占波长比例, 精英种类]
@@ -242,8 +246,8 @@
     null,
     { dur: 20, r0: 1.8, r1: 2.6, mix: { mite: 1 }, elites: [] },
     { dur: 22, r0: 2.0, r1: 2.8, mix: { mite: 0.8, dasher: 0.1, splitter: 0.1 }, elites: [] },
-    { dur: 25, r0: 2.2, r1: 3.0, mix: { mite: 0.6, shell: 0.12, dasher: 0.14, splitter: 0.14 }, elites: [] },
-    { dur: 28, r0: 2.3, r1: 3.2, mix: { mite: 0.5, shell: 0.15, dasher: 0.15, splitter: 0.1, bomber: 0.1 }, elites: [[0.45, 'warden']] },
+    { dur: 25, r0: 2.4, r1: 3.4, mix: { mite: 0.42, shell: 0.18, dasher: 0.2, splitter: 0.1, bomber: 0.1 }, elites: [] },
+    { dur: 28, r0: 2.6, r1: 3.8, mix: { mite: 0.34, shell: 0.2, dasher: 0.16, splitter: 0.1, bomber: 0.12, spitter: 0.08 }, elites: [[0.35, 'warden']] },
     { dur: 30, r0: 2.4, r1: 3.4, mix: { mite: 0.45, shell: 0.15, dasher: 0.12, splitter: 0.1, bomber: 0.08, spitter: 0.1 }, elites: [[0.4, 'warden']] },
     { dur: 32, r0: 2.5, r1: 3.6, mix: { mite: 0.4, shell: 0.15, dasher: 0.12, splitter: 0.1, bomber: 0.08, spitter: 0.09, shielder: 0.06 }, elites: [[0.35, 'brood']] },
     { dur: 34, r0: 2.7, r1: 3.8, mix: { mite: 0.4, shell: 0.15, dasher: 0.12, splitter: 0.1, bomber: 0.08, spitter: 0.09, shielder: 0.06 }, elites: [[0.25, 'warden'], [0.65, 'brood']] },

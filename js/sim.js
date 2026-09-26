@@ -1,4 +1,4 @@
-// 环带值守 · 核心模拟（无渲染依赖，可在 Node 里无头运行做数值测试）
+// 圣火守护者 · 核心模拟（无渲染依赖，可在 Node 里无头运行做数值测试）
 // 世界坐标：整块甲板 TUNE.WORLD，活动范围 TUNE.ARENA；镜头由渲染层处理。
 (function (root) {
   var RW = root.RW;
@@ -1291,6 +1291,7 @@
     var n = d.shards;
     if (e.elite && this.st.bounty > 0) n *= 2;
     for (var k = 0; k < n; k++) this.spawnShard(e.x, e.y, d.shardVal);
+    if (how === 'kill') this.addMass(Math.max(1, Math.round((d.mass || 1) * 0.45)));
     if (how === 'kill') {
       if (e.type === 'splitter') {
         for (var s = 0; s < d.splits; s++) {

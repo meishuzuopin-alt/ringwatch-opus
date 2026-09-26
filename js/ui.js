@@ -1,4 +1,4 @@
-// 环带值守 · 界面：标题 / 选武器 / 整备商店 / 复活 / 结算 / 暂停
+// 圣火守护者 · 界面：标题 / 选武器 / 整备商店 / 复活 / 结算 / 暂停
 (function (root) {
   var RW = root.RW;
   var T = RW.TUNE, W = T.W, H = T.H, TAU = Math.PI * 2;
@@ -88,12 +88,12 @@
       }
       c.restore();
     }
-    D.glowText('环带值守', W / 2, 150, 52, C.cyan, 'center', 20);
-    D.text('R I N G W A T C H', W / 2, 192, 12, '#e8d8b8', 'center', true, 3);
+    D.glowText('圣火守护者', W / 2, 150, 40, C.cyan, 'center', 16);
+    D.text('FLAME GUARDIAN', W / 2, 192, 12, '#e8d8b8', 'center', true, 3);
     D.text('夜色压境，守住村子的圣火。', W / 2, 400, 13, C.text, 'center', true, 3);
     D.text('撑过倒计时，整备，再迎下一波。', W / 2, 422, 12, C.dim, 'center', false, 3);
     if (g.best > 0) D.text('最佳纪录：撑到第 ' + g.best + ' 波', W / 2, 452, 13, C.gold, 'center', true, 3);
-    UI.button('start', 80, 480, 260, 62, '开始值守', { style: 'primary', size: 22 });
+    UI.button('start', 80, 480, 260, 62, '开始守护', { style: 'primary', size: 22 });
     UI.button('mute', 80, 556, 125, 40, muted ? '音效：关' : '音效：开', { size: 13 });
     UI.button('howto', 215, 556, 125, 40, '玩法说明', { size: 13 });
     D.text('拖动移动 · 自动攻击 · 灵火晋升 · 随时造塔', W / 2, 626, 11, C.dim, 'center', false, 3);
@@ -437,13 +437,13 @@
   UI.revive = function (g, adLabel) {
     UI.dim(0.78);
     UI.panel(24, 170, W - 48, 350, C.red);
-    D.glowText('值守中断', W / 2, 220, 34, C.red, 'center', 14);
+    D.glowText('守护中断', W / 2, 220, 34, C.red, 'center', 14);
     D.text('第 ' + g.wave + ' 波 · 还剩 ' + Math.max(0, Math.ceil(g.dur - g.wt)) + ' 秒', W / 2, 262, 13, C.text, 'center');
     var h = g.lastHits[g.lastHits.length - 1];
     if (h) D.text('致命一击：' + h.src, W / 2, 288, 13, '#ffb3c1', 'center', true);
     UI.button('revive', 50, 330, W - 100, 70, adLabel + ' · 原地复活', { style: 'ad', size: 18, sub: '恢复 60% 生命，清空身边敌人（每局一次）' });
     if (adLabel === '预览发放') D.text('广告位未配置：本按钮直接发放奖励，不会播放广告', W / 2, 414, 10, C.dim, 'center');
-    UI.button('giveup', 50, 440, W - 100, 52, '结束值守，查看结算', { style: 'ghost', size: 14 });
+    UI.button('giveup', 50, 440, W - 100, 52, '结束守护，查看结算', { style: 'ghost', size: 14 });
   };
 
   // ================= 结算 =================
@@ -451,7 +451,7 @@
     var r = g.result, c = D.ctx;
     D.drawBg(true);
     UI.dim(0.6);
-    D.text('值守结束', W / 2, 60, 16, C.dim, 'center', true);
+    D.text('守护结束', W / 2, 60, 16, C.dim, 'center', true);
     D.glowText('撑到第 ' + r.wave + ' 波', W / 2, 104, 36, r.newBest ? C.gold : C.cyan, 'center', 16);
     if (r.coreDown) D.text('圣火熄灭了', W / 2, 140, 13, C.red, 'center', true);
     else if (r.newBest) D.text('新纪录', W / 2, 140, 13, C.gold, 'center', true);

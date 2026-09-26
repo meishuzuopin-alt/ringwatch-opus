@@ -1,4 +1,4 @@
-// 环带值守 · 主循环：固定 1/60 秒步进、输入（浮动摇杆 / 战斗按钮 / 键盘）、界面动作分发
+// 圣火守护者 · 主循环：固定 1/60 秒步进、输入（浮动摇杆 / 战斗按钮 / 键盘）、界面动作分发
 (function (root) {
   var RW = root.RW;
   var P = RW.Plat, D = RW.Draw, UI = RW.UI, S = RW.Sfx, T = RW.TUNE, DT = T.DT;

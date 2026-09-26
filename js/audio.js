@@ -1,4 +1,4 @@
-// 环带值守 · 音效与背景节拍：全部 Web Audio 运行时合成，没有任何音频文件
+// 圣火守护者 · 音效与背景节拍：全部 Web Audio 运行时合成，没有任何音频文件
 (function (root) {
   var RW = root.RW;
 

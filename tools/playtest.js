@@ -39,7 +39,7 @@ const server = http.createServer((req, res) => {
   const state = async () => page.evaluate(() => { const g = RW.game; return { mode: g.mode, wave: g.wave, hp: g.player.hp, shards: g.shardCount, t: g.wt, kills: g.kills, enemies: g.enemyCount }; });
 
   await shot('01_title');
-  await tap(210, 511);            // 开始值守
+  await tap(210, 511);            // 开始守护
   await page.waitForTimeout(300);
   await shot('02_pick');
   const pickArg = process.env.PICK ? +process.env.PICK : 0;

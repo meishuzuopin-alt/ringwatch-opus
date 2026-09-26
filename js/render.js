@@ -1,4 +1,4 @@
-// 环带值守 · 渲染：镜头、甲板、实体、光效、小地图、战斗 HUD。全部 Canvas 运行时绘制。
+// 圣火守护者 · 渲染：镜头、甲板、实体、光效、小地图、战斗 HUD。全部 Canvas 运行时绘制。
 (function (root) {
   var RW = root.RW;
   var T = RW.TUNE, A = T.ARENA, WD = T.WORLD, V = T.VIEW, W = T.W, H = T.H, TAU = Math.PI * 2;
