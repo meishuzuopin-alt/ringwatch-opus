@@ -395,6 +395,27 @@
     ring: 0.06
   };
   RW.SANCTUARY.dim = RW.C1_LIGHT.veil;
+  // 手绘柔光试验。全部参数只写在这里；enabled 关掉就回到 C1。
+  // 调色：低饱和的鼠尾草绿 / 苔绿、灰粉鲑土路、哑青绿水。圈内更暖更饱，圈外再降饱和。
+  // C1 的冷暖结构不动：圈内仍是圣火暖光，圈外仍是冷蓝。着色器在 js/gl3d.js，只多一个半分辨率采样的全屏通道（在界面之前）。
+  // 光尘走原来的绿萤火发光点（GL.glow + 绿通道压暗），亮度留在泛光阈值下面。
+  RW.PAINTERLY = {
+    enabled: true,
+    biomeMix: 0.7,
+    palette: {
+      grass: '#8b9874', grass2: '#6f805c', grassDark: '#5c6b4c', moss: '#5a7348',
+      leaf: '#6d8658', leaf2: '#7d9468', leaf3: '#546848', skirt: '#3a4e40',
+      dirt: '#c4a194', dirt2: '#b08e84', stone: '#b7a89e', stone2: '#c4b6ac',
+      water: '#6e9894', bed: '#4e6e6c',
+      wall: '#e3d4c2', wallWood: '#8d735c', roofRed: '#a86a58', roofBlue: '#6d7d96'
+    },
+    grade: { outDesat: 0.26, inWarm: 0.42, inRich: 1.12, warm: [1.14, 0.97, 0.74] },
+    light: { sun: '#ffe0b0', sky: '#f3e6d0', sunMix: 0.10, skyMix: 0.04 },
+    kuwahara: { radius: 1.35, strength: 0.32, edge0: 0.02, edge1: 0.10, step: 2 },
+    rays: { dir: [0.38, 0.92], sigma: 0.08, alpha: 0.09, color: [1.0, 0.84, 0.58], drift: 0.12 },
+    frame: { aspect: [1.12, 0.86], inner: 0.52, outer: 1.12, strength: 0.70, color: [0.36, 0.42, 0.32], foliage: 0.55 },
+    motes: { count: 16, radius: 340, height: 16, bob: 0.4, bobAmp: 7, speed: 0.06, twinkle: 0.55, size: 7.5, alpha: 0.22, color: '#d5e7a4' }
+  };
   // 圣火每升一级，王旗自动往外插一站（各地图的王旗位置写在 js/map.js 的 fronts 里，切图时换成当前图的）。
   RW.FRONTS = [null];
 
