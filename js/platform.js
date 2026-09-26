@@ -16,19 +16,32 @@
     } else {
       Plat.canvas = document.getElementById('game');
       var fit = function () {
-        var v = Plat.view;
-        v.cssW = window.innerWidth; v.cssH = window.innerHeight;
+        var v = Plat.view, inset = Plat.safeInsets();
+        v.cssW = Math.max(1, window.innerWidth - inset.l - inset.r);
+        v.cssH = Math.max(1, window.innerHeight - inset.t - inset.b);
         v.dpr = Math.min(2, window.devicePixelRatio || 1);
+        Plat.canvas.style.left = inset.l + 'px'; Plat.canvas.style.top = inset.t + 'px';
         Plat.canvas.style.width = v.cssW + 'px'; Plat.canvas.style.height = v.cssH + 'px';
-        Plat.canvas.width = Math.round(v.cssW * v.dpr); Plat.canvas.height = Math.round(v.cssH * v.dpr);
+        Plat.canvas.style.touchAction = 'none';
+        Plat.canvas.width = Math.round(v.cssW * v.dpr);
+        Plat.canvas.height = Math.round(v.cssH * v.dpr);
         if (Plat.hud) {
           Plat.hud.width = Plat.canvas.width; Plat.hud.height = Plat.canvas.height;
-          if (Plat.hud.style) { Plat.hud.style.width = v.cssW + 'px'; Plat.hud.style.height = v.cssH + 'px'; }
+          if (Plat.hud.style) {
+            Plat.hud.style.left = inset.l + 'px'; Plat.hud.style.top = inset.t + 'px';
+            Plat.hud.style.width = v.cssW + 'px'; Plat.hud.style.height = v.cssH + 'px';
+          }
         }
         Plat.computeView();
         if (Plat.onResize) Plat.onResize();
       };
       window.addEventListener('resize', fit);
+      window.addEventListener('orientationchange', fit);
+      // 切回前台时，iOS 要把被系统挂起的音频上下文在手势里 resume
+      document.addEventListener('touchend', function () {
+        try { if (RW.Sfx && RW.Sfx.unlock) RW.Sfx.unlock(); } catch (e) { /* 没有音频也继续 */ }
+      }, { passive: true });
+      document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
       fit();
     }
     // 优先用 WebGL 画 3D，2D 画面（HUD/菜单）画到离屏画布上再贴上去；不支持 WebGL 时退回纯 2D
@@ -49,6 +62,19 @@
     Plat.computeView();
   };
 
+  // 网页包读安全区；桌面与微信是 0。读不到 env() 就当没有。
+  Plat.safeInsets = function () {
+    if (!Plat.web || typeof document === 'undefined' || !document.body) return { t: 0, r: 0, b: 0, l: 0 };
+    try {
+      var el = document.createElement('div');
+      el.style.cssText = 'position:absolute;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+      document.body.appendChild(el);
+      var cs = getComputedStyle(el);
+      var o = { t: parseFloat(cs.paddingTop) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0, l: parseFloat(cs.paddingLeft) || 0 };
+      document.body.removeChild(el);
+      return o;
+    } catch (e) { return { t: 0, r: 0, b: 0, l: 0 }; }
+  };
   Plat.computeView = function () {
     var v = Plat.view;
     v.s = Math.min(v.cssW / T.W, v.cssH / T.H);
@@ -156,16 +182,28 @@
   };
 
   // ---------- 激励视频 ----------
-  // 广告位留空：不播放，直接预览发放。桌面版没有广告模块，复活直接可用。
-  // 真正的播放和「看完才发」在 js/ads.js，微信入口才加载，桌面包不进去。
+  // off：桌面版，不播广告，复活直接可用。
+  // none：网页 Basic Launch，激励按钮藏起，调用也不发奖。
+  // wechat：js/ads.js，isEnded === true 才发。
+  // crazygames：js/ads-crazygames.js，只在网页包打开 --ads=crazygames 时加载。
+  var webBoot = (!isWx && typeof window !== 'undefined' && window.RW_WEB) ? window.RW_WEB : null;
+  Plat.web = !!(webBoot && webBoot.web);
+  if (webBoot && (webBoot.ads === 'none' || webBoot.ads === 'crazygames')) Plat.adProvider = webBoot.ads;
+  else Plat.adProvider = isWx ? 'wechat' : 'off';
   Plat.adUnit = function (kind) { return kind === 'revive' ? RW.AD.REWARD_REVIVE : RW.AD.REWARD_REROLL; };
-  Plat.hasAds = isWx;
-  Plat.adLabel = function (kind) { return Plat.adUnit(kind) ? '看广告' : '预览发放'; };
+  Plat.hasAds = Plat.adProvider === 'wechat' || Plat.adProvider === 'crazygames';
+  Plat.adLabel = function (kind) { return Plat.adUnit(kind) || Plat.adProvider === 'crazygames' ? '看广告' : '预览发放'; };
   Plat.showReward = function (kind, onGrant, onFail) {
-    if (!Plat.hasAds) { onGrant({ free: true }); return; }
+    if (Plat.adProvider === 'off') { if (onGrant) onGrant({ free: true }); return; }
+    if (Plat.adProvider === 'none') { if (onFail) onFail('当前环境无法播放广告'); return; }
+    if (Plat.adProvider === 'crazygames') {
+      if (RW.AdsCrazy && RW.AdsCrazy.show) RW.AdsCrazy.show(kind, onGrant, onFail);
+      else if (onFail) onFail('当前环境无法播放广告');
+      return;
+    }
     var unit = Plat.adUnit(kind);
-    if (!unit) { onGrant({ preview: true }); return; }
-    if (!RW.Ads || !RW.Ads.show) { onFail('当前环境无法播放广告'); return; }
+    if (!unit) { if (onGrant) onGrant({ preview: true }); return; }
+    if (!RW.Ads || !RW.Ads.show) { if (onFail) onFail('当前环境无法播放广告'); return; }
     RW.Ads.show(kind, unit, onGrant, onFail);
   };
 

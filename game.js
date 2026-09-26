@@ -12,6 +12,7 @@ require('./js/sprite_anim.js');
 require('./js/sprites.js');
 require('./js/world3d.js');
 require('./js/render.js');
+require('./js/i18n.js');
 require('./js/ui.js');
 require('./js/main.js');
 GameGlobal.RW.Main.start();

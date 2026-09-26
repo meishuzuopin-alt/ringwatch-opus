@@ -13,7 +13,7 @@ const bad = msg => { failed++; console.log('  ✗ ' + msg); };
 
 function walk(dir, ext, acc = []) {
   for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (f.name.startsWith('.') || f.name === 'node_modules' || f.name === 'shots' || f.name === 'dist') continue;
+    if (f.name.startsWith('.') || f.name === 'node_modules' || f.name === 'shots' || f.name === 'dist' || f.name === 'dist-web') continue;
     const p = path.join(dir, f.name);
     if (f.isDirectory()) walk(p, ext, acc); else if (p.endsWith(ext)) acc.push(p);
   }
@@ -175,7 +175,48 @@ console.log('广告');
     if (!/ok/.test(out)) bad('广告完成判定异常\n' + out);
     else ok('未结束 / 看完一半不发奖，isEnded 为真才发');
   } catch (e) { bad('广告完成判定失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
+  const cg2 = `
+    const root = ${JSON.stringify(root)};
+    require(root + '/js/ads-crazygames.js');
+    const RW = globalThis.RW;
+    let last = null;
+    globalThis.CrazyGames = { SDK: { game: {
+      gameplayStart() {}, gameplayStop() {}, loadingStart() {}, loadingStop() {}
+    }, ad: { requestAd(kind, cbs) { last = { kind, cbs }; } } } };
+    function once(fire) {
+      let g = 0, f = 0;
+      RW.AdsCrazy.show('revive', () => { g++; }, () => { f++; });
+      fire(last.cbs);
+      return g + ':' + f + ':' + (RW.AdsCrazy.holding ? 1 : 0);
+    }
+    const err = once(cbs => cbs.adError(new Error('blocked')));
+    const half = once(cbs => { cbs.adStarted(); cbs.adFinished({ isEnded: false }); });
+    const done = once(cbs => { cbs.adStarted(); cbs.adFinished(); });
+    const mid = (function () {
+      let g = 0, f = 0;
+      RW.AdsCrazy.show('midgame', () => { g++; }, () => { f++; });
+      last.cbs.adFinished();
+      return g + ':' + f;
+    })();
+    if (last.kind !== 'midgame') { console.error('kind ' + last.kind); process.exit(1); }
+    if (err !== '0:1:0' || half !== '0:1:0' || done !== '1:0:0' || mid !== '1:0') {
+      console.error([err, half, done, mid].join(' | ')); process.exit(1);
+    }
+    console.log('ok');
+  `;
+  try {
+    const out = execFileSync(process.execPath, ['-e', cg2], { encoding: 'utf8' });
+    if (!/ok/.test(out)) bad('CrazyGames 适配器异常\n' + out);
+    else ok('CrazyGames：未回调 / 出错 / isEnded 为假不发奖，看完才发，拦广告也不卡住');
+  } catch (e) { bad('CrazyGames 适配器失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 }
+
+console.log('网页包');
+try {
+  const out = execFileSync(process.execPath, [path.join(__dirname, 'build-web.js')], { encoding: 'utf8' });
+  if (!/网页包通过体积与外链检查/.test(out)) bad('网页包检查没通过\n' + out);
+  else ok(out.trim().split('\n').slice(-6).join('；'));
+} catch (e) { bad('网页包构建失败\n' + (e.stdout || '') + (e.stderr || e.message)); }
 
 if (failed) { console.log(`\n${failed} 项失败`); process.exit(1); }
 console.log('\n全部通过');

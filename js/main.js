@@ -9,8 +9,15 @@
   var js = { active: false, id: null, ox: 0, oy: 0, kx: 0, ky: 0, mx: 0, my: 0 };
   var BATTLE_BTNS = { pause: 1, dash: 1, skill: 1, build: 1 };
   var acc = 0, last = 0, inputBuf = { mx: 0, my: 0, dash: false, skill: 0 };
+  var portalLive = false;
+  // 只有网页包加载了 js/ads-crazygames.js 才有这些回调；没有 SDK 时静默跳过
+  function portalCall(name) {
+    var a = RW.AdsCrazy;
+    if (!a || !a[name]) return;
+    try { a[name](); } catch (e) { /* 广告脚本被拦也不影响游戏 */ }
+  }
 
-  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts, map: UI.runMap }, opt: RW.opt, keys: RW.keys }); }
+  function persist() { P.save(SAVE_KEY, { best: g.best, muted: muted, musicOff: musicOff, prog: g.prog, hero: UI.heroSel, setup: { danger: UI.runDanger, muts: UI.runMuts, map: UI.runMap }, opt: RW.opt, keys: RW.keys, lang: RW.I18n ? RW.I18n.lang : 'zh' }); }
   // 设置生效：音量三条总线、特效亮度（其余由渲染层直接读 RW.opt）
   function applyOpt() {
     var o = RW.opt;
@@ -33,6 +40,7 @@
   function resetStick() { js.active = false; js.id = null; js.mx = js.my = js.kx = js.ky = 0; }
 
   function start() {
+    portalCall('loadingStart');
     P.init();
     if (P.gl3d && RW.W3) { try { RW.W3.init(); } catch (err) { console.error(err); P.gl3d = false; } }
     var save = P.load(SAVE_KEY, { best: 0, muted: false }) || {};
@@ -54,6 +62,7 @@
     muted = !!save.muted;
     S.setMuted(muted);
     musicOff = !!save.musicOff; S.setMusicOff(musicOff); UI.musicOff = musicOff;
+    if (RW.I18n && (save.lang === 'en' || save.lang === 'zh')) RW.I18n.setLang(save.lang);
     UI.runInfo = runInfoOf(P.load(RUN_KEY, null));
     RW.game = g;
     if (RW.QA) {
@@ -320,6 +329,7 @@
       case 'howto': showHow = true; break;
       case 'howtoClose': showHow = false; break;
       case 'mute': muted = !muted; S.setMuted(muted); persist(); break;
+      case 'lang': if (RW.I18n) { RW.I18n.setLang(RW.I18n.lang === 'en' ? 'zh' : 'en'); persist(); } break;
       case 'music': musicOff = !musicOff; UI.musicOff = musicOff; S.setMusicOff(musicOff); persist(); break;
       case 'back': case 'home':
         if (g.nightOn) { g.nightOn = false; RW.loadMap(UI.runMap || 'village'); }
@@ -453,7 +463,10 @@
     if (RW.QA) RW.QA.frame(dt, g.enemyCount);
     if (buildMenu && !paused) { buildMenuT -= dt; if (buildMenuT <= 0) buildMenu = false; }
     pollPad(dt);
-    if (!paused && !showHow && !overlay) {
+    var adHold = RW.AdsCrazy && RW.AdsCrazy.holding;
+    var live = inBattle() && !paused && !adHold;
+    if (live !== portalLive) { portalLive = live; portalCall(live ? 'gameplayStart' : 'gameplayStop'); }
+    if (!paused && !showHow && !overlay && !adHold) {
       acc += dt;
       var steps = 0;
       while (acc >= DT && steps < 5) { g.update(getInput()); drain(); acc -= DT; steps++; }
@@ -469,7 +482,7 @@
     if (inBattle() || g.mode === 'revive') D.updateCamera(g, paused ? 0 : dt);
     render(paused ? 0 : dt);
     // 桌面版启动计时：第一帧画完记一笔（写进 startup.log）
-    if (!booted) { booted = true; if (typeof window !== 'undefined' && window.desktop && window.desktop.boot) window.desktop.boot('第一帧画面'); }
+    if (!booted) { booted = true; portalCall('loadingStop'); if (typeof window !== 'undefined' && window.desktop && window.desktop.boot) window.desktop.boot('第一帧画面'); }
     P.raf(frame);
   }
   function render(dt) {
@@ -490,7 +503,7 @@
         D.hud(g, UI, buildMenu); D.joystick(js);
         if (paused) UI.pause(g, muted);
         break;
-      case 'revive': if (gl3) D.overlay3D(g); else D.world(g); D.hud(g, UI, false); UI.btns.length = 0; UI.revive(g, P.hasAds ? P.adLabel('revive') : ''); break;
+      case 'revive': if (gl3) D.overlay3D(g); else D.world(g); D.hud(g, UI, false); UI.btns.length = 0; UI.revive(g, P.adProvider === 'none' ? null : (P.hasAds ? P.adLabel('revive') : '')); break;
       case 'shop': UI.shop(g, P.hasAds ? P.adLabel('reroll') : ''); break;
       case 'bless': UI.bless(g); break;
       case 'result': UI.result(g); break;

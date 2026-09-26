@@ -66,13 +66,14 @@
   UI.panel = function (x, y, w, h, border) { D.woodFrame(x, y, w, h, { style: 'panel', edge: border }); };
   UI.drawToast = function () {
     if (UI.toastT <= 0 || !UI.toastMsg) return;
-    var c = D.ctx; c.font = D.font(13, true);
-    var w = Math.min(W - 40, c.measureText(UI.toastMsg).width + 32);
+    var c = D.ctx, msg = RW.I18n ? RW.I18n.tr(UI.toastMsg) : UI.toastMsg;
+    c.font = D.font(13, true);
+    var w = Math.min(W - 40, c.measureText(msg).width + 32);
     c.globalAlpha = Math.min(1, UI.toastT * 3);
     var ty = UI.toastY || 8;
     D.tip = true;   // 提示层（界面审计：不许盖住战场中央）
     D.woodFrame((W - w) / 2, ty, w, 34, { style: 'hud', alpha: 0.95 });
-    D.text(UI.toastMsg, W / 2, ty + 17, 13, C.text, 'center', true);
+    D.text(msg, W / 2, ty + 17, 13, C.text, 'center', true);
     D.tip = false;
     c.globalAlpha = 1;
   };
@@ -96,7 +97,7 @@
     D.woodFrame(W / 2 - 220, 22, 440, 104, { style: 'panel', alpha: 0.9 });
     D.glowText('圣火守护者', W / 2, 70, 58, '#FFB547', 'center', 22);
     D.woodFrame(W / 2 - 100, 112, 200, 26, { style: 'hud' });
-    D.text('FLAME GUARDIAN', W / 2, 125, 12, D.UIC.parch, 'center', true);
+    D.text(RW.I18n && RW.I18n.lang === 'en' ? 'Hold the last flame' : 'FLAME GUARDIAN', W / 2, 125, 12, D.UIC.parch, 'center', true);
     D.text('长夜围住村庄，你是火旁最后的守护者。', W / 2, 162, 14, C.text, 'center', true, 3);
     var pr = g.prog || {};
     D.text(g.best > 0 ? '最佳纪录：守到第 ' + g.best + ' 波' + (pr.wins ? ' · 通关 ' + pr.wins + ' 次' : '') + (pr.bestScore ? ' · 最高分 ' + pr.bestScore : '') : '第一簇火，正等你点亮。', W / 2, 186, 12, g.best > 0 ? C.gold : C.dim, 'center', true, 3);
@@ -116,6 +117,7 @@
     if (root.desktop) UI.button('exitGame', mx, y + 136, mw, 34, '退出', { style: 'ghost', size: 13 });
     UI.button('mute', mx, H - 44, mw / 2 - 3, 30, muted ? '声音：关' : '声音：开', { size: 11, style: 'ghost' });
     UI.button('music', mx + mw / 2 + 3, H - 44, mw / 2 - 3, 30, UI.musicOff ? '音乐：关' : '音乐：开', { size: 11, style: 'ghost' });
+    if (RW.I18n && RW.I18n.web) UI.button('lang', W - 156, H - 44, 120, 30, RW.I18n.lang === 'en' ? '中文' : 'English', { size: 12, style: 'ghost' });
     var K = RW.keyLabel;
     D.text(K('up') + K('left') + K('down') + K('right') + ' 移动 · 自动攻击 · ' + K('dash') + ' 冲刺 · ' + K('skill0') + '/' + K('skill1') + '/' + K('skill2') + ' 技能 · 1–4 造塔 · Enter 开始 · 支持手柄', W / 2 + 130, H - 38, 11, C.dim, 'center', false, 3);
     D.text('v4.0 · 模型、音乐与音效均为程序生成的原创内容', W / 2 + 130, H - 18, 10, C.faint, 'center', false, 3);
@@ -248,7 +250,7 @@
     UI.heroGlyph(id, x + 60, y + 70, 1);
     D.text(d.name, x + 122, y + 34, 26, d.color, 'left', true);
     c.font = D.font(26, true);
-    var nw = c.measureText(d.name).width;
+    var nw = c.measureText(RW.I18n ? RW.I18n.tr(d.name) : d.name).width;
     c.fillStyle = 'rgba(255,255,255,0.08)'; D.chamfer(x + 130 + nw, y + 24, 64, 20, 10); c.fill();
     D.text(d.tag, x + 162 + nw, y + 34, 10, C.text, 'center', true);
     D.text('起手：' + RW.WEAPONS[d.weapon].name + ' · 技能：' + RW.SKILLS[d.skill].name, x + 122, y + 64, 11, C.dim, 'left');
@@ -634,7 +636,7 @@
       var hasT = wp.tier >= 3, hasM = g.modCount(ev.mod) > 0;
       D.text(wp.d.name, bx + 8, by + 14, 11, wp.d.color, 'left', true);
       c.font = D.font(11, true);
-      var nx = bx + 12 + c.measureText(wp.d.name).width;
+      var nx = bx + 12 + c.measureText(RW.I18n ? RW.I18n.tr(wp.d.name) : wp.d.name).width;
       D.text('III', nx, by + 14, 10, hasT ? C.good : C.faint, 'left', true);
       D.text('+ ' + RW.MODS[ev.mod].name, nx + 22, by + 14, 10, hasM ? C.good : C.faint, 'left', true);
       D.text('→ ' + ev.name, bx + cw - 8, by + 14, 10, C.dim, 'right');
@@ -690,7 +692,7 @@
     c.fillStyle = info.color; c.fillRect(x + 1, y + 10, 3, h - 20);
     D.text(info.name, x + 14, y + 16, 16, info.color, 'left', true);
     c.font = D.font(16, true);
-    var nw = c.measureText(info.name).width;
+    var nw = c.measureText(RW.I18n ? RW.I18n.tr(info.name) : info.name).width;
     D.text(info.tag, x + 20 + nw, y + 17, 10, C.dim, 'left');
     var textW = w - 128;
     var yy = y + 38;
@@ -762,6 +764,11 @@
     var h = g.lastHits[g.lastHits.length - 1];
     if (h) D.text('最后一击：' + h.src, cx, 214, 12, '#ffb3c1', 'center', true);
     var left = g.revivesLeft, all = RW.REKINDLE.times;
+    if (adLabel === null) {
+      D.text('此版本不播放广告，圣火熄灭后直接结算。', cx, 250, 12, C.dim, 'center');
+      UI.button('giveup', cx - 190, 300, 380, 52, '查看结算', { style: 'ghost', size: 14, sub: '今夜的守护到此为止' });
+      return;
+    }
     UI.button('revive', cx - 190, 244, 380, 70, '重燃圣火', { style: 'ad', size: 18, sub: (adLabel ? adLabel + ' · ' : '') + '剩 ' + left + '/' + all + ' 次 · 恢复半数火光' });
     for (var ri = 0; ri < all; ri++) {   // 三簇小火苗：亮着的是还能用的重燃
       var fx2 = cx - (all - 1) * 14 + ri * 28, on = ri < left;
@@ -859,7 +866,8 @@
       for (i = 0; i < Math.min(3, un.length); i++) UI.heroGlyph(un[i], RX + 36 + i * 44, uy + 32, 0.44);
       var names = un.map(function (id) { return RW.CLASSES[id].name; }).join('、'), tx = RX + 36 + Math.min(3, un.length) * 44 - 12;
       c.font = D.font(16, true);
-      if (c.measureText('解锁新英雄：' + names).width < RX + RWd - 12 - tx) D.glowText('解锁新英雄：' + names, tx, uy + 33, 16, C.gold, 'left', 8);
+      var unlockLine = '解锁新英雄：' + names;
+      if (c.measureText(RW.I18n ? RW.I18n.tr(unlockLine) : unlockLine).width < RX + RWd - 12 - tx) D.glowText(unlockLine, tx, uy + 33, 16, C.gold, 'left', 8);
       else { D.glowText('解锁新英雄 ×' + un.length, tx, uy + 22, 15, C.gold, 'left', 8); D.text(names, tx, uy + 44, 12, '#ffe2a8', 'left', true); }
     }
     var same = (r.hero && RW.CLASSES[r.hero] ? RW.CLASSES[r.hero].name : '') + (r.daily ? ' · 今日挑战' : (r.danger ? ' · 危险 ' + r.danger : ''));

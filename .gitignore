@@ -5,4 +5,5 @@ shots/
 # 微信开发者工具的本机私有配置
 project.private.config.json
 dist/
+dist-web/
 build/

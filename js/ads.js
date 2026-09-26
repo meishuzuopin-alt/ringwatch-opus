@@ -9,9 +9,17 @@
   }
   var cache = {};
   RW.Ads = {
+    provider: 'wechat',
     // 未看完、回调是空、或没有 isEnded，都不算完成
     completed: function (res) { return !!(res && res.isEnded === true); },
     show: function (kind, unit, onGrant, onFail) {
+      // 网页包可以把 provider 改成 none / crazygames。微信路径保持原样。
+      if (RW.Ads.provider === 'none') { if (onFail) onFail('当前环境无法播放广告'); return; }
+      if (RW.Ads.provider === 'crazygames') {
+        if (RW.AdsCrazy && RW.AdsCrazy.show) return RW.AdsCrazy.show(kind, onGrant, onFail);
+        if (onFail) onFail('当前环境无法播放广告');
+        return;
+      }
       if (!unit) { if (onGrant) onGrant({ preview: true }); return; }
       var api = wxApi();
       if (!api) { if (onFail) onFail('当前环境无法播放广告'); return; }
