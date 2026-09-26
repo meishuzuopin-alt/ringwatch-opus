@@ -1,0 +1,1 @@
+{"name": "bat", "image": "bat.png", "frame_w": 274, "frame_h": 263, "cols": 4, "rows": {"walk_down": 0, "walk_right": 1, "walk_left": 2, "walk_up": 3, "idle_down": 4, "attack": 5}, "pivot_x": 134.0, "pivot_y": 259.0, "body_height_px": 179, "height_rel_hero": 0.7, "fps": {"walk": 8, "idle": 4, "attack": [0.15, 0.15, 0.2, 0.3]}, "attack_facing": "down", "attack_thrust_dir": null}
